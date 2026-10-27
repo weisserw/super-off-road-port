@@ -1,0 +1,60 @@
+{
+  "id": "R2",
+  "category": "refactoring",
+  "status": "planned_next",
+  "scope": "Explicit powertrain inputs/outcome at update_trucks; same game model.",
+  "state_boundary": {
+    "immediate_retained": [
+      "steering_fraction",
+      "acceleration_fraction",
+      "nitro_button_history",
+      "nitro",
+      "nitro_animation"
+    ],
+    "proposed": [
+      "speed",
+      "heading",
+      "integrated world"
+    ],
+    "committed_reads": "Terrain rejection and pair-distance/normal/midpoint must continue reading the old current Truck until the existing commit. Other trucks mutate in ascending fleet/descending peer order."
+  },
+  "design": "A compact powertrain value owns its actual mutable fields; an explicit outcome applies retained updates using exhaustive destructuring and passes proposed speed/heading separately. No whole-Truck clone, no manual reconciliation list at the fleet callsite, no early committed speed/heading mutation. Existing isolated steer/nitro/accelerate entry contracts remain usable through adapters.",
+  "contracts_before_edit": [
+    "Powertrain high-byte and retained-field delta matrix",
+    "Prepared-frame suppression of nitro edge/history and immediate stock writes",
+    "Near-pair current committed versus proposed source fixtures",
+    "Existing four_truck_service_preserves_proposal_object_projection_pair_commit_order_and_input_latency and collision scan contracts"
+  ],
+  "validation_plan": "Run preimplementation contracts against completed M1, retain new starting binary/source checkpoint, compare natural driving/nitro and pair-contact recipes against that build; full affected integration and optimized check before R2 commit.",
+  "starting_implementation_commit": "8f837ee",
+  "starting_source_with_contract_sha256": "104ebcfd60e91a96daba89fb94b2fc9e7fc682a97999608a3fee5a603f6168c4",
+  "source_snapshot": "modernize/evidence/iteration-003/R2-preimplementation/source-with-contract.tar.gz",
+  "starting_binary_sha256": "e1ba6894f49ea65ba35c560eacd18db40bbf036542940dc5622eba5ed1a5331f",
+  "validation_interruption": {
+    "command": "python3 run.py check",
+    "result": "Process terminated with exit143 during optimized test compilation; no source/compiler diagnostic. Process inspection confirms cargo/rustc terminal. Preserve log and retry same required validation using existing build cache.",
+    "evidence": "modernize/evidence/iteration-003/R2-optimized-interrupted.log"
+  },
+  "validation_linker_retry": {
+    "result": "Retry reached linker but failed undefined hidden LLVM symbols in generated incremental test objects after prior SIGTERM. Likely stale incremental objects; next required full check disables incremental compilation without changing source/dependencies or deleting cached artifacts.",
+    "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+    "evidence": "modernize/evidence/iteration-003/R2-optimized-linker-failure.log"
+  },
+  "preimplementation_result": {
+    "command": "python3 run.py check-fast --test-filter iteration_three_powertrain",
+    "result": "PASS on completed M1 before R2 implementation",
+    "evidence": "modernize/evidence/iteration-003/R2-preimplementation/check-fast.log"
+  },
+  "rule_body_audit": "modernize/evidence/iteration-003/R2-rule-body-audit.json",
+  "starting_integration": {
+    "driving": "modernize/evidence/iteration-003/R2-starting-driving/result.json",
+    "hazard_lap": "modernize/evidence/iteration-003/R2-starting-hazard/native-hazard-route/result.json",
+    "natural_pair": "modernize/evidence/iteration-003/R2-starting-contact/result.json",
+    "original_inventory": "modernize/evidence/iteration-003/R2-original-inventory/result.json",
+    "original_pair": "modernize/evidence/iteration-003/R2-original-contact/result.json"
+  },
+  "second_interruption": {
+    "result": "First nonincremental run also received exit143 during compilation; no compiler diagnostic, no OOM kernel report. Preserved log; reran same full check attached to PTY with incremental disabled. This attached run now passes639 optimized tests and is building frontends.",
+    "evidence": "modernize/evidence/iteration-003/R2-nonincremental-interrupted.log"
+  }
+}

@@ -51,9 +51,17 @@ NitroStock or pending money, then projects and starts/ticks the award lifetime
 in the established order. Version2 saves and public observations still expose
 state0..11; incidental state11 graphics and retained fields are preserved.
 
+R2: `trucks/motion/powertrain.rs` separates immutable powertrain inputs from a
+compact proposed state and effects. Fleet service applies the five retained
+stock/history/fraction/animation outputs immediately, while proposed speed and
+heading stay in `WorkingMotion` through terrain rejection and pair contact.
+Exhaustive result destructuring makes that commit boundary explicit. The fleet
+no longer clones a whole truck and reconciles selected fields by hand. Isolated
+steering/nitro/acceleration entry points use the same rules through adapters;
+Truck remains the retained actor owner and snapshots are unchanged.
+
 Iteration progress, checks and individual commits are tracked in
-`modernize/status.json` and `modernize/changes.json`. Other selected targets are
-not implemented by this M1 change.
+`modernize/status.json` and `modernize/changes.json`. Other selected targets remain tracked individually as work proceeds.
 
 ## Preserved Stage1/2 architecture record
 

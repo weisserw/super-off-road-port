@@ -566,6 +566,93 @@
       "gameplay_changes": "none intended or observed in required comparisons",
       "commit_subject": "modernize: model pickup lifecycle and rewards natively",
       "qa_tooling_commit": "ac29a7a"
+    },
+    {
+      "id": "R2",
+      "iteration": 3,
+      "category": "refactoring",
+      "title": "Explicit powertrain proposal inputs and retained outputs",
+      "baseline": "modernize/baseline.json",
+      "starting_implementation_commit": "8f837ee",
+      "starting_checkpoint": "modernize/evidence/iteration-003/R2-preimplementation/source-with-contract.tar.gz",
+      "starting_binary_sha256": "e1ba6894f49ea65ba35c560eacd18db40bbf036542940dc5622eba5ed1a5331f",
+      "retained_source_sha256": "adeaa3324081766d831d179e07228ec13f586cd94f073a474898c15b26b2f631",
+      "retained_binary_sha256": "21620bc95257329f60dc7ca571631c6b284a8ccbd503b09721bfe7ed322eeec9",
+      "design": "modernize/design-iteration-003-R2.json",
+      "before": "Clone whole Truck for powertrain, copy five retained fields back at fleet callsite, construct proposal from clone.",
+      "after": "Compact PowertrainInput/PowertrainState and outcome. Exhaustively apply retained stock/history/fraction/animation output; carry proposed speed/heading through existing WorkingMotion. Domain adapters preserve isolated entry behavior.",
+      "removed_structure": [
+        "Whole-Truck powertrain clone",
+        "Hand-maintained retained-field reconciliation at fleet callsite"
+      ],
+      "preserved_model": [
+        "Fixed-width powertrain equations and source rule branches",
+        "Truck retained owner, motion phases and sequential pair commit order",
+        "Collision transaction clones for atomic error policy",
+        "All version2/public observations and semantic values"
+      ],
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter iteration_three_powertrain",
+          "result": "PASS preimplementation on M1;1 high-byte/whole-record mutation contract",
+          "evidence": "modernize/evidence/iteration-003/R2-preimplementation/check-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter powertrain",
+          "result": "PASS;4 tests",
+          "evidence": "modernize/evidence/iteration-003/R2-powertrain-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS;639 library tests, including all affected motion/contact/race/snapshot contracts",
+          "evidence": "modernize/evidence/iteration-003/R2-all-fast.log"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check (attached PTY)",
+          "result": "PASS;639 optimized tests, fmt, desktop/web Clippy/build, Rust1.90.0/Cargo.lock",
+          "evidence": "modernize/evidence/iteration-003/R2-optimized-latest.json"
+        },
+        {
+          "command": "Rule-body comparison against commit8f837ee",
+          "result": "PASS;steer/use_nitro/accelerate arithmetic/branch tokens identical after receiver/input rename",
+          "evidence": "modernize/evidence/iteration-003/R2-rule-body-audit.json"
+        },
+        {
+          "command": "original_inventory.py",
+          "result": "PASS;fresh original natural shop/purchase/consume and128 timer units over8frames from validated natural cache",
+          "evidence": "modernize/evidence/iteration-003/R2-original-inventory/result.json"
+        },
+        {
+          "command": "iteration3_contacts.py original / native --baseline ... --original ...",
+          "result": "PASS;fresh original/native natural contact0\u21926\u21925, persistent branches and guarded native replay; exact starting-build complete state/frame/PCM",
+          "evidence": "modernize/evidence/iteration-003/R2-retained-contact/comparison.json"
+        },
+        {
+          "command": "lifecycle.py + compare_lifecycle.py",
+          "result": "PASS;natural purchase/driving/nitro state/frame/PCM and all guarded checkpoint fields except identity match M1",
+          "evidence": "modernize/evidence/iteration-003/R2-retained-driving/baseline-comparison.json"
+        },
+        {
+          "command": "qa_harness iteration2_adapter native-hazard-route + compare_iteration2.py",
+          "result": "PASS;fresh natural race completion\u2192track2 hazard response/depletion and lap, exact complete states/frames/route PCM; presentation reviewed",
+          "evidence": "modernize/evidence/iteration-003/R2-retained-hazard/native-hazard-route/baseline-comparison.json"
+        }
+      ],
+      "presentation_review": "modernize/evidence/iteration-003/R2-presentation-review.json",
+      "validation_interruptions": [
+        "Initial optimized compilation received exit143; retry hit undefined hidden symbols in incremental objects.",
+        "First nonincremental run also received exit143. Attached nonincremental full check completed successfully. Logs and actual failures retained; no source/expectation changes made to pass validation."
+      ],
+      "source_grounded_contract_corrections": "None. Existing rule bodies and expected values unchanged. New high-byte/retained-state expectation was established before refactoring.",
+      "remaining_uncertainty": [
+        "No whole-game QA or desktop/browser runtime/physical playback claim.",
+        "Natural original pair contract establishes cooldown and representative contact, not all16 response cases; exhaustive independent source contracts remain passing.",
+        "Original/native absolute race dynamics are not asserted aligned across startup loading."
+      ],
+      "outcome": "retained",
+      "gameplay_changes": "none intended or observed in required comparisons",
+      "commit_subject": "refactor: make powertrain proposal and retained outputs explicit",
+      "qa_tooling_commit": "8f0bbfe"
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

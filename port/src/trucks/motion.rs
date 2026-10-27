@@ -6,6 +6,8 @@ use crate::world::terrain::{Projection, SamplingTables, Terrain};
 use crate::world::tracks::{TRUCKS, WHEELS};
 use anyhow::{Context, Result};
 
+mod powertrain;
+
 pub const WHEELS_PER_TRUCK: usize = WHEELS / TRUCKS;
 pub const UPGRADE_LEVELS: usize = 7;
 pub const SPEED_LIMITS: usize = 9;
@@ -117,27 +119,10 @@ pub fn load_motion_tables(rom: &[u8]) -> Result<MotionTables> {
     })
 }
 pub fn steer(truck: &mut Truck, tables: &MotionTables) {
-    use crate::controls::{BUTTON_L, BUTTON_LEFT, BUTTON_R, BUTTON_RIGHT};
-    const DIRECTION_STEP: u16 = 8;
-    const SHOULDER_STEP: u16 = 4;
-    const HEADING_MASK: u16 = 0xff;
-    let (fraction, carry) = truck
-        .steering_fraction
-        .overflowing_add(tables.steering_rates[usize::from(truck.upgrades.steering)]);
-    truck.steering_fraction = fraction;
-    if !carry {
-        return;
-    }
-    for (button, delta) in [
-        (BUTTON_RIGHT, DIRECTION_STEP.wrapping_neg()),
-        (BUTTON_R, SHOULDER_STEP.wrapping_neg()),
-        (BUTTON_LEFT, DIRECTION_STEP),
-        (BUTTON_L, SHOULDER_STEP),
-    ] {
-        if truck.controller.0 & button != 0 {
-            truck.heading = truck.heading.wrapping_add(delta) & HEADING_MASK;
-        }
-    }
+    let input = powertrain::PowertrainInput::from(&*truck);
+    let mut state = powertrain::PowertrainState::from(&*truck);
+    state.steer(&input, tables);
+    state.commit_all(truck);
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EffectSprite {
@@ -151,77 +136,19 @@ pub enum MotionEffect {
     ContactSprite(EffectSprite),
 }
 pub fn use_nitro(truck: &mut Truck, prepared: bool, active_humans: u8) -> Vec<MotionEffect> {
-    use crate::controls::BUTTON_Y;
-    const CURRENT_PRESS: u8 = 0x80;
-    const PREVIOUS_PRESS: u8 = 0x40;
-    if prepared {
-        return Vec::new();
-    }
-    let held = truck.controller.0 & BUTTON_Y != 0;
-    truck.nitro_button_history =
-        (truck.nitro_button_history >> 1) | if held { CURRENT_PRESS } else { 0 };
-    if truck.nitro_button_history & (CURRENT_PRESS | PREVIOUS_PRESS) != CURRENT_PRESS
-        || !truck.nitro.consume()
-    {
-        return Vec::new();
-    }
-    set_low(&mut truck.speed, NITRO_SPEED);
-    let mut effects = Vec::new();
-    if truck.screen_x <= u16::from(u8::MAX) {
-        truck.nitro_animation = 1;
-        effects.push(MotionEffect::NitroSprite(EffectSprite {
-            x: truck.screen_x as u8,
-            y: truck.screen_y,
-        }));
-    }
-    if active_humans != 0 {
-        effects.push(MotionEffect::Sound(NITRO_SOUND_COMMAND));
-    }
+    let input = powertrain::PowertrainInput::from(&*truck);
+    let mut state = powertrain::PowertrainState::from(&*truck);
+    let effects = state.use_nitro(&input, prepared, active_humans);
+    state.commit_all(truck);
     effects
 }
 /// Accumulation occurs on every call, including no throttle/airborne calls.
 /// Steering and nitro are separate owner operations run before this function.
 pub fn accelerate(truck: &mut Truck, tables: &MotionTables, human: bool, animation: u8) {
-    use crate::controls::BUTTON_B;
-    const ZERO_UPGRADE_COMPUTER_LIMIT: usize = 8;
-    let accumulated = truck
-        .acceleration_fraction
-        .wrapping_add(tables.acceleration_steps[usize::from(truck.upgrades.acceleration)]);
-    truck.acceleration_fraction = u16::from(accumulated as u8);
-    let step = (accumulated >> u8::BITS) as u8;
-    let old = truck.speed as u8;
-    let new = if truck.controller.0 & BUTTON_B == 0 || truck.contact_marker == 0 {
-        match (old as i8).cmp(&0) {
-            std::cmp::Ordering::Less => old.wrapping_add(1),
-            std::cmp::Ordering::Greater => old - 1,
-            std::cmp::Ordering::Equal => old,
-        }
-    } else if (old as i8) < 0 {
-        old.wrapping_add(step)
-    } else {
-        let selector = if truck.upgrades.speed == 0 && !human {
-            ZERO_UPGRADE_COMPUTER_LIMIT
-        } else {
-            usize::from(truck.upgrades.speed)
-        };
-        let limit = tables.speed_limits[selector];
-        if old < limit {
-            let (candidate, overflow) = (old as i8).overflowing_add(step as i8);
-            if overflow {
-                return;
-            }
-            if (candidate as u8) < limit {
-                set_low(&mut truck.speed, candidate as u8);
-                return;
-            }
-        }
-        if animation & 1 == 0 {
-            old
-        } else {
-            old.wrapping_sub(1)
-        }
-    };
-    set_low(&mut truck.speed, new);
+    let input = powertrain::PowertrainInput::from(&*truck);
+    let mut state = powertrain::PowertrainState::from(&*truck);
+    state.accelerate(&input, tables, human, animation);
+    state.commit_all(truck);
 }
 pub fn update_powertrain(
     truck: &mut Truck,
@@ -231,10 +158,9 @@ pub fn update_powertrain(
     prepared: bool,
     animation: u8,
 ) -> Vec<MotionEffect> {
-    steer(truck, tables);
-    let effects = use_nitro(truck, prepared, active_humans);
-    accelerate(truck, tables, human, animation);
-    effects
+    let outcome = powertrain::propose(truck, tables, human, active_humans, prepared, animation);
+    outcome.state.commit_all(truck);
+    outcome.effects
 }
 pub fn integrate_position(
     world: [u16; 2],
@@ -552,37 +478,30 @@ pub fn update_trucks(
     for slot in 0..TRUCKS {
         let human = environment.active_humans & (1 << slot) != 0;
         frame.phases.push(MotionPhase::Powertrain(slot));
-        // Powertrain's working speed/heading must not replace the committed
-        // values used by proposal rejection and pair-distance classification.
-        let mut powertrain = trucks[slot].clone();
-        frame.effects.extend(
-            update_powertrain(
-                &mut powertrain,
-                environment.tables,
-                human,
-                environment.active_humans,
-                environment.prepared,
-                environment.animation,
-            )
-            .into_iter()
-            .map(|effect| (slot, effect)),
+        // Retained powertrain outputs commit now. Proposed speed/heading stay
+        // separate until terrain rejection and sequential pair contacts finish.
+        let outcome = powertrain::propose(
+            &trucks[slot],
+            environment.tables,
+            human,
+            environment.active_humans,
+            environment.prepared,
+            environment.animation,
         );
-        let committed = &mut trucks[slot];
-        committed.steering_fraction = powertrain.steering_fraction;
-        committed.acceleration_fraction = powertrain.acceleration_fraction;
-        committed.nitro_button_history = powertrain.nitro_button_history;
-        committed.nitro = powertrain.nitro;
-        committed.nitro_animation = powertrain.nitro_animation;
+        outcome.state.commit_retained(&mut trucks[slot]);
+        frame
+            .effects
+            .extend(outcome.effects.into_iter().map(|effect| (slot, effect)));
         frame.phases.push(MotionPhase::Displacement(slot));
         let mut working = WorkingMotion {
             world: integrate_position(
-                powertrain.world,
-                powertrain.heading,
-                powertrain.speed,
+                trucks[slot].world,
+                outcome.state.heading,
+                outcome.state.speed,
                 environment.tables,
             ),
-            speed: powertrain.speed,
-            heading: powertrain.heading,
+            speed: outcome.state.speed,
+            heading: outcome.state.heading,
         };
         frame.phases.push(MotionPhase::SampleTerrain(slot));
         let heights = std::array::from_fn(|index| {
@@ -994,6 +913,37 @@ mod tests {
                 (248, expected, 128)
             );
         }
+    }
+    #[test]
+    fn iteration_three_powertrain_retained_fields_and_proposal_widths_are_explicit() {
+        let mut t = truck();
+        t.speed = 0xab07;
+        t.heading = 0xcd20;
+        t.acceleration_fraction = 0x12ff;
+        t.steering_fraction = 255;
+        t.nitro_button_history = 1;
+        t.nitro = crate::trucks::nitro::NitroStock::new(1);
+        t.controller = ControllerWord(BUTTON_Y | BUTTON_RIGHT);
+        let mut expected = t.clone();
+        // Source steering masks the heading word only on a turn; boost and drag
+        // preserve speed's high byte. Acceleration always retains just its low
+        // fraction, even without throttle. No wheel/contact/projection is written.
+        expected.heading = 0x18;
+        expected.speed = 0xab7b;
+        expected.acceleration_fraction = 0x7f;
+        expected.steering_fraction = 55;
+        expected.nitro_button_history = 0x80;
+        expected.nitro = crate::trucks::nitro::NitroStock::new(0);
+        expected.nitro_animation = 1;
+        let effects = update_powertrain(&mut t, &tables(), true, 1, false, 0);
+        assert_eq!(t, expected);
+        assert_eq!(
+            effects,
+            [
+                MotionEffect::NitroSprite(EffectSprite { x: 100, y: 90 }),
+                MotionEffect::Sound(NITRO_SOUND_COMMAND),
+            ]
+        );
     }
     #[test]
     fn prepared_powertrain_still_steers_and_accumulates_but_does_not_latch_nitro() {

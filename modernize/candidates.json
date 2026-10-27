@@ -1069,6 +1069,7 @@
     "uninvestigated_major_subsystems": []
   },
   "outcomes": {
-    "M1": "retained"
+    "M1": "retained",
+    "R2": "retained"
   }
 }

@@ -5,7 +5,7 @@
   "iteration": 3,
   "selection_status": "selected",
   "pilot_started": true,
-  "active_candidate": "R2",
+  "active_candidate": "M5",
   "baseline": "modernize/baseline.json",
   "starting_checkpoint": "modernize/iteration-003-preparation.json",
   "previous_iteration": "modernize/iterations/002/status.json",
@@ -23,8 +23,8 @@
   ],
   "changes": "modernize/changes.json",
   "changes_note": "Preserved historical outcomes; no iteration3 implementation until selection.",
-  "next_action": "M1 validated and retained; commit M1, then establish R2 powertrain proposal contracts against this checkpoint.",
-  "validation_status": "M1 PASS:638 library/optimized tests, full desktop/web gates, natural original pickup contract and exact starting-build state/frame/PCM comparisons.",
+  "next_action": "Commit validated R2, then establish M5 native-pose asset/save/presentation contracts against retained R2 checkpoint.",
+  "validation_status": "M1 and R2 retained. R2 passes639 library/optimized tests and all desktop/web gates, fresh original inventory/contact and exact driving/contact/hazard state/frame/PCM comparisons.",
   "menu_revision": 3,
   "investigation": "Complete bounded major-subsystem survey recorded:16 inspected areas,7 modernization and2 refactoring candidates; specific deferrals explain the1 modernization shortfall.",
   "execution_order": [
@@ -40,7 +40,7 @@
   ],
   "outcomes": {
     "M1": "retained",
-    "R2": "pending",
+    "R2": "retained",
     "M5": "pending",
     "R1": "pending",
     "M6": "pending",
@@ -48,5 +48,9 @@
     "M2": "pending",
     "M3": "pending",
     "M4": "pending"
-  }
+  },
+  "implementation_commits": {
+    "M1": "8f837ee"
+  },
+  "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged."
 }

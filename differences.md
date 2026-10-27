@@ -41,3 +41,10 @@ loading crosses different source NMIs. Exact starting-build state/frame/PCM
 comparisons use the same native recipe, without editing game state or bypassing
 checkpoint identity guards. This does not establish whole-game or physical
 console fidelity.
+
+Iteration3 R2 is structural refactoring: powertrain inputs, proposed speed/heading
+and immediate retained outputs are explicit. It preserves the existing motion
+model, fixed-width arithmetic and sequential collision visibility; no new physics
+or source representation conversion is claimed. The collision transaction clones
+remain responsible for atomic failure and are separate from the removed whole-
+Truck powertrain clone.

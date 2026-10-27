@@ -305,3 +305,22 @@ This list records independent reviewed source ranges, not ledger disposition.
 ## Stage 4 composition interface enrichment
 
 The pre-objects update_trucks contract accepted neither persistent contact-animation state nor ROM bearing data, so it could not execute required special-surface/pair effects. Stage4 enriches it with a borrowed actual contact array and immutable ContactTables, returning FleetFrame with phases, sprite/audio effects, shadows and pair visits. Existing phase/state expectations are unchanged; the synthetic test now supplies empty contact state and locally loaded original bearings. The implementation runs real terrain, objects::special_surface and contact::service_contacts before each sequential commit, preserving old committed speed/world while powertrain mutates its proposal.
+
+## Iteration3 R2 — explicit powertrain proposal and retained outputs
+
+The source order/width contracts above are unchanged. Actual steering, nitro and
+acceleration rules now live on a compact PowertrainState with immutable inputs
+in motion/powertrain.rs. The fleet consumes a PowertrainOutcome, applies only
+its five retained stock/history/fraction/animation outputs, and carries proposed
+speed/heading through displacement, terrain and contact to the existing commit.
+The complete retained result is destructured explicitly, so adding a powertrain
+output cannot silently disappear from a handwritten fleet reconciliation list.
+Wheels, world/projection and collision state are not copied into that proposal.
+Isolated domain entry points retain their existing immediate-commit behavior.
+
+The preimplementation high-byte/retained-field regression was first passed on
+completed M1. Existing steering, prepared/nitro, displacement, blocked-response,
+current-committed-versus-working contact and sequential fleet contracts remain
+unchanged. This is refactoring of the same game model, not modernization of the
+physics. Per-target checks and natural comparison evidence are recorded in
+modernize/changes.json under iteration3/R2.
