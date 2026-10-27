@@ -1,0 +1,5 @@
+# Native port
+
+Port this entire archived game through the fixed five-stage subagent pipeline in workflow.md: skeleton, behavior planning, behavior contract, game implementation, then QA. Act as coordinator and execute the stages sequentially. The behavior-contract stage starts one worker subagent per behavior area to independently trace source and write unit tests before game implementation. Read prompts/common.md and each stage prompt listed in workflow.md. Keep architecture.md, behaviors.md and progress.md current. Final QA runs only a short smoke test and initial exact-frame comparisons, fixing failures in place without restarting. Finish BUILDING.md and the implementation/QA handoffs; stop when both audits pass.
+
+On resume: Preserve work; do not reinitialize. Read architecture.md, behaviors.md, progress.md, ledger.json, uncertainties.json, differences.md, library-changes.md, research/current.json if present, debug/acceptance.json, debug/plan.json and debug/qa.json. Resume the active stage and blocking check before advancing; preserve valid QA results.

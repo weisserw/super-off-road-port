@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "status": "complete",
+  "plan_sha256": "8613e600cacf2426f8a5b0de41e654440afd2295283bc39b16454b97b1807d7f",
+  "passes": [
+    {
+      "number": 1,
+      "status": "passed",
+      "checks": [
+        {
+          "id": "initial-native-smoke",
+          "status": "passed",
+          "build": "c5a985da6cb5214f7ff11d4321cdd535d75c9e544f7549800ca58926e85fea2b",
+          "evidence": [
+            "debug/artifacts/smoke-run-003/initial-native-smoke/result.json",
+            "debug/artifacts/smoke-run-003/initial-native-smoke/review.json"
+          ]
+        },
+        {
+          "id": "initial-original-sanity",
+          "status": "passed",
+          "build": "c5a985da6cb5214f7ff11d4321cdd535d75c9e544f7549800ca58926e85fea2b",
+          "evidence": [
+            "debug/artifacts/sanity-run-007/initial-original-sanity/result.json",
+            "debug/artifacts/sanity-run-007/initial-original-sanity/review.json",
+            "debug/artifacts/ready-checkpoint-current/validation.json"
+          ]
+        }
+      ]
+    }
+  ],
+  "blockers": [],
+  "report": "debug/report.md",
+  "history": "debug/qa-stage5-intermediate.json",
+  "scope": "One bounded initial smoke/comparison pass; no whole-game traversal"
+}

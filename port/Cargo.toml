@@ -1,0 +1,24 @@
+[package]
+name = "super-off-road-port"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+
+[workspace]
+
+[features]
+default = []
+desktop = ["romatlas-port/desktop"]
+web = ["dep:wasm-bindgen"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+romatlas-port = { path = "/root/romatlas/crates/romatlas-port", features = ["snapshots"] }
+anyhow = "1.0"
+serde_json = "1.0"
+sha2 = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+getrandom = { version = "=0.2.17", features = ["std", "js"] }
+wasm-bindgen = { version = "=0.2.129", optional = true }

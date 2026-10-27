@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "status": "passed",
+  "enabled": true,
+  "reason": "Required initial original-fidelity sanity separate from native gameplay",
+  "manifest": "debug/sanity.json",
+  "evidence": [
+    "debug/artifacts/sanity-run-007/initial-original-sanity/result.json",
+    "debug/artifacts/sanity-run-007/initial-original-sanity/review.json"
+  ],
+  "preserved_attempts": [
+    "debug/artifacts/sanity-run-001/result.json",
+    "debug/artifacts/sanity-run-002/result.json",
+    "debug/artifacts/sanity-run-003/result.json",
+    "debug/artifacts/sanity-run-004/result.json",
+    "debug/artifacts/sanity-run-005/result.json",
+    "debug/artifacts/sanity-run-006/result.json"
+  ],
+  "scope": "Six exact selected frames plus30frame initial audio comparison; one bounded pass, repairs in place."
+}

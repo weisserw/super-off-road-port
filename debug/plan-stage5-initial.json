@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "revision": "initial-bounded-stage5",
+  "status": "ready",
+  "areas": [
+    "startup-frontend",
+    "initial-race"
+  ],
+  "mechanics": [
+    "short-native-controls",
+    "initial-render-scroll-animation-audio"
+  ],
+  "transitions": [
+    "start-name-shop-race"
+  ],
+  "checks": [
+    {
+      "id": "initial-native-smoke",
+      "covers": [
+        "area:startup-frontend",
+        "area:initial-race",
+        "mechanic:short-native-controls",
+        "transition:start-name-shop-race"
+      ],
+      "aspects": [
+        "behavior",
+        "graphics",
+        "sound"
+      ],
+      "expectation": "Cold startup is fault-free; natural Start/join/name/shop inputs reach initial race; a bounded throttle/steer/nitro interaction advances actors while rendering/audio remain inspectable. No whole-game coverage claimed.",
+      "setup": "Matching original ROM/default assets, deterministic reset, all inputs released; follow retained natural input recipe and validate each scene.",
+      "scenario": "debug/scenarios/initial_smoke.py",
+      "source": [
+        "reference/source/game.asm:initialize_frontend_and_attract",
+        "reference/source/game.asm:begin_player_selection",
+        "reference/source/game.asm:prepare_player_shop_frontend",
+        "reference/source/game.asm:run_race_frame"
+      ]
+    },
+    {
+      "id": "initial-original-sanity",
+      "covers": [
+        "area:startup-frontend",
+        "area:initial-race",
+        "mechanic:initial-render-scroll-animation-audio"
+      ],
+      "aspects": [
+        "graphics",
+        "behavior",
+        "sound"
+      ],
+      "expectation": "Selected meaningful initial frontend and race frames match the original exactly after documented source-state/NMI alignment; scrolling/animation and audible sequencing agree within independently documented DSP interpolation policy. Captures require review.",
+      "setup": "Separate original/native deterministic cold sessions with recorded complete inputs and validated semantic starting states; selected frames only.",
+      "scenario": "debug/scenarios/initial_sanity.py",
+      "source": [
+        "reference/source/game.asm:service_nmi_video_and_input",
+        "reference/source/game.asm:animate_scrolling_window",
+        "reference/source/game.asm:run_race_frame",
+        "reference/source/game.asm:spc_sequence_command_handlers"
+      ]
+    }
+  ]
+}

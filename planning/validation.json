@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "stage": "behavior_planning",
+  "regions": 1527,
+  "units": 1408,
+  "areas": 16,
+  "source_entry_line_links": "in bounds",
+  "code_changed": false,
+  "behavior_contracts": "pending, not compiled/run",
+  "note": "Ownership is navigation, not source tracing or implementation proof."
+}

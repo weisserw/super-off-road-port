@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "status": "in_progress",
+  "plan_sha256": "8da0e10d1eaffa27115868801d76cd267e84886b4f803edc9bc8e954033cd7fd",
+  "passes": [
+    {
+      "number": 1,
+      "status": "in_progress",
+      "checks": [
+        {
+          "id": "initial-native-smoke",
+          "status": "passed",
+          "build": "e05c259b64e7c7ef1d89e1fde931c48736b6da7df8dfd09f9be97f7d31f31a08",
+          "evidence": [
+            "debug/artifacts/smoke-run-001/initial-native-smoke/result.json",
+            "debug/artifacts/smoke-run-001/initial-native-smoke/review.json"
+          ],
+          "validity": "Subsequent frontend highscore secondpage fix does not affect the zero-scroll Name/Shop route or32x32 race under test; selected captures and behavioral inputs preserved. Final affected recheck planned after nativebuild."
+        },
+        {
+          "id": "initial-original-sanity",
+          "status": "failed",
+          "build": "e05c259b64e7c7ef1d89e1fde931c48736b6da7df8dfd09f9be97f7d31f31a08",
+          "evidence": [
+            "debug/artifacts/sanity-run-001/initial-original-sanity/result.json"
+          ],
+          "failure": "Highscore0132 extra text due missing BG3SC4A vertical size; licensed/software exact frames passed. Repair active."
+        }
+      ]
+    }
+  ],
+  "blockers": [
+    "initial-original-sanity: BG3 map geometry repair/recheck, initial ready animation/sprite alignment and original audio comparison pending"
+  ],
+  "report": ""
+}

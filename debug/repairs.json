@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "pass": 1,
+  "scope": "Repairs within same initial bounded QA pass",
+  "repairs": [
+    {
+      "id": "visible-origin",
+      "evidence": "debug/artifacts/sanity-run-001",
+      "observed": "Licensed/software initial row mismatch",
+      "source_reason": "SNES visible BG scanline1; OAMY0 and HDMA first entry have independent visible-row origins",
+      "affected": "presentation/mod.rs; source-backed BG/OAM/HDMA row contracts"
+    },
+    {
+      "id": "bg3-size",
+      "evidence": "debug/artifacts/sanity-run-001",
+      "observed": "highscore0132:5612 pixels extra top text",
+      "source_reason": "BG3SC4A selects32x64; retain map geometry and second page instead of32x32 wrap",
+      "affected": "frontend/attract.rs; presentation Layer size flags; vertical second-map contract"
+    },
+    {
+      "id": "rng-policy",
+      "evidence": "debug/artifacts/sanity-run-004",
+      "observed": "grid:71 pickup pixels absent",
+      "source_reason": "Boot leaves history unseeded; global deterministic observed reference zero baseline replaces prior invented nonzero seed, physical cold state remains unknown",
+      "affected": "config.rs; runtime.rs; uncertainties/differences retain previous policy"
+    },
+    {
+      "id": "prepared-parity",
+      "evidence": "debug/artifacts/sanity-run-005",
+      "observed": "grid:189 bag/nitro pixels",
+      "source_reason": "Source spawn uses animation parity before ready fade resets counter; native atomic loading differs from hardware NMI latency. One released natural setup tick validates source/native pickup2; no gameplay code adjustment",
+      "affected": "initial_adapter.py; originalWRAM06CE/nativepickup preconditions"
+    },
+    {
+      "id": "countdown-alias",
+      "evidence": "debug/artifacts/sanity-run-006",
+      "observed": "countdown13/4:21 banner pixels",
+      "source_reason": "Source $077D word shared by draw and banner service; independent delay $077F. Canonical Progress word synchronized with transition view at source boundaries; snapshot invariant",
+      "affected": "game/scheduler.rs; snapshots.rs; focused source-order contract1/1"
+    }
+  ],
+  "infrastructure": [
+    {
+      "attempt": "final check session42515",
+      "outcome": "SIGTERM143 empty log; no test assertion; rerun session60591 after process completion confirmed"
+    },
+    {
+      "attempt": "earlier long build/probe143",
+      "outcome": "Retained superseded attempts and artifacts; no cause inferred"
+    }
+  ]
+}

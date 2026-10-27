@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "adapter": "scenarios/initial_sanity_adapter.py",
+  "original_fidelity_sanity": {
+    "enabled": true,
+    "reason": "Required separate initial original rendering, scrolling, animation and audio sanity for faithful native port"
+  },
+  "tests": [
+    {
+      "id": "initial-original-sanity",
+      "kind": "original-fidelity-sanity",
+      "expectations": {
+        "original-fidelity": {
+          "frames": "Exact full 256x224 RGB pixels for original full-bright licensed/software screens and highscore scroll0132/0142; visible source scanline1 origin, source phase/scroll alignment not physical reset-frame equality. Also exact initial race grid and countdown animation selected at source ready/counter states0/6 and13/4 from natural original route snapshots.",
+          "audio": "Initial music sequencing and audible output reviewed against original; native linear DSP interpolation is the documented limited difference, not a waiver for missing/wrong music."
+        }
+      },
+      "reuse_frontend": "debug/artifacts/sanity-run-005/initial-original-sanity",
+      "reuse_build_change_reason": "Only race-window shared $077D ownership changed after sanity-run-005. Frontend source/rendering unchanged; retained four full-frame pairs remain valid. Race frames and smoke regenerated.",
+      "reuse_producer_sha256": {
+        "port/src/presentation/mod.rs": "2fa563fb6e78fe672cbe25f93d47c0f275dbd9530dd5d07342fb182d962c739b",
+        "port/src/frontend/attract.rs": "77f981eb748c5b5c5fdde1e114193dc00c8390aeba73831fd6f9be25bf6b9c5e"
+      }
+    }
+  ],
+  "suites": {
+    "initial": [
+      "initial-original-sanity"
+    ]
+  }
+}

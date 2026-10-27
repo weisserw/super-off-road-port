@@ -1,0 +1,8 @@
+/reference/
+/research/
+/review/toolkit-before/
+/checks/
+/port/target/
+/web-dist/
+/debug/artifacts/
+__pycache__/

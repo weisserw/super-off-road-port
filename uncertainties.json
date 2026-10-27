@@ -1,0 +1,880 @@
+{
+  "version": 1,
+  "rom_sha256": "24b687f95bb9737d223738f13c00aeaa7d697fa9e2fd50597b81d0cfa2160daa",
+  "entries": [
+    {
+      "id": "source-unknown-0001fb",
+      "offset": 507,
+      "length": 5,
+      "source_region_ids": [
+        "unknown-0001fb"
+      ],
+      "impact": "none",
+      "status": "excluded",
+      "summary": "Race trace inspected bytes01 02 04 00 00 after unconditional JMP and before separate descriptor entry. No established branch/call/data consumer; classification and implementation assessment remain pending, no padding/exclusion claim. Final native accounting: preserve Unknown classification and exact ID/range. The established preceding unconditional transfer/return and independently rooted following routine bound this interstice; source direct-call/branch/vector review establishes no additional operation for the supported game. Native typed neighboring routines replace their returns/transfers; no executable behavior is assigned to these bytes. This is a consumer-specific no-impact assessment, not a padding classification or universal machine reachability proof.",
+      "consumers": [
+        "Native neighboring typed routines; no established entry into this interstice."
+      ],
+      "ledger_ids": [
+        "unknown-0001fb"
+      ],
+      "evidence": [
+        "reference/source/game.asm:333",
+        "port/src/race.trace.md: Unclassified gap and limits",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Race trace inspected bytes01 02 04 00 00 after unconditional JMP and before separate descriptor entry. No established branch/call/data consumer; classification and implementation assessment remain pending, no padding/exclusion claim.",
+          "validation_limits": "Independent static source/ROM review only; no reachability proof or original-runtime QA. No native consumer invented."
+        }
+      ]
+    },
+    {
+      "id": "source-unknown-0019c0",
+      "offset": 6592,
+      "length": 2,
+      "source_region_ids": [
+        "unknown-0019c0"
+      ],
+      "impact": "none",
+      "status": "excluded",
+      "summary": "Runtime contract trace found bytes 01 FF between OAM helper PLP/RTS and separately called RNG; no established source consumer. Retain unknown classification; no native behavior invented. Final native accounting: preserve Unknown classification and exact ID/range. The established preceding unconditional transfer/return and independently rooted following routine bound this interstice; source direct-call/branch/vector review establishes no additional operation for the supported game. Native typed neighboring routines replace their returns/transfers; no executable behavior is assigned to these bytes. This is a consumer-specific no-impact assessment, not a padding classification or universal machine reachability proof.",
+      "consumers": [
+        "Native neighboring typed routines; no established entry into this interstice."
+      ],
+      "ledger_ids": [
+        "unknown-0019c0"
+      ],
+      "evidence": [
+        "port/src/runtime.trace.md: Metadata, padding, and unknown entry assessment",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Runtime contract trace found bytes 01 FF between OAM helper PLP/RTS and separately called RNG; no established source consumer. Retain unknown classification; no native behavior invented.",
+          "validation_limits": "Static original-source and local ROM inspection only; no reachability proof or behavior exclusion. Implementation consumer assessment remains pending."
+        }
+      ]
+    },
+    {
+      "id": "source-unknown-070149",
+      "offset": 459081,
+      "length": 1,
+      "source_region_ids": [
+        "unknown-070149"
+      ],
+      "impact": "none",
+      "status": "excluded",
+      "summary": "Audio independent source/ROM trace reads isolated6F RET at physical070149, between established return and separately entered routine. Inspected direct branches/calls,34 command vectors and5 envelope vectors establish no entry here. Byte remains in immutable uploaded data; preserving byte is not implementation, and no exclusion/reclassification is declared. Final native accounting: preserve Unknown classification and exact ID/range. The established preceding unconditional transfer/return and independently rooted following routine bound this interstice; source direct-call/branch/vector review establishes no additional operation for the supported game. Native typed neighboring routines replace their returns/transfers; no executable behavior is assigned to these bytes. This is a consumer-specific no-impact assessment, not a padding classification or universal machine reachability proof.",
+      "consumers": [
+        "Native neighboring typed routines; no established entry into this interstice."
+      ],
+      "ledger_ids": [
+        "unknown-070149"
+      ],
+      "evidence": [
+        "reference/source/game.asm",
+        "port/src/sound/audio.trace.md: Unknowns, consumer limits and preserved decisions",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Audio independent source/ROM trace reads isolated6F RET at physical070149, between established return and separately entered routine. Inspected direct branches/calls,34 command vectors and5 envelope vectors establish no entry here. Byte remains in immutable uploaded data; preserving byte is not implementation, and no exclusion/reclassification is declared.",
+          "validation_limits": "Static source/data review and pending executable contracts only, no complete reachability proof or original runtime/device observation. Implementation impact assessment may use these facts without full disassembly prerequisite."
+        }
+      ]
+    },
+    {
+      "id": "source-unknown-0704ff",
+      "offset": 460031,
+      "length": 1,
+      "source_region_ids": [
+        "unknown-0704ff"
+      ],
+      "impact": "none",
+      "status": "excluded",
+      "summary": "Audio independent source/ROM trace reads isolated6F RET at physical0704FF, between established return and separately entered routine. Inspected direct branches/calls,34 command vectors and5 envelope vectors establish no entry here. Byte remains in immutable uploaded data; preserving byte is not implementation, and no exclusion/reclassification is declared. Final native accounting: preserve Unknown classification and exact ID/range. The established preceding unconditional transfer/return and independently rooted following routine bound this interstice; source direct-call/branch/vector review establishes no additional operation for the supported game. Native typed neighboring routines replace their returns/transfers; no executable behavior is assigned to these bytes. This is a consumer-specific no-impact assessment, not a padding classification or universal machine reachability proof.",
+      "consumers": [
+        "Native neighboring typed routines; no established entry into this interstice."
+      ],
+      "ledger_ids": [
+        "unknown-0704ff"
+      ],
+      "evidence": [
+        "reference/source/game.asm",
+        "port/src/sound/audio.trace.md: Unknowns, consumer limits and preserved decisions",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Audio independent source/ROM trace reads isolated6F RET at physical0704FF, between established return and separately entered routine. Inspected direct branches/calls,34 command vectors and5 envelope vectors establish no entry here. Byte remains in immutable uploaded data; preserving byte is not implementation, and no exclusion/reclassification is declared.",
+          "validation_limits": "Static source/data review and pending executable contracts only, no complete reachability proof or original runtime/device observation. Implementation impact assessment may use these facts without full disassembly prerequisite."
+        }
+      ]
+    },
+    {
+      "id": "runtime-power-on-rng-seed",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Player-facing cold loading initializes all five RNG history bytes from OS/browser entropy, rejecting the absorbing state. Source boot establishes no seed; warm entry preserves current history. Explicit seeded diagnostic constructors and headless --rng-seed preserve reproducible comparisons. Reset/snapshots retain the initial sampled history separately from the advancing history.",
+      "consumers": [
+        "port/src/runtime.rs",
+        "port/src/game/state.rs"
+      ],
+      "ledger_ids": [
+        "region-1",
+        "region-174"
+      ],
+      "evidence": [
+        "port/src/runtime.trace.md: RNG",
+        "differences.md: native policies and validation limits",
+        "debug/artifacts/sanity-run-004/initial-original-sanity/initial-grid-alignment.json"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Original physical power-on RAM remains unknown. Historical Stage5 exact captures used an explicit zero baseline; they do not justify disabling random gameplay. Native and browser use getrandom backends; physical browser-device testing remains unperformed.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Boot/frontend paths establish no explicit RNG seed. Native cold reset requires deterministic initial history; seed selection remains pending implementation. A fixed nonzero history is a candidate assumption, not an original source fact; zero-filled history locks the traced feedback transform at zero.",
+          "validation_limits": "Alternatives: zero-filled startup, deterministic nonzero fixture, or bounded source-question observation of supported power-on state. Contract tests prove only source transform from explicit histories; no arbitrary seed expectation or runtime observation is asserted."
+        },
+        {
+          "stage": "Stage4",
+          "summary": "Native cold reset initializes runtime::COLD_RANDOM_HISTORY=[12,34,56,78,9B] hex. This is an explicit deterministic power-on assumption, not an original seed claim. Boot helper retains supplied history; zero feedback semantics remain contracted. Game reset reapplies the same policy.",
+          "reason_superseded": "Initial original natural grid capture differs only by pickup selected from zero WRAM history; deterministic cold baseline now zero, source boot remains unseeded."
+        },
+        {
+          "summary": "Native cold reset uses config::COLD_RANDOM_HISTORY=[0;5], matching the deterministic original reference zero-WRAM baseline. This is an explicit global native power-on policy, not a physical hardware seed fact. Warm frontend entry retains history and the pure zero feedback transform remains source-exact.",
+          "validation_limits": "Physical power-on RAM remains unestablished; no source seed write is claimed. Stage4 nonzero policy is retained as superseded. Matching the reference baseline is used globally, without scenario-specific writes.",
+          "reason_superseded": "User identified that zero history disables RNG. Randomized player startup supersedes the deterministic comparison default."
+        }
+      ],
+      "offset": 0,
+      "length": 6643,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-1",
+        "region-174"
+      ]
+    },
+    {
+      "id": "terrain-window-boundary-state",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Reachable preceding terrain controls use explicit native zero power-on policy (config::UNCOPIED_TERRAIN_CONTROL); source neighbor reads short-circuit at the first opening. Physical-console untouched WRAM values remain unknown. Missing copied neighborhoods still reject.",
+      "consumers": [
+        "port/src/world/terrain.rs"
+      ],
+      "ledger_ids": [
+        "region-173",
+        "region-169",
+        "region-170",
+        "region-731"
+      ],
+      "evidence": [
+        "port/src/world/terrain.trace.md: Neighborhood decode and ROM-backed windows",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Terrain neighbor/height reads can address outside the established copied $16B1 terrain window through encoded long WRAM aliases. Reachability and contents there remain unresolved; native contracts validate supported windows and reject missing data rather than assert original zero/clamp behavior.",
+          "validation_limits": "Static original source and ROM review only. Supported interior synthetic contracts cover complete classifier; if actual source routes/probes reach unsupported bounds, follow initialization/read lifetime before selecting a native boundary policy. This is not a permission to drop required behavior."
+        },
+        {
+          "summary": "Native supported-window policy rejects a missing neighborhood instead of fabricating out-of-copy WRAM. Valid copied original windows use exact source interpolation/classification. Conditional source alias contents remain unknown and are not claimed as zero or clamp.",
+          "status": "resolved",
+          "reason": "Natural driven racing reproduced a needed preceding-WRAM read and stopped gameplay."
+        }
+      ],
+      "offset": 6031,
+      "length": 475,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-173",
+        "region-169",
+        "region-170",
+        "region-731"
+      ]
+    },
+    {
+      "id": "controls-word-helper-entry",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "The conditional signed word helper is fully implemented from decoded direction table words. Shared Game uses established frontend byte and race word sampling paths; no additional player mode is introduced. Natural entry remains unestablished.",
+      "consumers": [
+        "port/src/controls.rs"
+      ],
+      "ledger_ids": [
+        "region-1280"
+      ],
+      "evidence": [
+        "port/src/controls.trace.md: Direction selectors, widths and original expectations",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Conditional direction word helper has decoded native-width semantics and DB00/DP0000 table association, but natural entry/caller context unresolved. Implement supported domain semantics without inventing player-visible mode; absence of labelled JSR is not an exclusion proof.",
+          "validation_limits": "Static source/caller/ROM table review only. Executable contracts fix conditional result from supplied controller word and table; do not establish natural reachability or arbitrary DB/DP contexts."
+        }
+      ],
+      "offset": 5151,
+      "length": 25,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-1280"
+      ]
+    },
+    {
+      "id": "collision-conditional-current-entry",
+      "offset": 993,
+      "length": 40,
+      "source_region_ids": [
+        "region-1281"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "conditional_deflect_current implements the complete conditional width/angle/speed effect. Normal fleet contact orchestration follows established entries; an unestablished caller is not invented.",
+      "consumers": [
+        "port/src/trucks/contact.rs"
+      ],
+      "ledger_ids": [
+        "region-1281"
+      ],
+      "evidence": [
+        "reference/source/game.asm:713",
+        "port/src/trucks/contact.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Conditional deflect_current_truck_contact entry has no established natural incoming source branch/call. Contract preserves M8 binary DB00/DP0000 semantics without inventing runtime routing.",
+          "validation_limits": "Independent static instruction trace; natural caller/context unresolved. No emulator or QA claim."
+        }
+      ]
+    },
+    {
+      "id": "ai-all-human-parameter-tail",
+      "offset": 9693,
+      "length": 30,
+      "source_region_ids": [
+        "region-351",
+        "region-739",
+        "region-352",
+        "region-740",
+        "region-353"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "The all-human offsetF7 write is retained as RaceState.route_tail_byte and serialized/observed. All32 original route windows are30..126bytes, so none overwrites or reads this tail. A long added route copy overwrites the corresponding high byte; this is a native extension lifetime policy following the source copy order, not original reachability evidence.",
+      "consumers": [
+        "port/src/trucks/ai.rs",
+        "port/src/race.rs",
+        "port/src/game.rs"
+      ],
+      "ledger_ids": [
+        "region-351",
+        "region-739",
+        "region-352",
+        "region-740",
+        "region-353"
+      ],
+      "evidence": [
+        "reference/source/game.asm:8851",
+        "reference/source/game.asm:1014",
+        "port/src/trucks/ai.trace.md: Parameter setup and source cross-owner underflow",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "All-human parameter setup decrements byte X to FF then writes parameter+$FF, route-buffer tail offsetF7. All32 original route windows are30..126bytes, so byte remains outside supported reads, not overwritten by variable-length copy. Native SetupEffects reports unused tail value; long added route/source direct-call lifetime remains unresolved.",
+          "validation_limits": "Independent static source/ROM review. No emulator/QA; preserving unused tail does not authorize corrupting added route data or dropping an established future consumer."
+        }
+      ]
+    },
+    {
+      "id": "race-native-input-validation",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Transactional route/banner validation is implemented for native supported inputs. Human byte-index wrap and source control skipping remain exact. File-backed extensions require complete count+1 records and valid redirects without restricting original overlapping variable-length windows.",
+      "consumers": [
+        "port/src/race.rs",
+        "port/src/world/tracks.rs"
+      ],
+      "ledger_ids": [
+        "region-124",
+        "region-128",
+        "region-155",
+        "region-238"
+      ],
+      "evidence": [
+        "port/src/race.trace.md: Human route interpreter and single progress owner",
+        "port/src/race.trace.md: Banner word counters and source sprite staging",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Native missing/cyclic route and unsupported banner-selector checks are explicit transactional supported-input validation, not claims source rejects malformed memory. Source human byte index multiplies modulo256; conditional64\u21920 fixture retained. Added content must preserve supported source semantics without hanging host.",
+          "validation_limits": "Contracts compile/discover but pending implementation. Bounds policies apply unsupported native extension/restore states; not a basis to drop an established source consumer."
+        }
+      ],
+      "offset": 1739,
+      "length": 2323,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-124",
+        "region-128",
+        "region-155",
+        "region-238"
+      ]
+    },
+    {
+      "id": "objects-composite-inclusive-tail",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "composite_tail and service_composites implement the derived fifth record/count alias and fourth-frame change4\u21923. Valid four-array source lifetime is retained; unsupported conditional growth rejects missing data rather than inventing neighboring RAM.",
+      "consumers": [
+        "port/src/world/objects.rs"
+      ],
+      "ledger_ids": [
+        "region-259",
+        "region-790",
+        "region-427"
+      ],
+      "evidence": [
+        "reference/source/game.asm:16795",
+        "reference/source/game.asm:16913",
+        "reference/source/symbols.asm:657",
+        "port/src/world/objects.trace.md: Track-zero composites",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Track0 composite service inclusive count4 loop visits derived fifth record, whose reaction aliases count; on fourth-frame tick count becomes3, preserving all four real records. Native contract exposes derived first-field tail and count effect explicitly. Conditional count growth beyond supported four-array lifetime remains unresolved.",
+          "validation_limits": "Static independent source/ROM trace only; tests pending implementation. No natural count>4/extra reaction trigger established. Unsupported native states need explicit validation/consumer assessment, no RAM map or invented zero tail."
+        }
+      ],
+      "offset": 20302,
+      "length": 554,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-259",
+        "region-790",
+        "region-427"
+      ]
+    },
+    {
+      "id": "objects-conditional-pickup-state-eleven",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "The conditional state11 projection uses the adjacent initializer tileC208 and extra24CA. Natural spawn caps remain intact; no fabricated source entry is needed to implement the callable conditional behavior.",
+      "consumers": [
+        "port/src/world/objects.rs"
+      ],
+      "ledger_ids": [
+        "region-782",
+        "region-362",
+        "region-783",
+        "region-1448",
+        "region-364"
+      ],
+      "evidence": [
+        "reference/source/game.asm:15209",
+        "reference/source/game.asm:15435",
+        "port/src/world/objects.trace.md: Pickup service",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Direct award at already-capped type1 count4 gives state11 and primary tile C208 from adjacent initializer bytes plus extra tile24CA. Natural spawn rejects count>=4; preserve conditional consumer without inventing natural entry.",
+          "validation_limits": "Static source/ROM review; no original-runtime observation or natural state11 claim. Source count values beyond4 and malformed native state remain separately validated."
+        }
+      ],
+      "offset": 18032,
+      "length": 689,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-782",
+        "region-362",
+        "region-783",
+        "region-1448",
+        "region-364"
+      ]
+    },
+    {
+      "id": "rendering-conditional-diagnostics-and-animation-suffix",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Diagnostic hexadecimal staging is implemented as a conditional helper. Sourcealias0525=0519+12 establishes natural contact cursor24..30: Truck effect_cooldown is the single owner, cursor adapters compose that suffix and frame service advances exactly once. Earlier unresolved suffix assessment is preserved in superseded_summary.",
+      "consumers": [
+        "port/src/presentation/memory.rs",
+        "port/src/presentation/sprites.rs",
+        "port/src/race.rs"
+      ],
+      "ledger_ids": [
+        "region-926",
+        "region-964",
+        "region-965",
+        "region-1369",
+        "region-1370"
+      ],
+      "evidence": [
+        "reference/source/game.asm:4195",
+        "reference/source/game.asm:7169",
+        "reference/source/game.asm:2252",
+        "port/src/presentation/rendering.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_summary": "Hex diagnostics have unresolved natural entry/E/DB/DP; contracts preserve native conditional glyph effects without inventing player UI. Full31-cell paired contact animation has supported suffix24..30 but no natural writer selecting24. Preserve conditional branch/table capacities, no lack-of-execution exclusion.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Hex diagnostic natural entry/E/DB/DP remains unresolved. Animation suffix24..30 is naturally selected: truck_effect_cooldowns0525 aliases sprite_animation_cursors0519+12, and contact effect writes24. Shared race owner advances this cursor exactly once per frame.",
+          "validation_limits": "Source alias independently checked in Stage4; diagnostic entry remains pending. No QA claim."
+        }
+      ],
+      "offset": 2076,
+      "length": 5038,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-926",
+        "region-964",
+        "region-965",
+        "region-1369",
+        "region-1370"
+      ]
+    },
+    {
+      "id": "rendering-consumer-unresolved-data",
+      "impact": "data",
+      "status": "preserved",
+      "summary": "The bounded offset grid/zero runs/tileword-like block remain Data with original IDs and immutable resource bytes available through Assets. Established window directory selects later bases and established consumers have explicit bounds. No additional geometry/map behavior is assigned merely from the pattern; raw retention is data preservation only.",
+      "consumers": [
+        "port/src/assets.rs",
+        "port/src/resource_definitions.rs",
+        "port/src/presentation/transitions.rs"
+      ],
+      "ledger_ids": [
+        "region-1409",
+        "region-1451",
+        "region-1452",
+        "region-1453"
+      ],
+      "evidence": [
+        "reference/source/game.asm:7122",
+        "reference/source/game.asm:18651",
+        "reference/source/game.asm:19676",
+        "reference/source/game.asm:19749",
+        "port/src/presentation/rendering.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "8x8 offset grid1AFB..1B7B, generic zero runs2EB72..2EB78 and45300..45340, tileword-like46260..4629A have no established gameplay consumer. Retained raw resources do not claim native behavior; transitions must inspect neighboring window selector relation. No data excluded/classified padding by pattern.",
+          "validation_limits": "Consumer/implementation impact remains pending for stage4; not a disassembly completion prerequisite. No original-runtime experiment run."
+        }
+      ],
+      "offset": 6907,
+      "length": 280479,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-1409",
+        "region-1451",
+        "region-1452",
+        "region-1453"
+      ]
+    },
+    {
+      "id": "rendering-fixed-color-and-supported-input-bounds",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Native cold fixed color is zero by explicit power-on policy. COLDATA0 selects no components, so reset/race preserve the owner as source writes require. Checked text/maps/IDs reject malformed extensions; original supported data still follows source inclusive fills and rectangles.",
+      "consumers": [
+        "port/src/presentation/mod.rs",
+        "port/src/presentation/memory.rs"
+      ],
+      "ledger_ids": [
+        "region-6",
+        "region-347",
+        "region-25",
+        "region-132"
+      ],
+      "evidence": [
+        "reference/source/game.asm:7272",
+        "reference/source/game.asm:6846",
+        "https://problemkaputt.de/fullsnes.htm#snesppucolormath",
+        "port/src/presentation/rendering.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "COLDATA0 in reset/race init selects no components, preserving fixed color. Deterministic power-on fixed color default remains implementation assumption to document. Native malformed glyph/map/ID/cursor extensions reject atomically; source zero descriptor dimensions/invalid pointers are conditional unsupported memory behavior, not asserted source validation.",
+          "validation_limits": "Contracts pending implementation; original valid assets traced, initial hardware fixed color not measured. No fabricated source RAM values or claim of original malformed-data rejection."
+        }
+      ],
+      "offset": 1979,
+      "length": 15781,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-6",
+        "region-347",
+        "region-25",
+        "region-132"
+      ]
+    },
+    {
+      "id": "transitions-scheduling-and-native-input-validation",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Game scheduler resumes actual fade/window/pause/countdown operations at source NMI boundaries, transfers sampled input at the established point and preserves the ready word gate. Conditional counted waits remain implemented; busy-poll subframe edges are an explicit unmeasured difference.",
+      "consumers": [
+        "port/src/presentation/transitions.rs",
+        "port/src/game/scheduler.rs"
+      ],
+      "ledger_ids": [
+        "region-963",
+        "region-191",
+        "region-370",
+        "region-216"
+      ],
+      "evidence": [
+        "reference/source/game.asm:7040",
+        "reference/source/game.asm:12183",
+        "reference/source/game.asm:17499",
+        "reference/source/game.asm:17894",
+        "port/src/presentation/transitions.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Native resumable source waits preserve NMI boundaries and pause histories; exact busy-poll subframe input edges remain unmeasured. Ready audio gate reads active+shifted human mask WORD; names reflect real alias, not a CPU memory map. Conditional counted-wait index-width/natural entry unresolved. Original supported shapes/countdowns traced; malformed extension buffers/layout/maps/owners reject atomically rather than reproduce source invalid memory behavior.",
+          "validation_limits": "Contracts compiled/discovered but pending implementation, original runtime/QA not run. Unknown preceding shape-neighbor tilewords remain separate existing rendering uncertainty."
+        }
+      ],
+      "offset": 6767,
+      "length": 15482,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-963",
+        "region-191",
+        "region-370",
+        "region-216"
+      ]
+    },
+    {
+      "id": "names-cold-history-and-conditional-entry",
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Native cold policy initializes editor history/repeat to zero; warm page setup retains them and shared Select/B rotations remain exact. Page_limit supports established0/1; conditional inline heading helper remains implemented. Shared menu/pause history transfers one owner; unestablished I/O-selected owner is treated as released with retained_history_release event, an explicit native assumption.",
+      "consumers": [
+        "port/src/frontend/names.rs",
+        "port/src/game/state.rs",
+        "port/src/game/scheduler.rs"
+      ],
+      "ledger_ids": [
+        "region-38",
+        "region-42",
+        "region-43",
+        "region-44",
+        "region-46",
+        "region-1316"
+      ],
+      "evidence": [
+        "reference/source/game.asm:13543",
+        "reference/source/game.asm:13864",
+        "reference/source/game.asm:14007",
+        "port/src/frontend/names.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Name-page initialization resets cursor positions but not repeat/history bytes; warm retention and shared Select/B ROR effects are established. Exact initial cold history/repeat contents need explicit deterministic native policy from boot lifetime. Page limits beyond1 and inline driver-heading natural caller are unestablished; conditional semantics are contracted without adding UI or claiming exclusion. Native malformed asset rejection is a source-informed validation difference.",
+          "validation_limits": "All36 contracts compile/discover but fail expected pending stubs; no original-runtime QA or cold-device-state observation. Existing IDs/ranges unchanged."
+        }
+      ],
+      "offset": 13399,
+      "length": 2810,
+      "range_scope": "Bounding physical span of linked source regions for this semantic uncertainty; not a claim of one contiguous object or reclassification.",
+      "source_region_ids": [
+        "region-38",
+        "region-42",
+        "region-43",
+        "region-44",
+        "region-46",
+        "region-1316"
+      ]
+    },
+    {
+      "id": "economy-conditional-awards-and-highest-borrow",
+      "offset": 14056,
+      "length": 140,
+      "source_region_ids": [
+        "region-1314",
+        "region-1315",
+        "region-35"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "All award digit entries and adjacent wallet/selected-wallet borrow are implemented with source sign/width semantics. Actual Game routes pickup and rank awards into the sole Session wallets and drains pending awards once. Conditional negative totals are retained rather than clamped.",
+      "consumers": [
+        "port/src/frontend/shop.rs",
+        "port/src/frontend/results.rs"
+      ],
+      "ledger_ids": [
+        "region-1314",
+        "region-1315",
+        "region-35"
+      ],
+      "evidence": [
+        "reference/source/game.asm:12674",
+        "reference/source/game.asm:12699",
+        "reference/source/game.asm:12749",
+        "port/src/frontend/shop.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Digit4/5 award entries have no established natural caller. Highest normalization borrow decrements previous wallet digit5 or selected-wallet byte for slot0; valid affordable gameplay does not establish a negative-total entry. Contracts preserve exact conditional effect rather than clamp or create RAM map. Raw CMP N borrow begins8A, not80. Final source crosscheck corrected intuitive item order and displayed award units; superseded execution records retained.",
+          "validation_limits": "Independent source/ROM tracing and runnable pending contracts only. No behavior implementation, original runtime experiment or natural-reachability proof; stage4 must retain source-informed native policy and source preconditions."
+        }
+      ]
+    },
+    {
+      "id": "results-conditional-record-and-session-extension-policy",
+      "offset": 9876,
+      "length": 1480,
+      "source_region_ids": [
+        "region-389",
+        "region-300",
+        "region-749",
+        "region-309"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Source pending-record wrapping, >250 input bypass, DEC/DEC/BPL penalty and participation XOR are implemented. AddedRecords is separately keyed session-only native extension policy. Actual postrace owner performs settlement once and distinct loss upload/release NMI waits.",
+      "consumers": [
+        "port/src/frontend/results.rs",
+        "port/src/game/scheduler.rs"
+      ],
+      "ledger_ids": [
+        "region-389",
+        "region-300",
+        "region-749",
+        "region-309"
+      ],
+      "evidence": [
+        "reference/source/game.asm:9287",
+        "reference/source/game.asm:9461",
+        "reference/source/game.asm:9561",
+        "reference/source/game.asm:12953",
+        "port/src/frontend/results.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Record faster branch INC wraps pending byte, upgrade DEC/DEC/BPL has conditional large-byte results, participation XOR/page split preserves upper mask. Natural gameplay usually bounded; contracts preserve conditional source effects without asserting device reachability. Record>250 input-bypass and penalty wallet startercash alias are established by code/symbol arithmetic. AddedRecords is separate native session-only policy for added named tracks; original16 arrays remain bounded and sole SessionRecords owner.",
+          "validation_limits": "Source/ROM trace and runnable pending contracts only; no implementation or original runtime/device observation. Full Game integration/snapshots and named-content default record policy remain stage4 work. Original uncertainty IDs/ranges preserved."
+        }
+      ]
+    },
+    {
+      "id": "audio-song-zero-configuration",
+      "offset": 459312,
+      "length": 212,
+      "source_region_ids": [
+        "region-81"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Native load_song zero performs the documented silent-reset policy while preserving live envelope definitions. It does not fabricate mutable low-ARAM configuration bytes; following note/effect setup uses explicit initialized definitions. This remains an implementation assumption rather than confirmed original ARAM content.",
+      "consumers": [
+        "port/src/sound/sequencer.rs"
+      ],
+      "ledger_ids": [
+        "region-81"
+      ],
+      "evidence": [
+        "reference/source/game.asm",
+        "port/src/sound/audio.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "song0 decremented config indexFF reads pointer cells111F/113F (initial0100 below upload), which can change after live141-byte config overlap. All8 song0 streams stop80. Native silent reset may preserve live envelopes rather than fabricate low-ARAM bytes, provided following effect/voice setup initializes dependent state. This is an implementation assumption, not confirmed original ARAM content.",
+          "validation_limits": "Contract stage only. No native behavior implemented, original runtime comparisons or device testing. Assumptions must be reconciled in Stage4 and recorded in differences.md; no missing behavior excluded."
+        }
+      ]
+    },
+    {
+      "id": "audio-native-clock-and-synthesis",
+      "offset": 458756,
+      "length": 231,
+      "source_region_ids": [
+        "region-78",
+        "region-87"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "Native heartbeat scheduler and fast-flag service are deterministic and serializable; source264-sample updates retain command/voice order. Toolkit Mixer produces actual BRR/nativeDSP PCM and owns predictor/envelope/noise/echo/key state; Sound owns resampling. Linear interpolation, instruction overhead and hardware races remain known fidelity limits, not a bit-exact claim.",
+      "consumers": [
+        "port/src/sound/synthesis.rs",
+        "port/src/sound/host.rs",
+        "/root/romatlas/crates/romatlas-port/src/snes/audio.rs"
+      ],
+      "ledger_ids": [
+        "region-78",
+        "region-87"
+      ],
+      "evidence": [
+        "reference/source/game.asm",
+        "port/src/sound/audio.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "Native second heartbeat update schedules264 DSP samples (66timer ticks at8kHz), retaining source order while omitting instruction polling overhead. Fast flag08 throughput needs explicit deterministic policy. Toolkit linear interpolation/native DSP lacks cycle-exact Gaussian/key-on races/bus effects; do not claim hardware sample equivalence. All song/sequence rules remain required native implementations.",
+          "validation_limits": "Contract stage only. No native behavior implemented, original runtime comparisons or device testing. Assumptions must be reconciled in Stage4 and recorded in differences.md; no missing behavior excluded."
+        }
+      ]
+    },
+    {
+      "id": "audio-conditional-command-and-resource-bounds",
+      "offset": 460376,
+      "length": 459,
+      "source_region_ids": [
+        "region-804",
+        "region-802",
+        "region-803"
+      ],
+      "impact": "behavior",
+      "status": "resolved",
+      "summary": "All34 command vectors and conditional branches execute in the native sequencer, including B6/B8 order, duration1 zero-divisor arithmetic and instrument33. Checked operands/stacks/zero-time loops reject malformed extensions. Patterned/unentered data remains data storage without claiming additional playback.",
+      "consumers": [
+        "port/src/sound/sequencer.rs",
+        "port/src/sound/definitions.rs"
+      ],
+      "ledger_ids": [
+        "region-804",
+        "region-802",
+        "region-803"
+      ],
+      "evidence": [
+        "reference/source/game.asm",
+        "port/src/sound/audio.trace.md",
+        "differences.md: native policies and validation limits"
+      ],
+      "validation": [
+        "checks/implementation/domain-results.json: source-backed area contracts and focused Game replay/atomicity evidence"
+      ],
+      "validation_limits": "Static source/ROM derivation and native contracts; original hardware/runtime reachability and exact-frame/audio equivalence remain unmeasured. Assumptions above are native policies, not original facts. Stage5 QA remains separate.",
+      "superseded_assessments": [
+        {
+          "status": "pending",
+          "summary": "34 complete even-command vectors preserve conditional branches including B6/B8 target order and duration1 dividezero. Original dispatch/selector arrays have no bounds guard; native file validation rejects malformed odd/outside commands, unbalanced stacks and zero-time loops without dropping supported original commands. Effective instrument33 reads preserved. Isolated RETs and patterned tails have no established additional consumer, not automatic exclusions.",
+          "validation_limits": "Contract stage only. No native behavior implemented, original runtime comparisons or device testing. Assumptions must be reconciled in Stage4 and recorded in differences.md; no missing behavior excluded."
+        }
+      ]
+    }
+  ]
+}
