@@ -1,13 +1,12 @@
 //! Computer driver, route progress and ranking contracts. Independent derivations
 //! and source-width/call-order evidence: ai.trace.md. Shared race progress owns all laps.
-use super::motion::Truck;
+use super::{bearings::BearingTable, motion::Truck};
 use crate::{
     runtime::RandomState,
-    world::tracks::{Route, TRUCKS},
+    world::tracks::{NextTarget, Route, TRUCKS, Waypoint},
 };
 use anyhow::{Context, Result, ensure};
 
-pub const VECTOR_CELLS: usize = 256;
 pub const AI_PARAMETERS: usize = 8;
 pub const WAYPOINT_RESET_TICKS: u8 = 100;
 pub const BIAS_DELAY_TICKS: u8 = 100;
@@ -17,7 +16,7 @@ pub const LAST_LAP: u8 = 4;
 pub const WINNING_LAP: u8 = 5;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AiTables {
-    pub bearings: [u8; VECTOR_CELLS],
+    pub bearings: BearingTable,
     pub turn_steps: [u8; TRUCKS],
     pub waypoint_timeouts: [u8; AI_PARAMETERS],
     pub parameter_thresholds: [u8; AI_PARAMETERS],
@@ -25,7 +24,6 @@ pub struct AiTables {
     pub rank_threshold_two: [u8; TRUCKS],
 }
 pub fn load_tables(rom: &[u8]) -> Result<AiTables> {
-    const BEARING_ROM: usize = 0x1cc7;
     const TURN_ROM: usize = 0x989;
     const TIMEOUT_ROM: usize = 0xa64;
     const PARAMETER_ROM: usize = 0x2687;
@@ -38,7 +36,7 @@ pub fn load_tables(rom: &[u8]) -> Result<AiTables> {
             .try_into()?)
     }
     Ok(AiTables {
-        bearings: read(rom, BEARING_ROM)?,
+        bearings: BearingTable::load(rom)?,
         turn_steps: read(rom, TURN_ROM)?,
         waypoint_timeouts: read(rom, TIMEOUT_ROM)?,
         parameter_thresholds: read(rom, PARAMETER_ROM)?,
@@ -119,22 +117,13 @@ pub fn setup_parameters(trucks: &mut [Truck; TRUCKS], race: &mut RaceAi) -> Setu
 }
 /// Uses current route record with arithmetic half-bias unless low extent is one.
 /// Reduced Y is quantizer X and reduced X is quantizer Y, followed by +quarterturn.
-pub fn desired_heading(truck: &Truck, record: [u16; 2], tables: &AiTables) -> u8 {
-    const EXTENT_MASK: u16 = 0x1f;
-    const CENTER_MASK: u16 = 0xbfe0;
-    const BIAS_SCALE: i16 = 128;
-    const VECTOR_SHIFT: u32 = 6;
+pub fn desired_heading(truck: &Truck, waypoint: Waypoint, tables: &AiTables) -> u8 {
     const QUARTER_TURN: u8 = 0x40;
-    let bias = (i16::from(truck.ai_route_bias as i8) * BIAS_SCALE) as u16;
     let reduced: [i8; 2] = std::array::from_fn(|axis| {
-        let target = if record[axis] & EXTENT_MASK == 1 {
-            record[axis]
-        } else {
-            record[axis].wrapping_add(bias)
-        } & CENTER_MASK;
-        (target.wrapping_sub(truck.world[axis]) >> VECTOR_SHIFT) as u8 as i8
+        waypoint.axes[axis].steer_delta(truck.world[axis], truck.ai_route_bias)
     });
-    tables.bearings[usize::from(quantize_vector(reduced[1], reduced[0]))].wrapping_add(QUARTER_TURN)
+    tables.bearings.cells[usize::from(quantize_vector(reduced[1], reduced[0]))]
+        .wrapping_add(QUARTER_TURN)
 }
 pub fn steer_heading(truck: &mut Truck, driver: &mut Driver, desired: u8, step: u8) {
     const DEADBAND_BIAS: u8 = 4;
@@ -174,7 +163,7 @@ pub fn tick_timeout(driver: &mut Driver, animation: u8, route_count: u8) {
         driver.timeout = WAYPOINT_RESET_TICKS;
     }
 }
-pub fn inside_waypoint(world: [u16; 2], record: [u16; 2]) -> bool {
+pub fn inside_waypoint(world: [u16; 2], record: Waypoint) -> bool {
     crate::race::inside_checkpoint(world, record)
 }
 pub fn ranking(
@@ -182,29 +171,13 @@ pub fn ranking(
     drivers: &[Driver; TRUCKS],
     route: &Route,
 ) -> Result<[usize; TRUCKS]> {
-    const EXTENT_MASK: u16 = 0x1f;
-    const RANK_CENTER_MASK: u16 = 0xffe0;
     for driver in drivers {
-        ensure!(
-            route
-                .words
-                .get(usize::from(driver.checkpoint) * 2)
-                .is_some(),
-            "ranking checkpoint beyond route"
-        );
+        route.node(driver.checkpoint)?;
     }
     let distance = |slot: usize| -> Result<u16> {
-        let at = usize::from(drivers[slot].checkpoint) * 2;
-        let x = *route.words.get(at).context("missing ranking X")?;
-        let axis = usize::from(x & EXTENT_MASK != 1);
-        let packed = *route
-            .words
-            .get(at + axis)
-            .context("missing ranking coordinate")?;
-        Ok(
-            ((packed & RANK_CENTER_MASK).wrapping_sub(trucks[slot].world[axis]) as i16)
-                .unsigned_abs(),
-        )
+        route
+            .node(drivers[slot].checkpoint)?
+            .ranking_distance(trucks[slot].world)
     };
     let mut order = [0; TRUCKS];
     let mut selected = [false; TRUCKS];
@@ -309,33 +282,26 @@ pub fn next_target(
     random: &mut RandomState,
 ) -> Result<()> {
     use crate::runtime::RandomResultWidth;
-    const EXTENT_MASK: u8 = 0x1f;
-    const BIAS_MINIMUM_EXTENT: u8 = 4;
     const BIAS_RANDOM_MASK: u8 = 7;
     const BIAS_CENTER: u8 = 4;
-    const CONDITIONAL_REDIRECT: u8 = 0xfd;
-    const UNCONDITIONAL_REDIRECT: u8 = 0xfe;
     const REDIRECT_RANDOM_MASK: u8 = 3;
     let checkpoint = driver.checkpoint.wrapping_add(1);
-    // ASL twice runs at byte width in this particular source consumer.
-    let at = usize::from(checkpoint.wrapping_mul(4)) / 2;
-    let first = *route.words.get(at).context("next target X beyond route")?;
-    let second = *route
-        .words
-        .get(at + 1)
-        .context("next target Y beyond route")?;
+    let node = route.short_node(checkpoint)?;
+    // Read both source words; native bounds checks precede bias/progress
+    // mutation even for redirects. Control nodes retain geometry for other readers.
+    node.waypoint()?;
     truck.ai_route_bias = 0;
     driver.checkpoint = checkpoint;
-    if ((first as u8 | second as u8) & EXTENT_MASK) >= BIAS_MINIMUM_EXTENT {
+    if node.choose_bias {
         truck.ai_route_bias = ((random.next(RandomResultWidth::Byte) as u8) & BIAS_RANDOM_MASK)
             .wrapping_sub(BIAS_CENTER);
         driver.bias_delay = BIAS_DELAY_TICKS;
     }
-    match (first >> u8::BITS) as u8 {
-        UNCONDITIONAL_REDIRECT => driver.checkpoint = second as u8,
-        CONDITIONAL_REDIRECT => {
+    match node.next {
+        NextTarget::Redirect(target) => driver.checkpoint = target,
+        NextTarget::ConditionalRedirect(target) => {
             if random.next(RandomResultWidth::Byte) as u8 & REDIRECT_RANDOM_MASK == 0 {
-                driver.checkpoint = second as u8;
+                driver.checkpoint = target;
             } else {
                 driver.checkpoint = driver.checkpoint.wrapping_add(1);
             }
@@ -350,7 +316,7 @@ pub fn progress_waypoint(
     trucks: &mut [Truck; TRUCKS],
     race: &mut RaceAi,
     slot: usize,
-    cached_record: [u16; 2],
+    cached_record: Waypoint,
     route: &Route,
     tables: &AiTables,
     random: &mut RandomState,
@@ -411,14 +377,7 @@ pub fn service_computers(
         if race.active_humans & (1 << slot) != 0 {
             continue;
         }
-        let at = usize::from(race.drivers[slot].checkpoint) * 2;
-        let record = [
-            *route.words.get(at).context("AI target X beyond route")?,
-            *route
-                .words
-                .get(at + 1)
-                .context("AI target Y beyond route")?,
-        ];
+        let record = route.node(race.drivers[slot].checkpoint)?.waypoint()?;
         phases.push(AiPhase::SetAcceleration(slot));
         trucks[slot].upgrades.acceleration = AI_ACCELERATION;
         phases.push(AiPhase::SetThrottle(slot));
@@ -457,7 +416,9 @@ mod tests {
     fn tables() -> AiTables {
         let b = rom();
         AiTables {
-            bearings: b[BEARINGS].try_into().unwrap(),
+            bearings: BearingTable {
+                cells: b[BEARINGS].try_into().unwrap(),
+            },
             turn_steps: b[TURN_STEPS].try_into().unwrap(),
             waypoint_timeouts: b[TIMEOUTS].try_into().unwrap(),
             parameter_thresholds: b[PARAM_THRESHOLDS].try_into().unwrap(),
@@ -486,10 +447,10 @@ mod tests {
         }
     }
     fn route() -> Route {
-        Route {
-            words: vec![0x2002, 0x2002, 0x3002, 0x3002, 0x4002, 0x4002, 0xff02],
-            checkpoint_count: 2,
-        }
+        Route::from_words(
+            vec![0x2002, 0x2002, 0x3002, 0x3002, 0x4002, 0x4002, 0xff02],
+            2,
+        )
     }
     // Runtime trace gives first DF then6A, retained state after first draw fixed here.
     fn random() -> RandomState {
@@ -506,7 +467,7 @@ mod tests {
     fn rom_tables_preserve_overlapping_threshold_windows_and_exact_timeout_extent() {
         let b = rom();
         let t = load_tables(&b).unwrap();
-        assert_eq!(t.bearings.as_slice(), &b[BEARINGS]);
+        assert_eq!(t.bearings.cells.as_slice(), &b[BEARINGS]);
         assert_eq!(t.turn_steps, [3, 4, 4, 4]);
         assert_eq!(
             t.waypoint_timeouts,
@@ -599,11 +560,39 @@ mod tests {
         let t = trucks();
         let table = tables();
         // dx=+64,dy=0 -> vector(0,+1)->lookup10=BF, +40=FF.
-        assert_eq!(desired_heading(&t[0], [0x2041, 0x2001], &table), 0xff);
+        assert_eq!(
+            desired_heading(
+                &t[0],
+                crate::world::tracks::Waypoint::from_encoded([0x2041, 0x2001]),
+                &table
+            ),
+            0xff
+        );
         // dx=0,dy=+64 -> vector(+1,0)->lookup01=FF, +40=3F.
-        assert_eq!(desired_heading(&t[0], [0x2001, 0x2041], &table), 0x3f);
-        assert_eq!(desired_heading(&t[0], [0x1fc1, 0x2001], &table), 0x80);
-        assert_eq!(desired_heading(&t[0], [0x2001, 0x1fc1], &table), 0xbf);
+        assert_eq!(
+            desired_heading(
+                &t[0],
+                crate::world::tracks::Waypoint::from_encoded([0x2001, 0x2041]),
+                &table
+            ),
+            0x3f
+        );
+        assert_eq!(
+            desired_heading(
+                &t[0],
+                crate::world::tracks::Waypoint::from_encoded([0x1fc1, 0x2001]),
+                &table
+            ),
+            0x80
+        );
+        assert_eq!(
+            desired_heading(
+                &t[0],
+                crate::world::tracks::Waypoint::from_encoded([0x2001, 0x1fc1]),
+                &table
+            ),
+            0xbf
+        );
     }
     #[test]
     fn route_bias_is_signed_half_world_cell_and_extent_one_suppresses_each_axis() {
@@ -611,8 +600,22 @@ mod tests {
         let table = tables();
         t[0].ai_route_bias = 0xfc;
         // -4 gives signed-16 -512; both components -8 quantize(-4,-4)=CC.
-        assert_eq!(desired_heading(&t[0], [0x2002, 0x2002], &table), 0x9f);
-        assert_eq!(desired_heading(&t[0], [0x2001, 0x2001], &table), 0x3f);
+        assert_eq!(
+            desired_heading(
+                &t[0],
+                crate::world::tracks::Waypoint::from_encoded([0x2002, 0x2002]),
+                &table
+            ),
+            0x9f
+        );
+        assert_eq!(
+            desired_heading(
+                &t[0],
+                crate::world::tracks::Waypoint::from_encoded([0x2001, 0x2001]),
+                &table
+            ),
+            0x3f
+        );
     }
     #[test]
     fn heading_deadband_is_negative_four_through_positive_three_and_high_byte_survives() {
@@ -695,14 +698,26 @@ mod tests {
             ([0x2000, 0x3100], true),
             ([0x1eff, 0x3000], false),
         ] {
-            assert_eq!(inside_waypoint(p, rec), v);
+            assert_eq!(
+                inside_waypoint(p, crate::world::tracks::Waypoint::from_encoded(rec)),
+                v
+            );
         }
-        assert!(!inside_waypoint([0x2000, 0x3000], [0x2000, 0x3000]));
-        assert!(inside_waypoint([0xfff0, 0], [0x0001, 0x0001]));
+        assert!(!inside_waypoint(
+            [0x2000, 0x3000],
+            crate::world::tracks::Waypoint::from_encoded([0x2000, 0x3000])
+        ));
+        assert!(inside_waypoint(
+            [0xfff0, 0],
+            crate::world::tracks::Waypoint::from_encoded([0x0001, 0x0001])
+        ));
     }
     #[test]
     fn ai_rectangles_clear_bit_fourteen_where_ranking_distance_keeps_it() {
-        assert!(inside_waypoint([0, 0], [0x4001, 0x4001]));
+        assert!(inside_waypoint(
+            [0, 0],
+            crate::world::tracks::Waypoint::from_encoded([0x4001, 0x4001])
+        ));
     }
     #[test]
     fn ranking_orders_laps_then_checkpoint_minus_one_in_unsigned_byte_order() {
@@ -725,10 +740,7 @@ mod tests {
             checkpoint: 0,
             ..Driver::default()
         }; TRUCKS];
-        let r = Route {
-            words: vec![0x2001, 0x3002, 0xff00],
-            checkpoint_count: 0,
-        };
+        let r = Route::from_words(vec![0x2001, 0x3002, 0xff00], 0);
         for (truck, x) in t.iter_mut().zip([0x2100, 0x1f80, 0x2000, 0x2200]) {
             truck.world = [x, 0];
         }
@@ -744,10 +756,7 @@ mod tests {
             checkpoint: 0,
             ..Driver::default()
         }; TRUCKS];
-        let r = Route {
-            words: vec![0x2002, 0x7002, 0xff00],
-            checkpoint_count: 0,
-        };
+        let r = Route::from_words(vec![0x2002, 0x7002, 0xff00], 0);
         for (truck, y) in t.iter_mut().zip([0x7100, 0x6f80, 0x7000, 0x7200]) {
             truck.world = [0, y];
         }
@@ -893,7 +902,9 @@ mod tests {
         let mut t = trucks();
         let mut d = Driver::default();
         let mut r = route();
-        r.words[2] = 0x3004;
+        let mut words = r.encoded_words();
+        words[2] = 0x3004;
+        r = Route::from_words(words, r.checkpoint_count);
         let mut rng = random();
         next_target(&mut t[0], &mut d, &r, &mut rng).unwrap();
         assert_eq!(
@@ -911,8 +922,8 @@ mod tests {
         ] {
             let mut t = trucks();
             let mut d = Driver::default();
-            let r = Route {
-                words: vec![
+            let r = Route::from_words(
+                vec![
                     0x2002,
                     0x2002,
                     u16::from_le_bytes([0, control]),
@@ -921,8 +932,8 @@ mod tests {
                     0x3002,
                     0xff02,
                 ],
-                checkpoint_count: 2,
-            };
+                2,
+            );
             let mut rng = seed;
             next_target(&mut t[0], &mut d, &r, &mut rng).unwrap();
             assert_eq!(d.checkpoint, expected);
@@ -937,10 +948,7 @@ mod tests {
     fn wide_fd_draws_bias_before_redirect_lottery_and_preserves_rng_call_count() {
         let mut t = trucks();
         let mut d = Driver::default();
-        let r = Route {
-            words: vec![0x2002, 0x2002, 0xfd04, 0, 0x3002, 0x3002, 0xff02],
-            checkpoint_count: 2,
-        };
+        let r = Route::from_words(vec![0x2002, 0x2002, 0xfd04, 0, 0x3002, 0x3002, 0xff02], 2);
         let mut rng = random();
         next_target(&mut t[0], &mut d, &r, &mut rng).unwrap();
         assert_eq!(
@@ -962,7 +970,7 @@ mod tests {
                 &mut t,
                 &mut r,
                 1,
-                [0x7002, 0x7002],
+                crate::world::tracks::Waypoint::from_encoded([0x7002, 0x7002]),
                 &route(),
                 &tables(),
                 &mut rng
@@ -990,7 +998,7 @@ mod tests {
                 &mut t,
                 &mut r,
                 1,
-                [0x2002, 0x2002],
+                crate::world::tracks::Waypoint::from_encoded([0x2002, 0x2002]),
                 &route(),
                 &tables(),
                 &mut rng
@@ -1020,7 +1028,7 @@ mod tests {
             &mut t,
             &mut r,
             2,
-            [0x2002, 0x2002],
+            crate::world::tracks::Waypoint::from_encoded([0x2002, 0x2002]),
             &route(),
             &tables(),
             &mut rng,
@@ -1048,7 +1056,7 @@ mod tests {
             &mut t,
             &mut r,
             1,
-            [0x2002, 0x2002],
+            crate::world::tracks::Waypoint::from_encoded([0x2002, 0x2002]),
             &route(),
             &tables(),
             &mut rng,
@@ -1072,10 +1080,7 @@ mod tests {
         let preserved = [t[0].clone(), t[2].clone()];
         let mut rng = random();
         // Route is distant, so no waypoint RNG/rank adjustment; only target steering.
-        let far = Route {
-            words: vec![0x7002, 0x7002, 0xff00],
-            checkpoint_count: 0,
-        };
+        let far = Route::from_words(vec![0x7002, 0x7002, 0xff00], 0);
         let phases = service_computers(&mut t, &mut r, &far, &tables(), &mut rng).unwrap();
         assert_eq!(
             phases,
@@ -1128,7 +1133,7 @@ mod tests {
                 &mut t,
                 &mut r,
                 1,
-                [0x2002, 0x2002],
+                crate::world::tracks::Waypoint::from_encoded([0x2002, 0x2002]),
                 &route(),
                 &tables(),
                 &mut rng,

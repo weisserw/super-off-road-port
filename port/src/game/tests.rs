@@ -140,7 +140,13 @@ fn crossing_the_final_human_checkpoint_advances_to_results() {
         }
     }
     let route = &game.selected.track.routes[usize::from(game.selected.reversed)];
-    game.state.race.trucks[0].world = [route.words[0] & 0xbfe0, route.words[1] & 0xbfe0];
+    game.state.race.trucks[0].world = route
+        .node(0)
+        .unwrap()
+        .waypoint()
+        .unwrap()
+        .axes
+        .map(|axis| axis.center);
     game.state.race.trucks[0].speed = 0;
     game.state.race.progress.drivers[0].checkpoint = 0;
     game.state.race.progress.drivers[0].lap = crate::race::WINNING_LAP - 1;
@@ -518,7 +524,7 @@ fn fetched_named_track_order_selects_added_game_content_and_snapshot_binds_asset
     assert_eq!(game.observe()["progression"]["sequence_count"], 17);
     assert_eq!(game.state.scene, Scene::RaceFade);
     assert_eq!(game.state.race.world.placements.len(), 1);
-    assert_eq!(game.state.race.timer.fraction_bcd, 0x16);
+    assert_eq!(game.state.race.timer.encoded()[0], 0x16);
     assert_eq!(
         &game.state.race.video.memory.vram[0x9200..0x9204],
         &[1, 32, 2, 32]

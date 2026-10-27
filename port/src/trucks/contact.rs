@@ -1,31 +1,17 @@
 //! Truck pair contact contracts. Source derivations and every conditional entry:
 //! contact.trace.md. Pairs share real terrain and truck proposal ownership.
-use super::motion::{Truck, WorkingMotion};
+use super::{
+    bearings::BearingTable,
+    motion::{Truck, WorkingMotion},
+};
 use crate::world::terrain::{SamplingTables, Terrain};
 use crate::world::tracks::TRUCKS;
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 
 pub const CONTACT_DISTANCE_LIMIT: u16 = 40;
 pub const DISTANT_PAIR: u16 = 41;
 pub const CONTACT_COOLDOWN_TICKS: u8 = 6;
 pub const IMPACT_SOUND_COMMAND: u16 = 0x0302;
-pub const DIRECTION_SLOTS: usize = 256;
-
-/// ROM heading lookup consumed after the shared signed-vector quantizer, which
-/// AI also owns. Stored cells remain intact even where natural access is unknown.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ContactTables {
-    pub directions: [u8; DIRECTION_SLOTS],
-}
-pub fn load_contact_tables(rom: &[u8]) -> Result<ContactTables> {
-    const BEARINGS_ROM: usize = 0x1cc7;
-    Ok(ContactTables {
-        directions: rom
-            .get(BEARINGS_ROM..BEARINGS_ROM + DIRECTION_SLOTS)
-            .context("truncated contact bearing table")?
-            .try_into()?,
-    })
-}
 pub fn coarse_distance(current: [u16; 2], other: [u16; 2]) -> u16 {
     const AXIS_CUTOFF: u16 = 0x0a00;
     const COARSE_AXIS_SHIFT: u32 = 6;
@@ -59,7 +45,7 @@ pub fn contact_angles(
     committed_current: &Truck,
     working: &WorkingMotion,
     other: &Truck,
-    tables: &ContactTables,
+    tables: &BearingTable,
 ) -> ContactAngles {
     const VECTOR_REDUCTION_SHIFT: u32 = 4;
     const OTHER_SECTOR_SHIFT: u32 = 4;
@@ -68,7 +54,7 @@ pub fn contact_angles(
     let y = ((committed_current.world[1].wrapping_sub(other.world[1]) >> VECTOR_REDUCTION_SHIFT)
         as u8)
         .wrapping_neg() as i8;
-    let normal = tables.directions[usize::from(super::ai::quantize_vector(x, y))];
+    let normal = tables.cells[usize::from(super::ai::quantize_vector(x, y))];
     let relative_current = (working.heading as u8).wrapping_sub(normal);
     let relative_other = (other.heading as u8).wrapping_sub(normal);
     ContactAngles {
@@ -168,7 +154,7 @@ pub fn conditional_deflect_current(working: &mut WorkingMotion, animation: u8) {
 pub struct ContactEnvironment<'a> {
     pub terrain: &'a Terrain,
     pub sampling: &'a SamplingTables,
-    pub tables: &'a ContactTables,
+    pub tables: &'a BearingTable,
     pub original_track: u8,
     pub animation: u8,
     pub active_humans: u8,
@@ -311,6 +297,7 @@ fn turn(heading: &mut u16, delta: u8) {
 
 #[cfg(test)]
 mod tests {
+    use super::super::bearings::BEARING_CELLS;
     use super::*;
     use crate::world::terrain::{CELL_BYTES, ROW_BYTES};
     use crate::world::tracks::TERRAIN_BYTES;
@@ -362,7 +349,7 @@ mod tests {
     fn environment<'a>(
         terrain: &'a Terrain,
         sampling: &'a SamplingTables,
-        tables: &'a ContactTables,
+        tables: &'a BearingTable,
     ) -> ContactEnvironment<'a> {
         ContactEnvironment {
             terrain,
@@ -376,13 +363,13 @@ mod tests {
     #[test]
     fn bearing_loader_preserves_all_rom_cells_and_checks_bounds() {
         let b = rom();
-        let t = load_contact_tables(&b).unwrap();
-        assert_eq!(t.directions.as_slice(), &b[DIRECTION_ROM.clone()]);
+        let t = BearingTable::load(&b).unwrap();
+        assert_eq!(t.cells.as_slice(), &b[DIRECTION_ROM.clone()]);
         assert_eq!(
-            [t.directions[0], t.directions[0x11], t.directions[0xff]],
+            [t.cells[0], t.cells[0x11], t.cells[0xff]],
             [0xff, 0xe0, 0x5f]
         );
-        assert!(load_contact_tables(&b[..DIRECTION_ROM.end - 1]).is_err());
+        assert!(BearingTable::load(&b[..DIRECTION_ROM.end - 1]).is_err());
     }
     #[test]
     fn coarse_distance_quantizes_each_absolute_axis_before_squaring() {
@@ -417,8 +404,8 @@ mod tests {
     }
     #[test]
     fn contact_bearing_uses_committed_positions_but_working_current_heading() {
-        let t = ContactTables {
-            directions: rom()[DIRECTION_ROM.clone()].try_into().unwrap(),
+        let t = BearingTable {
+            cells: rom()[DIRECTION_ROM.clone()].try_into().unwrap(),
         };
         let current = truck();
         let mut other = truck();
@@ -438,8 +425,8 @@ mod tests {
     }
     #[test]
     fn bearing_signed_nibbles_and_joint_scaling_match_fixed_rom_cells() {
-        let t = ContactTables {
-            directions: rom()[DIRECTION_ROM.clone()].try_into().unwrap(),
+        let t = BearingTable {
+            cells: rom()[DIRECTION_ROM.clone()].try_into().unwrap(),
         };
         let current = truck();
         for (world, normal) in [
@@ -646,8 +633,8 @@ mod tests {
     fn separation_uses_committed_midpoint_and_signed_doubled_sine_for_all_octants() {
         let terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         for (normal, current, other) in [
@@ -680,8 +667,8 @@ mod tests {
     fn separation_midpoint_addition_wraps_before_logical_halving() {
         let terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         // $F000+$F100 wraps$E100 then halves to$7080, not$F080.
@@ -704,8 +691,8 @@ mod tests {
     #[test]
     fn independently_blocked_separation_candidates_preserve_only_rejected_position() {
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         for (blocks, accepted) in [
             ([false, false], [true, true]),
@@ -745,8 +732,8 @@ mod tests {
     fn both_terrain_classifications_append_surface_markers_in_current_then_other_order() {
         let mut terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         // Only the current candidate supplies marker1. Other marker0 then shifts it tobit6.
         terrain.cells[ROW_BYTES * 16 + CELL_BYTES * 17 + 2] = 0x55;
@@ -761,8 +748,8 @@ mod tests {
     fn every_nonzero_cooldown_skips_scanning_and_decrements_once() {
         let terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         for cooldown in [1, 6, 255] {
@@ -785,8 +772,8 @@ mod tests {
     fn zero_cooldown_scan_visits_other_slots_descending_without_filtering_their_cooldowns() {
         let terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         let mut trucks = std::array::from_fn(|i| Truck {
@@ -825,8 +812,8 @@ mod tests {
     fn contact_scan_rejects_exact_metric40_but_accepts37_and_leaves_far_records_unchanged() {
         let terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         for (offset_y, count) in [(0x80, 0), (0x40, 1)] {
@@ -855,8 +842,8 @@ mod tests {
     fn current_slot_is_excluded_even_when_all_other_trucks_are_distant() {
         let terrain = flat();
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         for slot in 0..TRUCKS {
@@ -878,8 +865,8 @@ mod tests {
     fn checked_native_interfaces_reject_missing_terrain_and_invalid_slot() {
         let terrain = Terrain { cells: vec![] };
         let sine = sampling();
-        let tables = ContactTables {
-            directions: [0; DIRECTION_SLOTS],
+        let tables = BearingTable {
+            cells: [0; BEARING_CELLS],
         };
         let env = environment(&terrain, &sine, &tables);
         let mut trucks = std::array::from_fn(|_| truck());

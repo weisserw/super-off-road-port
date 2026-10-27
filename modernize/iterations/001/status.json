@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "workflow": "modernization-beta",
+  "status": "iteration_complete",
+  "iteration": 1,
+  "selection_status": "completed",
+  "pilot_started": true,
+  "active_candidate": null,
+  "baseline": "modernize/baseline.json",
+  "source_snapshot": "modernize/baseline-source.tar.gz",
+  "candidates": "modernize/candidates.json",
+  "selected_candidates": [
+    "M1",
+    "M2",
+    "R1"
+  ],
+  "outcomes": {
+    "M1": "retained",
+    "M2": "retained",
+    "R1": "retained"
+  },
+  "retained_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+  "changes": "modernize/changes.json",
+  "next_action": "Stop: iteration1 complete. A further iteration requires a fresh menu and user selection."
+}

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "adapter": "iteration2_adapter.py",
+  "original_fidelity_sanity": {
+    "enabled": true,
+    "reason": "Independently establish original natural hazard response/depletion and route progression for iteration2"
+  },
+  "tests": [
+    {
+      "id": "native-hazard-route",
+      "binary": "modernize/evidence/iteration-002/starting-port",
+      "expectations": {
+        "original-fidelity": {
+          "source": [
+            "port/src/world/objects.trace.md:93-134",
+            "port/src/trucks/ai.trace.md: waypoint/lap progression",
+            "reference/source/game.asm:15548-16468"
+          ],
+          "rules": "Natural attract reaches original order2/track2. Hazard slot5 projects4731/356C at response timer43, animation34, uses0.44 further services consume the final response and leave kind2, timer0, usesFFFF, animation0, tile256E. AI route traversal reaches a second lap. Original physical frames and native loading ticks need not align.",
+          "limits": "Tracks8/13 redirect branches are independently source-backed real-ROM domain contracts; this natural integration covers ordinary waypoints/laps, not those conditional branches."
+        }
+      }
+    },
+    {
+      "id": "original-hazard-route",
+      "kind": "original-fidelity-sanity",
+      "snapshot": "modernize/evidence/iteration-002/original-hazard-discovery-002/response.snapshot.json",
+      "snapshot_sha256": "7472c4b7c3036cc85a831e3fc5a6c5f90c831deda702a85b9642a219665d5f08",
+      "expectations": {
+        "original-fidelity": {
+          "source": [
+            "port/src/world/objects.trace.md:93-134",
+            "port/src/trucks/ai.trace.md: waypoint/lap progression",
+            "reference/source/game.asm:15548-16468"
+          ],
+          "rules": "Natural attract reaches original order2/track2. Hazard slot5 projects4731/356C at response timer43, animation34, uses0.44 further services consume the final response and leave kind2, timer0, usesFFFF, animation0, tile256E. AI route traversal reaches a second lap. Original physical frames and native loading ticks need not align.",
+          "limits": "Tracks8/13 redirect branches are independently source-backed real-ROM domain contracts; this natural integration covers ordinary waypoints/laps, not those conditional branches."
+        }
+      }
+    }
+  ],
+  "suites": {
+    "all": [
+      "native-hazard-route",
+      "original-hazard-route"
+    ]
+  }
+}

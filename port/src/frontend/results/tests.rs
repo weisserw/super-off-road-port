@@ -129,11 +129,7 @@ fn progress() -> Progress {
     }
 }
 fn time() -> RaceTimer {
-    RaceTimer {
-        high_bcd: 1,
-        middle_bcd: 0x23,
-        fraction_bcd: 0x99,
-    }
+    RaceTimer::from_encoded([0x99, 0x23, 1])
 }
 fn awards(timer: u16, pending: u8) -> Awards {
     Awards {
@@ -277,10 +273,7 @@ fn faster_time_compares_high_then_middle_bytes_and_increments_pending_instead_of
     p = 9;
     compare_record(&mut p, time(), [0, 0x99]);
     assert_eq!(p, 0);
-    let t = RaceTimer {
-        fraction_bcd: 0,
-        ..time()
-    };
+    let t = RaceTimer::from_encoded([0, time().encoded()[1], time().encoded()[2]]);
     p = 3;
     compare_record(&mut p, t, [1, 0x23]);
     assert_eq!(p, 0);
@@ -377,11 +370,7 @@ fn time_rows_use_three_name_tiles_and_only_display_selected_bcd_nibbles() {
         &s,
         &AddedRecords::default(),
         &RecordKey::Original(2),
-        RaceTimer {
-            high_bcd: 0xf1,
-            middle_bcd: 0x23,
-            fraction_bcd: 0x99,
-        },
+        RaceTimer::from_encoded([0x99, 0x23, 0xf1]),
         3,
         &mut m,
     )
@@ -716,7 +705,7 @@ fn penalty_minus_two_signed_byte_clamps_and_resets_same_wallet_to_starter_cash()
         steering: 2,
         suspension: 6,
     };
-    t[2].nitro_stock_bcd = 0x53;
+    t[2].nitro = crate::trucks::nitro::NitroStock::from_encoded(0x53);
     s.wallets[2] = [9; 6];
     let others = s.wallets;
     penalize_loser(&mut s, &mut t, 2).unwrap();
@@ -729,7 +718,7 @@ fn penalty_minus_two_signed_byte_clamps_and_resets_same_wallet_to_starter_cash()
             suspension: 4
         }
     );
-    assert_eq!(t[2].nitro_stock_bcd, 0x53);
+    assert_eq!(t[2].nitro.encoded(), 0x53);
     assert_eq!(s.wallets[2], [0, 0, 1, 0, 0, 0]);
     assert_eq!(s.wallets[0], others[0]);
     assert_eq!(s.wallets[3], others[3]);
@@ -984,7 +973,7 @@ fn postrace_entry_services_hud_time_before_first_wait_without_early_continuation
         &mut d,
     );
     assert_eq!(p.phase, PostracePhase::HudWait);
-    assert_eq!(t.fraction_bcd, 0x16);
+    assert_eq!(t.encoded()[0], 0x16);
     assert_eq!(s.continuation_progress, 0xab00);
     assert_ne!(m.staged_oam, [0x69; OAM_BYTES]);
 }

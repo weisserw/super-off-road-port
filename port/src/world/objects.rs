@@ -323,12 +323,9 @@ pub fn collect_pickup(
             pending_awards[slot].wrapping_add((pickup.state - MONEY_STATE_BASE) as u8);
         PICKUP_MONEY_SOUND
     } else {
-        let stock = trucks[slot].nitro_stock_bcd;
-        let decimal =
-            u16::from(stock >> 4) * 10 + u16::from(stock & 0xf) + pickup.state - NITRO_STATE_BASE;
-        if decimal < 100 {
-            trucks[slot].nitro_stock_bcd = ((decimal / 10) as u8) << 4 | (decimal % 10) as u8;
-        }
+        trucks[slot]
+            .nitro
+            .award_pickup(pickup.state - NITRO_STATE_BASE);
         PICKUP_NITRO_SOUND
     };
     project_pickup(pickup, projection, tables)?;
@@ -394,16 +391,9 @@ pub fn service_pickup(
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DynamicObject {
-    pub kind: u16,
-    pub placement: Placement,
-    pub animation: u16,
-    pub timer: u16,
-    pub uses: u16,
-    pub sprite: ObjectSprite,
-}
+mod hazard;
+use hazard::ResponseTick;
+pub use hazard::{DynamicObject, HazardStage, ReactionBudget, ResponseClock};
 pub fn initialize_dynamic(
     objects: &mut [DynamicObject; DYNAMIC_SLOTS],
     records: &[Placement; DYNAMIC_SLOTS],
@@ -413,15 +403,16 @@ pub fn initialize_dynamic(
     use crate::runtime::RandomResultWidth;
     const USE_MASK: u16 = 7;
     for slot in (0..DYNAMIC_SLOTS).rev() {
-        objects[slot].kind = 0;
+        objects[slot].stage = HazardStage::Inactive;
         if records[slot].world[0] == 0 {
             continue;
         }
         objects[slot].placement = records[slot];
-        objects[slot].uses = random.next(RandomResultWidth::Byte) & USE_MASK;
+        objects[slot].reactions =
+            ReactionBudget::remaining(1 + (random.next(RandomResultWidth::Byte) & USE_MASK));
         objects[slot].animation = 0;
-        objects[slot].timer = 0;
-        objects[slot].kind = 1;
+        objects[slot].response = ResponseClock::default();
+        objects[slot].stage = HazardStage::Reactive;
         objects[slot].sprite = ObjectSprite {
             coordinates: screen_coordinates(records[slot], projection),
             tile_attributes: DYNAMIC_IDLE_TILE,
@@ -436,11 +427,11 @@ pub fn dynamic_near(
     const X_OFFSET: u16 = 0x100;
     const WIDTH: u16 = 0x300;
     const Y_LIFT: u16 = 0xc0;
-    ensure!(
-        (1..=3).contains(&object.kind),
-        "invalid active dynamic kind"
-    );
-    let vertical = tables.dynamic_vertical[usize::from(object.kind - 1)];
+    let index = object
+        .stage
+        .collision_index()
+        .context("invalid active dynamic kind")?;
+    let vertical = tables.dynamic_vertical[index];
     Ok(object.placement.world[0]
         .wrapping_sub(truck[0])
         .wrapping_add(X_OFFSET)
@@ -462,34 +453,33 @@ pub fn service_dynamic(
     const TYPE_ONE_REACTION: u16 = 0x22;
     const TYPE_TWO_REACTION: u16 = 0x11;
     const TYPE_THREE_REACTION: u16 = 0x1d;
-    const TIMER_TILE_THRESHOLD: u16 = 4;
     const REACTION_PALETTE: u16 = 0x1000;
     const HOLD_REACTION_THRESHOLD: u16 = 0x1f;
     let slot = usize::from(animation & 3);
     let mut sounds = Vec::new();
     for object in objects.iter_mut().rev() {
-        if object.kind == 0 {
+        if object.stage == HazardStage::Inactive {
             continue;
         }
         if object.animation == 0 || object.animation == CONTACT_AGAIN {
             if !dynamic_near(object, trucks[slot].world, tables)? {
                 continue;
             }
-            match object.kind {
-                1 => {
-                    object.timer = DYNAMIC_RESPONSE_TICKS;
+            match object.stage {
+                HazardStage::Reactive => {
+                    object.response = ResponseClock::start(DYNAMIC_RESPONSE_TICKS);
                     object.animation = TYPE_ONE_REACTION;
                     trucks[slot].speed = 0;
                     if active_humans != 0 {
                         sounds.push(DYNAMIC_CONTACT_SOUND);
                     }
                 }
-                2 => {
-                    object.kind = 3;
+                HazardStage::Depleted => {
+                    object.stage = HazardStage::Struck;
                     trucks[slot].speed = 0;
                     object.animation = TYPE_TWO_REACTION;
                 }
-                3 => {
+                HazardStage::Struck => {
                     if trucks[slot].speed == 0 {
                         continue;
                     }
@@ -502,7 +492,7 @@ pub fn service_dynamic(
             .dynamic_tiles
             .get(usize::from(object.animation))
             .context("invalid dynamic animation")?
-            | if object.timer >= TIMER_TILE_THRESHOLD {
+            | if object.response.highlighted() {
                 REACTION_PALETTE
             } else {
                 0
@@ -510,32 +500,34 @@ pub fn service_dynamic(
         if animation & 3 == 0 && object.animation != 0 {
             object.animation -= 1;
         }
-        if object.kind != 1 {
+        if object.stage != HazardStage::Reactive {
             continue;
         }
-        object.timer = object.timer.wrapping_sub(1);
-        if (object.timer as i16) < 0 {
-            if object.animation == TYPE_THREE_REACTION {
-                continue;
+        match object.response.tick() {
+            ResponseTick::Complete(legacy_timer) => {
+                if object.animation == TYPE_THREE_REACTION {
+                    object.response.defer_completion(legacy_timer);
+                    continue;
+                }
+                object.animation = 0;
+                object.response = ResponseClock::default();
+                object.sprite.tile_attributes = DYNAMIC_IDLE_TILE;
+                if !object.reactions.finish_response() {
+                    object.sprite.tile_attributes = DYNAMIC_EXHAUSTED_TILE;
+                    object.stage = HazardStage::Depleted;
+                }
             }
-            object.animation = 0;
-            object.timer = 0;
-            object.sprite.tile_attributes = DYNAMIC_IDLE_TILE;
-            object.uses = object.uses.wrapping_sub(1);
-            if (object.uses as i16) < 0 {
-                object.sprite.tile_attributes = DYNAMIC_EXHAUSTED_TILE;
-                object.kind += 1;
+            ResponseTick::Remaining(ticks) => {
+                if object.animation < HOLD_REACTION_THRESHOLD {
+                    object.animation = TYPE_ONE_REACTION;
+                }
+                let delta = *tables
+                    .dynamic_y_deltas
+                    .get(usize::from(ticks))
+                    .context("invalid dynamic response timer")?;
+                let [x, y] = object.sprite.coordinates.to_le_bytes();
+                object.sprite.coordinates = u16::from_le_bytes([x, y.wrapping_add(delta as u8)]);
             }
-        } else {
-            if object.animation < HOLD_REACTION_THRESHOLD {
-                object.animation = TYPE_ONE_REACTION;
-            }
-            let delta = *tables
-                .dynamic_y_deltas
-                .get(usize::from(object.timer))
-                .context("invalid dynamic response timer")?;
-            let [x, y] = object.sprite.coordinates.to_le_bytes();
-            object.sprite.coordinates = u16::from_le_bytes([x, y.wrapping_add(delta as u8)]);
         }
     }
     Ok(sounds)
@@ -943,9 +935,9 @@ mod tests {
     }
     fn dynamic(kind: u16) -> DynamicObject {
         DynamicObject {
-            kind,
+            stage: HazardStage::from_encoded(kind),
             placement: placement(),
-            uses: 2,
+            reactions: ReactionBudget::from_encoded(2),
             ..DynamicObject::default()
         }
     }
@@ -1208,7 +1200,7 @@ mod tests {
             let mut p = pickup(2);
             p.counts[1] = old_count;
             let mut ts = trucks();
-            ts[3].nitro_stock_bcd = stock;
+            ts[3].nitro = crate::trucks::nitro::NitroStock::from_encoded(stock);
             let mut a = [0; 4];
             let sound = collect_pickup(
                 &mut p,
@@ -1220,8 +1212,8 @@ mod tests {
                 &tables(),
             )
             .unwrap();
-            assert_eq!(ts[3].nitro_stock_bcd, expected);
-            assert_eq!(ts[0].nitro_stock_bcd, 0);
+            assert_eq!(ts[3].nitro.encoded(), expected);
+            assert_eq!(ts[0].nitro.encoded(), 0);
             assert_eq!(p.state, 3 + old_count);
             assert_eq!(sound, [PICKUP_NITRO_SOUND]);
         }
@@ -1242,7 +1234,7 @@ mod tests {
                     vec![PICKUP_NITRO_SOUND]
                 }
             );
-            assert_eq!(ts[3].nitro_stock_bcd, 1);
+            assert_eq!(ts[3].nitro.encoded(), 1);
         }
     }
     #[test]
@@ -1358,7 +1350,7 @@ mod tests {
      {
         let mut ds = no_dynamic();
         for d in &mut ds {
-            d.timer = 99;
+            d.response = ResponseClock::from_encoded(99);
             d.sprite.coordinates = 0x8877;
         }
         let mut records = [Placement::default(); 6];
@@ -1369,14 +1361,14 @@ mod tests {
         };
         let mut rng = RandomState([0x12, 0x34, 0x56, 0x78, 0x9b]);
         initialize_dynamic(&mut ds, &records, &mut rng, projection());
-        assert_eq!(ds[5].uses, 7);
-        assert_eq!(ds[2].uses, 2);
+        assert_eq!(ds[5].reactions.encoded(), 7);
+        assert_eq!(ds[2].reactions.encoded(), 2);
         assert_eq!(rng.0, [0x6a, 0xdf, 0x12, 0x34, 0x56]);
-        assert_eq!(ds[5].kind, 1);
-        assert_eq!(ds[5].timer, 0);
+        assert_eq!(ds[5].stage.encoded(), 1);
+        assert_eq!(ds[5].response.encoded(), 0);
         assert_eq!(ds[5].sprite.tile_attributes, DYNAMIC_IDLE_TILE);
-        assert_eq!(ds[0].kind, 0);
-        assert_eq!(ds[0].timer, 99);
+        assert_eq!(ds[0].stage.encoded(), 0);
+        assert_eq!(ds[0].response.encoded(), 99);
         assert_eq!(ds[0].sprite.coordinates, 0x8877);
     }
     #[test]
@@ -1399,7 +1391,7 @@ mod tests {
             ds[5].animation = animation;
             let mut ts = trucks();
             service_dynamic(&mut ds, &mut ts, 1, ALL_HUMANS, &tables()).unwrap();
-            assert_eq!(ds[5].kind, 2);
+            assert_eq!(ds[5].stage.encoded(), 2);
             assert_eq!(ts[1].speed, 0x30);
         }
         for animation in [0, 18] {
@@ -1408,7 +1400,7 @@ mod tests {
             ds[5].animation = animation;
             let mut ts = trucks();
             service_dynamic(&mut ds, &mut ts, 1, ALL_HUMANS, &tables()).unwrap();
-            assert_eq!(ds[5].kind, 3);
+            assert_eq!(ds[5].stage.encoded(), 3);
             assert_eq!(ds[5].animation, 17);
             assert_eq!(ts[1].speed, 0);
         }
@@ -1422,7 +1414,7 @@ mod tests {
         ts[1].speed = 0xab30;
         let sounds = service_dynamic(&mut ds, &mut ts, 1, ALL_HUMANS, &tables()).unwrap();
         assert_eq!(ts[1].speed, 0);
-        assert_eq!(ds[5].timer, 43);
+        assert_eq!(ds[5].response.encoded(), 43);
         assert_eq!(ds[5].animation, 34);
         assert_eq!(ds[5].sprite.coordinates, 0x3c10);
         assert_eq!(ds[5].sprite.tile_attributes, 0x356c);
@@ -1433,20 +1425,20 @@ mod tests {
         for (timer, tile) in [(3, 0x2522), (4, 0x3522)] {
             let mut ds = no_dynamic();
             ds[0] = dynamic(2);
-            ds[0].timer = timer;
+            ds[0].response = ResponseClock::from_encoded(timer);
             ds[0].animation = 17;
             let mut ts = trucks();
             service_dynamic(&mut ds, &mut ts, 0, 0, &tables()).unwrap();
             assert_eq!(ds[0].sprite.tile_attributes, tile);
             assert_eq!(ds[0].animation, 16);
-            assert_eq!(ds[0].timer, timer);
+            assert_eq!(ds[0].response.encoded(), timer);
         }
     }
     #[test]
     fn idle_type_one_underflows_timer_and_consumes_uses_even_without_contact() {
         let mut ds = no_dynamic();
         ds[0] = dynamic(1);
-        ds[0].uses = 0;
+        ds[0].reactions = ReactionBudget::from_encoded(0);
         let mut ts = trucks();
         for truck in &mut ts {
             truck.world = [0, 0];
@@ -1455,9 +1447,9 @@ mod tests {
         // nonzero animation enters lifetime even when no contact test occurs.
         ds[0].animation = 1;
         service_dynamic(&mut ds, &mut ts, 1, 0, &tables()).unwrap();
-        assert_eq!(ds[0].kind, 2);
-        assert_eq!(ds[0].uses, 0xffff);
-        assert_eq!(ds[0].timer, 0);
+        assert_eq!(ds[0].stage.encoded(), 2);
+        assert_eq!(ds[0].reactions.encoded(), 0xffff);
+        assert_eq!(ds[0].response.encoded(), 0);
         assert_eq!(ds[0].animation, 0);
         assert_eq!(ds[0].sprite.tile_attributes, DYNAMIC_EXHAUSTED_TILE);
     }
@@ -1466,13 +1458,13 @@ mod tests {
         let mut ds = no_dynamic();
         ds[0] = dynamic(1);
         ds[0].animation = 30;
-        ds[0].timer = 0;
-        ds[0].uses = 2;
+        ds[0].response = ResponseClock::from_encoded(0);
+        ds[0].reactions = ReactionBudget::from_encoded(2);
         let mut ts = trucks();
         service_dynamic(&mut ds, &mut ts, 0, 0, &tables()).unwrap();
         assert_eq!(ds[0].animation, 29);
-        assert_eq!(ds[0].timer, 0xffff);
-        assert_eq!(ds[0].uses, 2);
+        assert_eq!(ds[0].response.encoded(), 0xffff);
+        assert_eq!(ds[0].reactions.encoded(), 2);
     }
     #[test]
     fn type_three_response_requires_full_word_motion_and_does_not_stop_truck() {
@@ -1493,7 +1485,7 @@ mod tests {
         ds[0] = dynamic(3);
         let mut ts = trucks();
         service_dynamic(&mut ds, &mut ts, 1, 0, &tables()).unwrap();
-        assert_eq!(ds[5].kind, 3);
+        assert_eq!(ds[5].stage.encoded(), 3);
         assert_eq!(ts[1].speed, 0);
         assert_eq!(ds[0].animation, 0);
     }
@@ -1505,8 +1497,8 @@ mod tests {
         let mut ts = trucks();
         ts[0].world = [0, 0];
         service_dynamic(&mut ds, &mut ts, 0, 0, &tables()).unwrap();
-        assert_eq!(ds[0].timer, 0);
-        assert_eq!(ds[0].uses, 2);
+        assert_eq!(ds[0].response.encoded(), 0);
+        assert_eq!(ds[0].reactions.encoded(), 2);
         assert_eq!(ds[0].sprite.tile_attributes, 0xbeef);
     }
     #[test]
@@ -1785,7 +1777,7 @@ mod tests {
         assert_eq!(w.pending_awards[1], 1);
         assert_eq!(w.pickup.state, 7);
         assert_eq!(ts[1].speed, 0);
-        assert_eq!(w.dynamic[5].kind, 3);
+        assert_eq!(w.dynamic[5].stage.encoded(), 3);
         assert_eq!(w.placements[0].animation, 0);
         assert_eq!(rng, old);
         assert_eq!(sounds, [PICKUP_MONEY_SOUND]);
@@ -1809,7 +1801,7 @@ mod tests {
             &tables(),
         )
         .unwrap();
-        assert_eq!(ts[1].nitro_stock_bcd, 2);
+        assert_eq!(ts[1].nitro.encoded(), 2);
         assert_eq!(w.pickup.state, 0);
         assert_eq!(w.pickup.counts, [0, 0]);
         assert_eq!(w.pending_awards, [0; 4]);

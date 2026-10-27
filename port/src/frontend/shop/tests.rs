@@ -102,7 +102,8 @@ fn word(memory: &VideoMemory, at: u16) -> u16 {
 fn fixture() -> ShopAssets {
     ShopAssets {
         costs: [1, 8, 4, 10, 6],
-        caps: [0x99, 6, 6, 6, 6],
+        nitro_cap: NitroStock::new(99),
+        upgrade_caps: [6; 4],
         cursor_tiles: [
             0x2020, 0x2022, 0x6020, 0x2024, 0x202c, 0x6024, 0xa020, 0xa022, 0xe020,
         ],
@@ -143,7 +144,8 @@ fn loader_uses_parallel_byte_costs_caps_shared_grid_and_full_text_terminators() 
     let a = load_assets(&rom).unwrap();
     let expected = fixture();
     assert_eq!(a.costs, expected.costs);
-    assert_eq!(a.caps, expected.caps);
+    assert_eq!(a.nitro_cap, expected.nitro_cap);
+    assert_eq!(a.upgrade_caps, expected.upgrade_caps);
     assert_eq!(a.cursor_tiles, expected.cursor_tiles);
     assert_eq!(a.cursor_x, expected.cursor_x);
     assert_eq!(a.cursor_y, expected.cursor_y);
@@ -258,8 +260,8 @@ fn inactive_conversion_ignores_last_two_digits_and_skips_joined_humans() {
     convert_inactive(&mut s, &mut t).unwrap();
     assert_eq!(s.wallets[0], [0, 0, 0, 0, 9, 9]);
     assert_eq!(s.wallets[1][3], 2);
-    assert_eq!(t[0].nitro_stock_bcd, 0);
-    assert_eq!(t[1].nitro_stock_bcd, 0);
+    assert_eq!(t[0].nitro.encoded(), 0);
+    assert_eq!(t[1].nitro.encoded(), 0);
 }
 #[test]
 fn inactive_conversion_decimal_seventy_nine_to_eighty_consumes_extra_unit_before_cap() {
@@ -267,9 +269,9 @@ fn inactive_conversion_decimal_seventy_nine_to_eighty_consumes_extra_unit_before
     s.active_humans = 0;
     s.wallets[2] = [0, 0, 0, 3, 0, 0];
     let mut t = trucks();
-    t[2].nitro_stock_bcd = 0x79;
+    t[2].nitro = crate::trucks::nitro::NitroStock::from_encoded(0x79);
     convert_inactive(&mut s, &mut t).unwrap();
-    assert_eq!(t[2].nitro_stock_bcd, 0x80);
+    assert_eq!(t[2].nitro.encoded(), 0x80);
     assert_eq!(s.wallets[2], [0, 0, 0, 1, 0, 0]);
     assert_eq!(s.selected_wallet, 2);
 }
@@ -280,11 +282,11 @@ fn inactive_already_capped_decrements_without_normalization_or_selected_change()
     s.selected_wallet = 3;
     s.wallets[0] = [0, 0, 1, 0, 0, 0];
     let mut t = trucks();
-    t[0].nitro_stock_bcd = 0x80;
+    t[0].nitro = crate::trucks::nitro::NitroStock::from_encoded(0x80);
     convert_inactive(&mut s, &mut t).unwrap();
     assert_eq!(s.wallets[0], [0, 0, 1, 255, 0, 0]);
     assert_eq!(s.selected_wallet, 3);
-    assert_eq!(t[0].nitro_stock_bcd, 0x80);
+    assert_eq!(t[0].nitro.encoded(), 0x80);
 }
 #[test]
 fn inactive_conversion_visits_descending_slots_and_consumes_hundreds_balance() {
@@ -293,10 +295,10 @@ fn inactive_conversion_visits_descending_slots_and_consumes_hundreds_balance() {
     s.wallets[3] = [0, 0, 0, 2, 0, 0];
     s.wallets[1] = [0, 0, 0, 1, 0, 0];
     let mut t = trucks();
-    t[3].nitro_stock_bcd = 9;
+    t[3].nitro = crate::trucks::nitro::NitroStock::from_encoded(9);
     convert_inactive(&mut s, &mut t).unwrap();
-    assert_eq!(t[3].nitro_stock_bcd, 0x11);
-    assert_eq!(t[1].nitro_stock_bcd, 1);
+    assert_eq!(t[3].nitro.encoded(), 0x11);
+    assert_eq!(t[1].nitro.encoded(), 1);
     assert_eq!(s.selected_wallet, 1);
 }
 #[test]
@@ -331,7 +333,7 @@ fn insufficient_funds_and_capped_stock_leave_wallet_and_truck_unchanged() {
     );
     assert_eq!(s, old);
     s.wallets[0][3] = 9;
-    t[0].nitro_stock_bcd = 0x99;
+    t[0].nitro = crate::trucks::nitro::NitroStock::from_encoded(0x99);
     let old = s.clone();
     assert_eq!(
         purchase(&mut s, &mut t, 0, 0, Item::Nitro, &fixture()).unwrap(),
@@ -353,7 +355,7 @@ fn each_item_uses_its_cost_cap_and_stock_field_without_cross_mutation() {
         let mut t = trucks();
         purchase(&mut s, &mut t, 0, 0, item, &fixture()).unwrap();
         assert_eq!(s.wallets[0][3], 20 - cost);
-        assert_eq!(t[0].nitro_stock_bcd, u8::from(item == Item::Nitro));
+        assert_eq!(t[0].nitro.encoded(), u8::from(item == Item::Nitro));
         assert_eq!(t[0].upgrades.steering, u8::from(item == Item::Steering));
         assert_eq!(t[0].upgrades.speed, u8::from(item == Item::Speed));
         assert_eq!(
@@ -380,9 +382,9 @@ fn decimal_nitro_increment_nine_to_ten_and_upgrade_six_reject() {
     let mut s = blank_wallets();
     s.wallets[0][3] = 20;
     let mut t = trucks();
-    t[0].nitro_stock_bcd = 9;
+    t[0].nitro = crate::trucks::nitro::NitroStock::from_encoded(9);
     purchase(&mut s, &mut t, 0, 0, Item::Nitro, &fixture()).unwrap();
-    assert_eq!(t[0].nitro_stock_bcd, 0x10);
+    assert_eq!(t[0].nitro.encoded(), 0x10);
     t[0].upgrades.speed = 6;
     assert_eq!(
         purchase(&mut s, &mut t, 0, 0, Item::Speed, &fixture()).unwrap(),
@@ -480,7 +482,7 @@ fn confirm_uses_b_edge_not_start_and_holds_do_not_repeat_purchases() {
         )
         .unwrap();
     }
-    assert_eq!(t[0].nitro_stock_bcd, 1);
+    assert_eq!(t[0].nitro.encoded(), 1);
     assert_eq!(s.wallets[0][3], 4);
     assert_eq!(h.selection.done_mask, 0);
     assert_eq!(h.selection.editors[0].button_history & 0xc0, 0xc0);
@@ -584,7 +586,7 @@ fn low_byte_only_input_resets_repeat_and_released_b_allows_new_purchase() {
         &mut m,
     )
     .unwrap();
-    assert_eq!(t[0].nitro_stock_bcd, 1);
+    assert_eq!(t[0].nitro.encoded(), 1);
 }
 #[test]
 fn first_done_path_waits_before_drawing_second_done_has_no_extra_wait() {
@@ -686,8 +688,8 @@ fn done_mask_skips_bar_player_and_nonzero_page_uses_other_truck_pair() {
     h.selection.page = 1;
     h.selection.done_mask = 1;
     let mut t = trucks();
-    t[2].nitro_stock_bcd = 3;
-    t[3].nitro_stock_bcd = 1;
+    t[2].nitro = crate::trucks::nitro::NitroStock::from_encoded(3);
+    t[3].nitro = crate::trucks::nitro::NitroStock::from_encoded(1);
     let mut m = memory();
     cycle_upgrade_field(&mut h, &t, &fixture(), &mut m).unwrap();
     assert_eq!(word(&m, 0x4a02), 0x5a5a);
@@ -830,8 +832,8 @@ fn service_refreshes_wallet_and_bar_before_purchase_leaves_new_debit_for_next_bo
         ],
     )
     .unwrap();
-    assert_eq!(t[0].nitro_stock_bcd, 1);
-    assert_eq!(t[2].nitro_stock_bcd, 0);
+    assert_eq!(t[0].nitro.encoded(), 1);
+    assert_eq!(t[2].nitro.encoded(), 0);
     assert_eq!(s.wallets[0][3], 0);
     assert_eq!(word(&m, 0x4964), 0x2002);
     assert_eq!(h.redraw_field, 0);
@@ -865,7 +867,7 @@ fn suspended_first_done_wait_resumes_without_resampling_second_controller() {
     )
     .unwrap();
     assert_eq!(h.selection.done_mask, 1);
-    assert_eq!(t[1].nitro_stock_bcd, 1);
+    assert_eq!(t[1].nitro.encoded(), 1);
     assert_eq!(s.wallets[1][3], 1);
     assert_eq!(word(&m, 0x4903), 0x2011);
     for i in 0..9 {

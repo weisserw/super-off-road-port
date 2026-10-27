@@ -15,7 +15,7 @@ use crate::{
         memory::SharedGraphics,
         transitions::{Fade, Window},
     },
-    trucks::motion::Truck,
+    trucks::{motion::Truck, nitro::NitroStock},
 };
 use anyhow::{Context, Result, ensure};
 pub const ITEMS: usize = 5;
@@ -25,7 +25,7 @@ pub const MONEY_DIGITS: usize = 6;
 pub const SHOP_AUDIO: u16 = 0x0301;
 pub const COMPLETE_AUDIO: u16 = 0xe803;
 pub const ACK_AUDIO: u16 = 0x0101;
-pub const INACTIVE_NITRO_LIMIT: u8 = 0x80;
+pub const INACTIVE_NITRO_LIMIT: NitroStock = NitroStock::new(80);
 pub const COSTS_ROM: usize = 0x2f3c;
 pub const CAPS_ROM: usize = 0x2f41;
 pub const BAR_DESTINATIONS_ROM: usize = 0x310d;
@@ -36,7 +36,8 @@ pub const COMPLETE_TEXT_ROM: usize = 0x2de6;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShopAssets {
     pub costs: [u8; ITEMS],
-    pub caps: [u8; ITEMS],
+    pub nitro_cap: NitroStock,
+    pub upgrade_caps: [u8; ITEMS - 1],
     pub cursor_tiles: [u16; CURSOR_SPRITES],
     pub cursor_x: [u8; CURSOR_SPRITES],
     pub cursor_y: [u8; CURSOR_SPRITES],
@@ -70,7 +71,8 @@ pub fn load_assets(rom: &[u8]) -> Result<ShopAssets> {
     let destinations = words(BAR_DESTINATIONS_ROM, 10)?;
     let assets = ShopAssets {
         costs: bytes(COSTS_ROM, ITEMS)?.try_into().unwrap(),
-        caps: bytes(CAPS_ROM, ITEMS)?.try_into().unwrap(),
+        nitro_cap: NitroStock::from_encoded(bytes(CAPS_ROM, 1)?[0]),
+        upgrade_caps: bytes(CAPS_ROM + 1, ITEMS - 1)?.try_into().unwrap(),
         cursor_tiles: words(CURSOR_TILEWORDS_ROM, CURSOR_SPRITES)?
             .try_into()
             .unwrap(),
@@ -160,10 +162,10 @@ pub fn convert_inactive(session: &mut Session, trucks: &mut [Truck; 4]) -> Resul
         }
         while session.wallets[slot][..4].iter().any(|&digit| digit != 0) {
             session.wallets[slot][3] = session.wallets[slot][3].wrapping_sub(1);
-            if trucks[slot].nitro_stock_bcd >= INACTIVE_NITRO_LIMIT {
+            if trucks[slot].nitro.at_cap(INACTIVE_NITRO_LIMIT) {
                 break;
             }
-            trucks[slot].nitro_stock_bcd = increment_decimal(trucks[slot].nitro_stock_bcd);
+            trucks[slot].nitro.refill_one();
             session.selected_wallet = slot as u8;
             normalize_wallet(session)?;
         }
@@ -200,11 +202,18 @@ pub fn purchase(
     if wallet[..3].iter().all(|&d| d == 0) && wallet[PURCHASE_DIGIT] < assets.costs[item] {
         return Ok(Purchase::InsufficientFunds);
     }
-    let stock = stock_mut(&mut trucks[slot], item);
-    if *stock >= assets.caps[item] {
-        return Ok(Purchase::AtCap);
+    if item == index(Item::Nitro) {
+        if trucks[slot].nitro.at_cap(assets.nitro_cap) {
+            return Ok(Purchase::AtCap);
+        }
+        trucks[slot].nitro.refill_one();
+    } else {
+        let stock = upgrade_stock_mut(&mut trucks[slot], item);
+        if *stock >= assets.upgrade_caps[item - 1] {
+            return Ok(Purchase::AtCap);
+        }
+        *stock = increment_decimal(*stock);
     }
-    *stock = increment_decimal(*stock);
     wallet[PURCHASE_DIGIT] = wallet[PURCHASE_DIGIT].wrapping_sub(assets.costs[item]);
     Ok(Purchase::Bought)
 }
@@ -662,16 +671,15 @@ fn index(item: Item) -> usize {
 }
 fn stock(truck: &Truck, item: usize) -> u8 {
     match item {
-        0 => truck.nitro_stock_bcd,
+        0 => truck.nitro.encoded(),
         1 => truck.upgrades.acceleration,
         2 => truck.upgrades.steering,
         3 => truck.upgrades.speed,
         _ => truck.upgrades.suspension,
     }
 }
-fn stock_mut(truck: &mut Truck, item: usize) -> &mut u8 {
+fn upgrade_stock_mut(truck: &mut Truck, item: usize) -> &mut u8 {
     match item {
-        0 => &mut truck.nitro_stock_bcd,
         1 => &mut truck.upgrades.acceleration,
         2 => &mut truck.upgrades.steering,
         3 => &mut truck.upgrades.speed,

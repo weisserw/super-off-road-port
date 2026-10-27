@@ -3,6 +3,7 @@
 pub mod memory;
 pub mod sprites;
 pub mod transitions;
+pub const HUD_DIGIT_TILE_BASE: u8 = 0x15;
 use crate::{race::RaceTimer, world::tracks::TrackContent};
 use anyhow::{Context, Result, ensure};
 pub const VRAM_BYTES: usize = 65536;
@@ -304,7 +305,7 @@ pub fn initialize_hud(
     const BORDER_STARTS: [u16; 2] = [0x4800, 0x4b40];
     const BORDER_WORDS: usize = 64;
     const BORDER_TILE: u16 = 0x2ddb;
-    const DIGIT_BASE: u8 = 0x15;
+    const DIGIT_BASE: u8 = HUD_DIGIT_TILE_BASE;
     validate_track_presentation(content)?;
     let graphics = rom
         .get(HUD_ROM..HUD_ROM + HUD_BYTES)
@@ -349,20 +350,24 @@ pub fn initialize_hud(
 pub fn update_hud_digits(
     memory: &mut VideoMemory,
     laps: [u8; 4],
-    nitro: [u8; 4],
+    nitro: [crate::trucks::nitro::NitroStock; 4],
     timer: &mut RaceTimer,
 ) {
-    const DIGIT_BASE: u8 = 0x15;
+    const DIGIT_BASE: u8 = HUD_DIGIT_TILE_BASE;
     const LAP_START: usize = 0x22;
     const TIMER_HIGH: usize = 0x3e;
     const TIMER_MIDDLE_HIGH: usize = 0x3a;
     const TIMER_MIDDLE_LOW: usize = 0x32;
     for (output, slot) in (0..4).rev().enumerate() {
         memory.staged_oam[LAP_START + output * 4] = laps[slot].wrapping_add(DIGIT_BASE);
-        memory.staged_oam[2 + output * 8] = (nitro[slot] & 0xf).wrapping_add(DIGIT_BASE);
-        memory.staged_oam[6 + output * 8] = (nitro[slot] >> 4).wrapping_add(DIGIT_BASE);
+        let [units, tens] = nitro[slot].display_digits();
+        memory.staged_oam[2 + output * 8] = units.wrapping_add(DIGIT_BASE);
+        memory.staged_oam[6 + output * 8] = tens.wrapping_add(DIGIT_BASE);
     }
-    let digits = crate::race::advance_timer(timer);
+    crate::race::advance_timer(timer);
+    let digits = timer
+        .visible_digits()
+        .map(|digit| digit.wrapping_add(DIGIT_BASE));
     for (at, digit) in [TIMER_HIGH, TIMER_MIDDLE_HIGH, TIMER_MIDDLE_LOW]
         .into_iter()
         .zip(digits)

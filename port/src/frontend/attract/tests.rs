@@ -65,7 +65,7 @@ fn assets() -> FrontendAssets {
 }
 fn trucks() -> [Truck; 4] {
     std::array::from_fn(|_| Truck {
-        nitro_stock_bcd: 0x42,
+        nitro: crate::trucks::nitro::NitroStock::from_encoded(0x42),
         upgrades: Upgrades {
             steering: 3,
             speed: 4,
@@ -199,7 +199,7 @@ fn warm_and_cold_shared_setup_reset_wallets_twenty_stock_upgrade_bytes_but_not_m
         assert_eq!(s.selected_wallet, 0);
         assert_eq!(s.records, records(0x77));
         for truck in t {
-            assert_eq!(truck.nitro_stock_bcd, 0);
+            assert_eq!(truck.nitro.encoded(), 0);
             assert_eq!(truck.upgrades, Upgrades::default());
             assert_eq!(truck.speed, 0x1234);
             assert_eq!(truck.heading, 0x5678);
@@ -236,7 +236,7 @@ fn attract_rotates_before_lookup_and_wraps_byte_counter_then_masks() {
         assert_eq!(s.attract_rotation, after);
         assert_eq!(s.order_slot, [7, 11, 15, 19][after as usize]);
         assert_eq!(s.active_humans, 0);
-        assert!(t.iter().all(|t| t.nitro_stock_bcd == ATTRACT_NITRO));
+        assert!(t.iter().all(|t| t.nitro == ATTRACT_NITRO));
         assert_eq!(s.inhibit_video, 0x81);
         assert!(d.force_blank);
         assert_eq!(d.masked_layers, 0);
@@ -251,9 +251,9 @@ fn joined_second_page_counts_even_if_first_zero_and_combines_shifted_bits() {
     finish_driver_selection(&mut s, &mut t);
     assert_eq!(s.active_humans, 8);
     assert_eq!(s.order_slot, 0);
-    assert_eq!(t[3].nitro_stock_bcd, 0x42);
+    assert_eq!(t[3].nitro.encoded(), 0x42);
     for truck in &t[..3] {
-        assert_eq!(truck.nitro_stock_bcd, AI_INITIAL_NITRO);
+        assert_eq!(truck.nitro.encoded(), AI_INITIAL_NITRO.encoded());
     }
     assert_eq!(s.phase, EntryPhase::ReadyForRace);
 }
@@ -264,9 +264,9 @@ fn joined_mask_combine_is_byte_shift_or_not_a_global_low_four_mask() {
     let mut t = trucks();
     finish_driver_selection(&mut s, &mut t);
     assert_eq!(s.active_humans, 0x89);
-    assert_eq!(t[0].nitro_stock_bcd, 0x42);
-    assert_eq!(t[3].nitro_stock_bcd, 0x42);
-    assert_eq!(t[1].nitro_stock_bcd, AI_INITIAL_NITRO);
+    assert_eq!(t[0].nitro.encoded(), 0x42);
+    assert_eq!(t[3].nitro.encoded(), 0x42);
+    assert_eq!(t[1].nitro.encoded(), AI_INITIAL_NITRO.encoded());
 }
 #[test]
 fn nobody_joined_restarts_entry_without_ai_stock_or_order_reset() {
@@ -644,7 +644,7 @@ fn panel_initialization_resets_stock_not_wallets_and_installs_real_map_before_wi
     assert_eq!(p.window.masks, [3, 0, 0]);
     assert_eq!(s.wallets, [[9; 6]; 4]);
     for truck in t {
-        assert_eq!(truck.nitro_stock_bcd, 0);
+        assert_eq!(truck.nitro.encoded(), 0);
         assert_eq!(truck.upgrades, Upgrades::default());
     }
     assert_eq!(s.enabled_layers, 5);

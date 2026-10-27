@@ -19,6 +19,26 @@ NMI first transfers eligible staged video and automatic input, advances counters
 
 Headless semantic observations expose scene, counters, canonical actors/progression, timers, window/menu/pause state, world, sound and bounded event journal. Debug transport adds deterministic frame/audio hashes and checkpoint recipes described in debug/api.md. Original records are session state; this cartridge has no battery save.
 
+## Modernization iteration 1
+
+Truck now owns `trucks::nitro::NitroStock`, measured in charges. Movement consumes it, shop refills it, and pickups award charges without packed-decimal arithmetic in those gameplay callers. Original shop caps decode at asset loading. HUD digits and the version2 `nitro_stock_bcd` save/debug field remain boundary encodings. Upgrades and wallet normalization keep their existing models and order.
+
+`race::RaceTimer` stores elapsed source timing units and advances by sixteen per service, with the source pre-add saturation test and retained crossing fraction. Its visible digits are independent of tile selection in presentation. Results encode the upper precision only at original record storage/comparison boundaries; the units are not claimed milliseconds.
+
+Both value owners isolate noncanonical byte states accepted by old saves in a compatibility variant. Normal gameplay uses native quantities. Legacy conditional arithmetic remains solely to preserve those accepted states, including their display/record effects; it is not a new invalid-BCD hardware claim. Serialization and public semantic observations retain their existing fields and values.
+
+The scheduler delegates name and shop scene steps to cohesive methods. An explicit yield/continue result preserves whether a scene handoff consumes the current NMI. Window ownership, retained button history, view synchronization and sound flushing retain their positions. Evidence, remaining limits and per-target outcomes are in [modernize/changes.json](modernize/changes.json); original trace contracts and historical architecture below are preserved.
+
+## Modernization iteration 2
+
+`world::tracks::Route` owns immutable decoded nodes, waypoint geometry and human/AI traversal actions. Human checkpoint acceptance, AI target selection and ranking no longer interpret route words during gameplay. A control node still carries geometry for consumers that read it as a rectangle. Ranking retains its distinct center; steering reduces to source bits6..13, so the upper coordinate bits cannot affect its quantized vector. Human/next-target lookups retain a64-node source window separately from full-index cached AI/ranking lookup. Route count, terminal/partial words, serialization and the known route-copy tail effect remain boundary contracts. `GridOrigin` supplies decoded grid coordinates.
+
+The six dynamic hazards own named `HazardStage` values, a `ResponseClock`, and a `ReactionBudget` measured in complete responses. Source uses0 decodes to one response. Completion and depletion use explicit states rather than normal signed-underflow sentinels. Conditional historical counter values and animation29 deferred completion remain isolated compatibility cases. Contact windows at presentation cursors0/18, drawing before decrement, full-word speed effects, sound gating and descending slot interaction retain their established order. Version2 kind/timer/uses/animation serialization and semantic observations are unchanged; inactive retained fields are still preserved.
+
+`trucks::bearings::BearingTable` is loaded once into the immutable Resources-owned `AiTables`. Movement/contact and late-frame AI borrow that same table. Selected `RaceAssets` no longer load or own a duplicate contact bearing array. The shared signed-vector quantizer and each caller's coordinate reduction/correction stay intact. This is resource-ownership refactoring; the route and hazard changes are game-model modernization.
+
+See [modernize/changes.json](modernize/changes.json) for per-target evidence and limits. Iteration1 records are also preserved in [modernize/iterations/001](modernize/iterations/001).
+
 ## Preserved Stage1/2 architecture record
 
 # Native port architecture

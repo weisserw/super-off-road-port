@@ -136,10 +136,9 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
                 .world
                 .dynamic
                 .iter()
-                .all(|object| object.kind <= 3
+                .all(|object| object.stage.supported()
                     && object.animation < 35
-                    && ((object.timer as i16) < 0
-                        || object.timer <= crate::world::objects::DYNAMIC_RESPONSE_TICKS)),
+                    && object.response.valid_snapshot()),
         "invalid world snapshot"
     );
     if let Some(composites) = &state.race.world.composites {

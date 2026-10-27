@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "iteration": 2,
+  "faithful_baseline": "modernize/baseline.json",
+  "starting_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+  "source_snapshot": "modernize/evidence/iteration-002/starting-source.tar.gz",
+  "source_snapshot_sha256": "89ac12701f51b077e754e3fae1ec7d8519308125573a603a81614fded4d48d39",
+  "native_binary_sha256": "f2f60380b6d1450cbfd860f3e095bf16a20d15b651b05a39b5aca66dc558d4e5",
+  "prior_iteration_archive": "modernize/iterations/001",
+  "readiness_check": "PASS: toolkit port_modernize.py check",
+  "accounting_audit": {
+    "ok": true,
+    "regions": 1527,
+    "units": 1408,
+    "uncertainties": 22,
+    "uncertainty_tracking": true,
+    "semantic_correctness_assessed": false
+  },
+  "validation_review": "Starting source and executable match completed iteration1 (631 tests, all six optimized checks, bounded original/native/lifecycle evidence). No implementation or test edits this turn; no repeated gameplay QA or build run.",
+  "coverage_limits": [
+    "Existing natural integration covers startup, shop, short racing and initial frame/audio comparisons; not route-control or full hazard lifecycles.",
+    "Route-specific original traversal and hazard contact/exhaustion setup must be established for any selected conversion.",
+    "Noncanonical save states retain existing native policies; hardware behavior is not newly certified."
+  ]
+}

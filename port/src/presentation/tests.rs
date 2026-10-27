@@ -652,11 +652,7 @@ fn hud_initialization_uploads_graphics_border_titles_and_resets_only_time() {
     let c = load_track_presentation(&b, 0).unwrap();
     let t = load_hud_tables(&b).unwrap();
     let mut m = memory();
-    let mut clock = RaceTimer {
-        fraction_bcd: 0x12,
-        middle_bcd: 0x34,
-        high_bcd: 5,
-    };
+    let mut clock = RaceTimer::from_encoded([0x12, 0x34, 5]);
     initialize_hud(&mut m, &b, &c, &t, false, &mut clock).unwrap();
     assert_eq!(&m.vram[0xa000..0xc000], &b[0x3b600..0x3d600]);
     assert_eq!(
@@ -693,12 +689,13 @@ fn reversed_flag_alone_gates_special_overlays_then_title_still_draws() {
 #[test]
 fn hud_digit_slots_reverse_truck_order_and_call_real_timer_even_after_winner() {
     let mut m = memory();
-    let mut t = RaceTimer {
-        fraction_bcd: 0x90,
-        middle_bcd: 0x12,
-        high_bcd: 3,
-    };
-    update_hud_digits(&mut m, [1, 2, 3, 5], [0x12, 0x34, 0x56, 0x78], &mut t);
+    let mut t = RaceTimer::from_encoded([0x90, 0x12, 3]);
+    update_hud_digits(
+        &mut m,
+        [1, 2, 3, 5],
+        [0x12, 0x34, 0x56, 0x78].map(crate::trucks::nitro::NitroStock::from_encoded),
+        &mut t,
+    );
     assert_eq!(
         [
             m.staged_oam[2],
@@ -719,14 +716,7 @@ fn hud_digit_slots_reverse_truck_order_and_call_real_timer_even_after_winner() {
         ],
         [0x1a, 0x18, 0x17, 0x16]
     );
-    assert_eq!(
-        t,
-        RaceTimer {
-            fraction_bcd: 6,
-            middle_bcd: 0x13,
-            high_bcd: 3
-        }
-    );
+    assert_eq!(t, RaceTimer::from_encoded([6, 0x13, 3]));
     assert_eq!(
         [m.staged_oam[0x3e], m.staged_oam[0x3a], m.staged_oam[0x32]],
         [0x18, 0x16, 0x18]
@@ -735,13 +725,14 @@ fn hud_digit_slots_reverse_truck_order_and_call_real_timer_even_after_winner() {
 #[test]
 fn hud_time_saturation_preserves_fraction_and_draws_all_three_visible_nibbles() {
     let mut m = memory();
-    let mut t = RaceTimer {
-        fraction_bcd: 0x77,
-        middle_bcd: 0x99,
-        high_bcd: 9,
-    };
-    update_hud_digits(&mut m, [1; 4], [0; 4], &mut t);
-    assert_eq!(t.fraction_bcd, 0x77);
+    let mut t = RaceTimer::from_encoded([0x77, 0x99, 9]);
+    update_hud_digits(
+        &mut m,
+        [1; 4],
+        [0; 4].map(crate::trucks::nitro::NitroStock::from_encoded),
+        &mut t,
+    );
+    assert_eq!(t.encoded()[0], 0x77);
     assert_eq!(
         [m.staged_oam[0x3e], m.staged_oam[0x3a], m.staged_oam[0x32]],
         [0x1e; 3]

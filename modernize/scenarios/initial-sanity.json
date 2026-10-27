@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "adapter": "../../debug/scenarios/initial_sanity_adapter.py",
+  "original_fidelity_sanity": {
+    "enabled": true,
+    "reason": "Required separate initial original rendering, scrolling, animation and audio sanity for faithful native port"
+  },
+  "tests": [
+    {
+      "id": "initial-original-sanity",
+      "kind": "original-fidelity-sanity",
+      "expectations": {
+        "original-fidelity": {
+          "frames": "Exact full 256x224 RGB pixels for original full-bright licensed/software screens and highscore scroll0132/0142; visible source scanline1 origin, source phase/scroll alignment not physical reset-frame equality. Also exact initial race grid and countdown animation selected at source ready/counter states0/6 and13/4 from natural original route snapshots.",
+          "audio": "Initial music sequencing and audible output reviewed against original; native linear DSP interpolation is the documented limited difference, not a waiver for missing/wrong music."
+        }
+      }
+    }
+  ],
+  "suites": {
+    "initial": [
+      "initial-original-sanity"
+    ]
+  }
+}

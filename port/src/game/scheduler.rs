@@ -19,6 +19,14 @@ const GAME_OVER_TEXT: u16 = 0x4b0b;
 const EMPTY_RECORD_TIME: [u8; 2] = [9, 0x99];
 const EMPTY_RECORD_GLYPH: u8 = 0x2a;
 
+/// Whether a frontend return consumes the current NMI boundary. Keeping this
+/// explicit prevents an extracted handler from adding/removing a visible wait.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SceneStep {
+    Yield,
+    Continue,
+}
+
 impl Port {
     pub(super) fn boot(&mut self) -> Result<()> {
         let mut boot = runtime::BootState {
@@ -376,10 +384,7 @@ impl Port {
         let terrain = self.terrain.clone();
         let direction = usize::from(selected.reversed);
         let route = &selected.track.routes[direction];
-        let start = [
-            *route.words.first().context("empty race route")?,
-            *route.words.get(1).context("missing route startY")?,
-        ];
+        let start = route.grid_origin()?;
         let grid = tracks::prepare_grid(
             start,
             selected.track.headings[direction],
@@ -564,6 +569,124 @@ impl Port {
         }
         self.state.scene(Scene::LossShowWait);
         Ok(())
+    }
+    // These scene steps preserve the same window/history owners and service
+    // order as their domain calls. Yield ends this NMI's scene pump; Continue
+    // dispatches the next scene before the common view/sound flush.
+    fn advance_names_scene(&mut self, resources: &Resources) -> Result<SceneStep> {
+        let Menu::Names(selection) = &mut self.state.menu else {
+            anyhow::bail!("name scene missing owner");
+        };
+        let previous = selection.phase;
+        names::advance(
+            selection,
+            &mut self.state.session,
+            &resources.names,
+            &resources.shared,
+            &resources.directions,
+            &mut self.state.race.video.memory,
+            &mut self.state.race.video.display,
+            &mut self.state.race.video.sprites,
+            self.state.automatic,
+            self.state.race.progress.animation_frame,
+        )?;
+        if previous == names::Phase::FinalWait {
+            let mut window = self
+                .state
+                .window
+                .take()
+                .context("name contraction lost source window")?;
+            let motion = t::begin_frontend(
+                t::FrontendKind::Contracting,
+                &mut window,
+                &mut self.state.race.video.display,
+            );
+            selection.sequence = Some(names::Sequence::Window { window, motion });
+        }
+        if matches!(previous, names::Phase::EntryFade | names::Phase::FadeIn)
+            && let Some(names::Sequence::Fade(fade)) = &selection.sequence
+        {
+            self.state.race.progress.animation_frame = fade.animation_counter;
+        }
+        if selection.phase == names::Phase::Ack {
+            if let Some(names::Sequence::Window { window, .. }) = selection.sequence.take() {
+                self.state.window = Some(window);
+            }
+            names::finish_page(selection, &mut self.state.session);
+        }
+        if selection.phase == names::Phase::Complete {
+            let history = selection.editors[1].button_history;
+            self.state.pause.owner_plus_one = history;
+            self.begin_shop(ShopNext::FirstRace)?;
+        }
+        Ok(SceneStep::Yield)
+    }
+    fn advance_shop_scene(&mut self, resources: &Resources) -> Result<SceneStep> {
+        let Menu::Shop(shop) = &mut self.state.menu else {
+            anyhow::bail!("shop scene missing owner");
+        };
+        let previous = shop.phase;
+        shop::advance(
+            shop,
+            &mut self.state.session,
+            &mut self.state.race.trucks,
+            &resources.shop,
+            &resources.names,
+            &resources.shared,
+            &resources.directions,
+            &mut self.state.race.video.memory,
+            &mut self.state.race.video.display,
+            self.state.automatic,
+        )?;
+        if previous == shop::Phase::FinalWait {
+            let mut window = self
+                .state
+                .window
+                .take()
+                .context("shop expansion lost source window")?;
+            let motion = t::begin_frontend(
+                t::FrontendKind::Expanding,
+                &mut window,
+                &mut self.state.race.video.display,
+            );
+            shop.window = Some(window);
+            shop.window_motion = Some(motion);
+        }
+        if previous == shop::Phase::FadeIn
+            && let Some(fade) = &shop.fade
+        {
+            self.state.race.progress.animation_frame = fade.animation_counter;
+        }
+        if shop.phase == shop::Phase::Ack {
+            self.state.window = shop.window.take();
+            shop::finish_page(shop, &mut self.state.session);
+        }
+        if shop.phase == shop::Phase::Complete {
+            self.state.shop_redraw_field = shop.redraw_field;
+            let selection = self.take_selection();
+            self.state.menu = Menu::Idle(selection);
+            if self.state.shop_next == ShopNext::FirstRace {
+                attract::finish_driver_selection(
+                    &mut self.state.session,
+                    &mut self.state.race.trucks,
+                );
+                if self.state.session.phase == attract::EntryPhase::RestartEntry {
+                    self.enter_frontend()?;
+                    return Ok(SceneStep::Yield);
+                }
+                self.state.race.video.display.force_blank = true;
+                self.state.race.video.display.masked_layers = 0;
+                presentation::reset_display(&mut self.state.race.video.display);
+                self.state.sequence_index = 0;
+                self.state.scene(Scene::RacePrepare);
+                return Ok(SceneStep::Continue);
+            }
+            self.postrace_owner(true)?;
+            self.postrace_owner(false)?;
+            self.finish_postrace()?;
+            return Ok(SceneStep::Continue);
+        }
+        Ok(SceneStep::Yield)
     }
     pub(super) fn advance(&mut self, input: &MultiInputState) -> Result<()> {
         self.state.ticks = self.state.ticks.wrapping_add(1);
@@ -754,123 +877,14 @@ impl Port {
                     }
                     break;
                 }
-                Scene::Names => {
-                    let Menu::Names(selection) = &mut self.state.menu else {
-                        anyhow::bail!("name scene missing owner");
-                    };
-                    let previous = selection.phase;
-                    names::advance(
-                        selection,
-                        &mut self.state.session,
-                        &resources.names,
-                        &resources.shared,
-                        &resources.directions,
-                        &mut self.state.race.video.memory,
-                        &mut self.state.race.video.display,
-                        &mut self.state.race.video.sprites,
-                        self.state.automatic,
-                        self.state.race.progress.animation_frame,
-                    )?;
-                    if previous == names::Phase::FinalWait {
-                        let mut window = self
-                            .state
-                            .window
-                            .take()
-                            .context("name contraction lost source window")?;
-                        let motion = t::begin_frontend(
-                            t::FrontendKind::Contracting,
-                            &mut window,
-                            &mut self.state.race.video.display,
-                        );
-                        selection.sequence = Some(names::Sequence::Window { window, motion });
-                    }
-                    if matches!(previous, names::Phase::EntryFade | names::Phase::FadeIn)
-                        && let Some(names::Sequence::Fade(fade)) = &selection.sequence
-                    {
-                        self.state.race.progress.animation_frame = fade.animation_counter;
-                    }
-                    if selection.phase == names::Phase::Ack {
-                        if let Some(names::Sequence::Window { window, .. }) =
-                            selection.sequence.take()
-                        {
-                            self.state.window = Some(window);
-                        }
-                        names::finish_page(selection, &mut self.state.session);
-                    }
-                    if selection.phase == names::Phase::Complete {
-                        let history = selection.editors[1].button_history;
-                        self.state.pause.owner_plus_one = history;
-                        self.begin_shop(ShopNext::FirstRace)?;
-                    }
-                    break;
-                }
-                Scene::Shop => {
-                    let Menu::Shop(shop) = &mut self.state.menu else {
-                        anyhow::bail!("shop scene missing owner");
-                    };
-                    let previous = shop.phase;
-                    shop::advance(
-                        shop,
-                        &mut self.state.session,
-                        &mut self.state.race.trucks,
-                        &resources.shop,
-                        &resources.names,
-                        &resources.shared,
-                        &resources.directions,
-                        &mut self.state.race.video.memory,
-                        &mut self.state.race.video.display,
-                        self.state.automatic,
-                    )?;
-                    if previous == shop::Phase::FinalWait {
-                        let mut window = self
-                            .state
-                            .window
-                            .take()
-                            .context("shop expansion lost source window")?;
-                        let motion = t::begin_frontend(
-                            t::FrontendKind::Expanding,
-                            &mut window,
-                            &mut self.state.race.video.display,
-                        );
-                        shop.window = Some(window);
-                        shop.window_motion = Some(motion);
-                    }
-                    if previous == shop::Phase::FadeIn
-                        && let Some(fade) = &shop.fade
-                    {
-                        self.state.race.progress.animation_frame = fade.animation_counter;
-                    }
-                    if shop.phase == shop::Phase::Ack {
-                        self.state.window = shop.window.take();
-                        shop::finish_page(shop, &mut self.state.session);
-                    }
-                    if shop.phase == shop::Phase::Complete {
-                        self.state.shop_redraw_field = shop.redraw_field;
-                        let selection = self.take_selection();
-                        self.state.menu = Menu::Idle(selection);
-                        if self.state.shop_next == ShopNext::FirstRace {
-                            attract::finish_driver_selection(
-                                &mut self.state.session,
-                                &mut self.state.race.trucks,
-                            );
-                            if self.state.session.phase == attract::EntryPhase::RestartEntry {
-                                self.enter_frontend()?;
-                                break;
-                            }
-                            self.state.race.video.display.force_blank = true;
-                            self.state.race.video.display.masked_layers = 0;
-                            presentation::reset_display(&mut self.state.race.video.display);
-                            self.state.sequence_index = 0;
-                            self.state.scene(Scene::RacePrepare);
-                            continue;
-                        }
-                        self.postrace_owner(true)?;
-                        self.postrace_owner(false)?;
-                        self.finish_postrace()?;
-                        continue;
-                    }
-                    break;
-                }
+                Scene::Names => match self.advance_names_scene(&resources)? {
+                    SceneStep::Yield => break,
+                    SceneStep::Continue => continue,
+                },
+                Scene::Shop => match self.advance_shop_scene(&resources)? {
+                    SceneStep::Yield => break,
+                    SceneStep::Continue => continue,
+                },
                 Scene::RacePrepare => {
                     self.prepare_race()?;
                     break;

@@ -25,7 +25,6 @@ pub const SECONDARY_TRIGGER: u16 = 15;
 pub const INITIAL_AI_TIMEOUT: u8 = 200;
 pub const PRIMARY_SPRITE_ATTRIBUTES: u16 = 0x3584;
 pub const HIDDEN_SPRITE_COORDINATES: u16 = 0xf0f0;
-pub const TIMER_DIGIT_TILE_BASE: u8 = 0x15;
 pub const ORIGINAL_ORDER_MASK: u8 = 63;
 
 /// Single race authority shared by human and computer checkpoint consumers.
@@ -41,48 +40,13 @@ pub struct Progress {
     /// Source word; the last-lap helper stores only its low byte.
     pub banner_state: u16,
 }
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RaceTimer {
-    pub fraction_bcd: u8,
-    pub middle_bcd: u8,
-    pub high_bcd: u8,
-}
-/// Increment is source encoded decimal16, not claimed wall-clock milliseconds.
-/// Winner/prepared guards do not exist inside this HUD-time operation.
-pub fn advance_timer(timer: &mut RaceTimer) -> [u8; 3] {
-    const FRACTION_STEP: u8 = 0x16;
-    const MAX_HIGH: u8 = 0x09;
-    const MAX_MIDDLE: u8 = 0x99;
-    const NIBBLE_MASK: u8 = 0x0f;
-    fn decimal_add(value: u8, increment: u8, carry: bool) -> (u8, bool) {
-        let mut low =
-            u16::from(value & NIBBLE_MASK) + u16::from(increment & NIBBLE_MASK) + u16::from(carry);
-        let low_carry = low > 9;
-        if low_carry {
-            low -= 10;
-        }
-        let mut high = u16::from(value >> 4) + u16::from(increment >> 4) + u16::from(low_carry);
-        let carry = high > 9;
-        if carry {
-            high -= 10;
-        }
-        (((high << 4) | low) as u8, carry)
-    }
-    if timer.high_bcd < MAX_HIGH || timer.middle_bcd < MAX_MIDDLE {
-        let (fraction, carry) = decimal_add(timer.fraction_bcd, FRACTION_STEP, false);
-        let (middle, carry) = decimal_add(timer.middle_bcd, 0, carry);
-        let (high, _) = decimal_add(timer.high_bcd, 0, carry);
-        timer.fraction_bcd = fraction;
-        timer.middle_bcd = middle;
-        timer.high_bcd = high;
-    }
-    [
-        timer.high_bcd & NIBBLE_MASK,
-        timer.middle_bcd >> 4,
-        timer.middle_bcd & NIBBLE_MASK,
-    ]
-    .map(|digit| digit.wrapping_add(TIMER_DIGIT_TILE_BASE))
+mod time;
+pub use time::RaceTimer;
+
+/// Preserve the shared service entry point while keeping display encoding in
+/// presentation. Prepared/winner guards do not exist inside this operation.
+pub fn advance_timer(timer: &mut RaceTimer) {
+    timer.advance();
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -223,17 +187,8 @@ pub fn animate_banner(
 }
 /// Both race consumers share the same center-world packed rectangle helper.
 /// Wrapped unsigned acceptance excludes lower world edge and includes upper.
-pub fn inside_checkpoint(world: [u16; 2], record: [u16; 2]) -> bool {
-    const HALF_EXTENT_MASK: u16 = 0x1f;
-    const CENTER_MASK: u16 = 0xbfe0;
-    const EXTENT_SHIFT: u32 = 7;
-    (0..2).all(|axis| {
-        let half = (record[axis] & HALF_EXTENT_MASK) << EXTENT_SHIFT;
-        (record[axis] & CENTER_MASK)
-            .wrapping_sub(world[axis])
-            .wrapping_add(half)
-            < half * 2
-    })
+pub fn inside_checkpoint(world: [u16; 2], waypoint: crate::world::tracks::Waypoint) -> bool {
+    waypoint.contains(world)
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct HumanRouteVisits {
@@ -250,10 +205,6 @@ pub fn service_human_routes(
     route: &Route,
     automatic: [ControllerWord; TRUCKS],
 ) -> Result<HumanRouteVisits> {
-    const CONDITIONAL_MARKER: u8 = 0xfd;
-    const REDIRECT_MARKER: u8 = 0xfe;
-    const TERMINATOR: u8 = 0xff;
-    const SKIP_BIT: u8 = 0x40;
     let mut next_trucks = trucks.clone();
     let mut next = progress.clone();
     let mut retained = std::array::from_fn(|slot| next_trucks[slot].controller);
@@ -271,21 +222,16 @@ pub fn service_human_routes(
             let checkpoint = next.drivers[slot].checkpoint;
             ensure!(!seen[usize::from(checkpoint)], "control-only route cycle");
             seen[usize::from(checkpoint)] = true;
-            let at = usize::from(checkpoint.wrapping_mul(4)) / 2;
-            let x = *route.words.get(at).context("missing human route record")?;
-            let high = (x >> u8::BITS) as u8;
-            if high == TERMINATOR {
-                next.drivers[slot].checkpoint = 0;
-                continue;
+            let node = route.short_node(checkpoint)?;
+            match node.human {
+                crate::world::tracks::HumanTraversal::Wrap => {
+                    next.drivers[slot].checkpoint = 0;
+                }
+                crate::world::tracks::HumanTraversal::Skip => {
+                    next.drivers[slot].checkpoint = checkpoint.wrapping_add(1);
+                }
+                crate::world::tracks::HumanTraversal::Checkpoint => break node.waypoint()?,
             }
-            if matches!(high, CONDITIONAL_MARKER | REDIRECT_MARKER) || high & SKIP_BIT != 0 {
-                next.drivers[slot].checkpoint = checkpoint.wrapping_add(1);
-                continue;
-            }
-            break [
-                x,
-                *route.words.get(at + 1).context("missing human route Y")?,
-            ];
         };
         visits.tested_slots.push(slot);
         if !inside_checkpoint(next_trucks[slot].world, record) {
@@ -493,7 +439,7 @@ pub fn update_frame_services(
         &environment.motion,
         &mut race.terrain_history,
         &mut race.world.contacts,
-        &environment.assets.contacts,
+        &environment.ai.bearings,
     )?;
     stage_motion_frame(race, frame);
     phases.push(ServicePhase::Wheels);
@@ -560,7 +506,7 @@ pub fn update_frame_services(
     presentation::update_hud_digits(
         &mut race.video.memory,
         race.progress.drivers.map(|driver| driver.lap),
-        race.trucks.each_ref().map(|truck| truck.nitro_stock_bcd),
+        race.trucks.each_ref().map(|truck| truck.nitro),
         &mut race.timer,
     );
     phases.push(ServicePhase::Computers);
@@ -659,8 +605,8 @@ pub fn prepare_selected_race(
     phase!(ClearSpriteAnimations);
     apply_cursor_view(race, [0; crate::presentation::SORTED_SPRITES]);
     phase!(LoadRoute);
-    if let Some(word) = environment.route.words.get(0xf7 / 2) {
-        race.route_tail_byte = word.to_le_bytes()[1];
+    if let Some(byte) = environment.route.copied_tail() {
+        race.route_tail_byte = byte;
     }
     for driver in &mut race.progress.drivers {
         driver.checkpoint = 1;
@@ -1038,10 +984,10 @@ mod tests {
         })
     }
     fn route() -> Route {
-        Route {
-            words: vec![0x2002, 0x3002, 0x2002, 0x3002, 0x2002, 0x3002, 0xff03],
-            checkpoint_count: 3,
-        }
+        Route::from_words(
+            vec![0x2002, 0x3002, 0x2002, 0x3002, 0x2002, 0x3002, 0xff03],
+            3,
+        )
     }
     fn display() -> BannerDisplay {
         BannerDisplay {
@@ -1304,18 +1250,45 @@ mod tests {
             ([0x2000, 0x2f00], false),
             ([0x2000, 0x3100], true),
         ] {
-            assert_eq!(inside_checkpoint(world, CHECKPOINT_RECORD), expected);
+            assert_eq!(
+                inside_checkpoint(
+                    world,
+                    crate::world::tracks::Waypoint::from_encoded(CHECKPOINT_RECORD)
+                ),
+                expected
+            );
         }
-        assert!(!inside_checkpoint(CHECKPOINT_CENTER, [0x2000, 0x3002]));
-        assert!(!inside_checkpoint(CHECKPOINT_CENTER, [0x2002, 0x3000]));
+        assert!(!inside_checkpoint(
+            CHECKPOINT_CENTER,
+            crate::world::tracks::Waypoint::from_encoded([0x2000, 0x3002])
+        ));
+        assert!(!inside_checkpoint(
+            CHECKPOINT_CENTER,
+            crate::world::tracks::Waypoint::from_encoded([0x2002, 0x3000])
+        ));
     }
     #[test]
     fn rectangle_masks_control_bit_fourteen_preserves_bit_fifteen_and_wraps_world_subtraction() {
-        assert!(inside_checkpoint([0, 0], [0x4001, 0x4001]));
-        assert!(inside_checkpoint([0x8000, 0x8000], [0x8001, 0x8001]));
-        assert!(!inside_checkpoint([0, 0], [0x8001, 0x8001]));
-        assert!(inside_checkpoint([0xfff0, 0x0080], [0x0001, 0x0001]));
-        assert!(!inside_checkpoint([0xff80, 0], [0x0001, 0x0001]));
+        assert!(inside_checkpoint(
+            [0, 0],
+            crate::world::tracks::Waypoint::from_encoded([0x4001, 0x4001])
+        ));
+        assert!(inside_checkpoint(
+            [0x8000, 0x8000],
+            crate::world::tracks::Waypoint::from_encoded([0x8001, 0x8001])
+        ));
+        assert!(!inside_checkpoint(
+            [0, 0],
+            crate::world::tracks::Waypoint::from_encoded([0x8001, 0x8001])
+        ));
+        assert!(inside_checkpoint(
+            [0xfff0, 0x0080],
+            crate::world::tracks::Waypoint::from_encoded([0x0001, 0x0001])
+        ));
+        assert!(!inside_checkpoint(
+            [0xff80, 0],
+            crate::world::tracks::Waypoint::from_encoded([0x0001, 0x0001])
+        ));
     }
     #[test]
     fn enabled_humans_scan_descending_copy_new_full_words_and_preserve_disabled_ai_words() {
@@ -1361,12 +1334,12 @@ mod tests {
     }
     #[test]
     fn human_fd_fe_and_bit_fourteen_records_skip_without_reading_redirect_targets() {
-        let r = Route {
-            words: vec![
+        let r = Route::from_words(
+            vec![
                 0xfd00, 0xffff, 0xfe00, 0xfffe, 0x4002, 0, 0x2002, 0x3002, 0xff04,
             ],
-            checkpoint_count: 4,
-        };
+            4,
+        );
         let mut t = trucks();
         let mut p = progress();
         p.active_humans = 1;
@@ -1390,10 +1363,7 @@ mod tests {
     }
     #[test]
     fn rejected_human_checkpoint_keeps_index_but_preceding_control_skips_still_persist() {
-        let r = Route {
-            words: vec![0x4001, 0, 0x2002, 0x3002, 0xff02],
-            checkpoint_count: 2,
-        };
+        let r = Route::from_words(vec![0x4001, 0, 0x2002, 0x3002, 0xff02], 2);
         let mut t = trucks();
         t[0].world = [0, 0];
         let mut p = progress();
@@ -1414,10 +1384,7 @@ mod tests {
     }
     #[test]
     fn start_acceptance_bypasses_checkpoint_limit_test_even_when_limit_is_one() {
-        let r = Route {
-            words: vec![0x2002, 0x3002, 0xff01],
-            checkpoint_count: 1,
-        };
+        let r = Route::from_words(vec![0x2002, 0x3002, 0xff01], 1);
         let mut t = trucks();
         let mut p = progress();
         p.active_humans = 1;
@@ -1456,14 +1423,8 @@ mod tests {
     fn missing_or_control_only_cyclic_extension_route_returns_error_without_partial_copy_or_progress()
      {
         for r in [
-            Route {
-                words: vec![0xff00],
-                checkpoint_count: 0,
-            },
-            Route {
-                words: vec![0xfe00, 0, 0xff01],
-                checkpoint_count: 1,
-            },
+            Route::from_words(vec![0xff00], 0),
+            Route::from_words(vec![0xfe00, 0, 0xff01], 1),
         ] {
             let mut t = trucks();
             let mut p = progress();
@@ -1483,14 +1444,16 @@ mod tests {
             ([0x84, 0x09, 0], [0, 0x10, 0], [0x15, 0x16, 0x15]),
             ([0x99, 0x99, 8], [0x15, 0, 9], [0x1e, 0x15, 0x15]),
         ] {
-            let mut timer = RaceTimer {
-                fraction_bcd: initial[0],
-                middle_bcd: initial[1],
-                high_bcd: initial[2],
-            };
-            assert_eq!(advance_timer(&mut timer), tiles);
+            let mut timer = RaceTimer::from_encoded([initial[0], initial[1], initial[2]]);
+            advance_timer(&mut timer);
             assert_eq!(
-                [timer.fraction_bcd, timer.middle_bcd, timer.high_bcd],
+                timer
+                    .visible_digits()
+                    .map(|digit| digit.wrapping_add(crate::presentation::HUD_DIGIT_TILE_BASE)),
+                tiles
+            );
+            assert_eq!(
+                [timer.encoded()[0], timer.encoded()[1], timer.encoded()[2]],
                 expected
             );
         }
@@ -1498,41 +1461,23 @@ mod tests {
     #[test]
     fn timer_freezes_only_when_both_high_and_middle_thresholds_reached_retaining_fraction() {
         for fraction in [0x00, 0x17, 0x99] {
-            let mut timer = RaceTimer {
-                fraction_bcd: fraction,
-                middle_bcd: 0x99,
-                high_bcd: 9,
-            };
+            let mut timer = RaceTimer::from_encoded([fraction, 0x99, 9]);
             let old = timer;
-            assert_eq!(advance_timer(&mut timer), [0x1e, 0x1e, 0x1e]);
+            advance_timer(&mut timer);
+            assert_eq!(timer.visible_digits(), [9, 9, 9]);
             assert_eq!(timer, old);
         }
-        let mut timer = RaceTimer {
-            fraction_bcd: 0,
-            middle_bcd: 0x98,
-            high_bcd: 9,
-        };
+        let mut timer = RaceTimer::from_encoded([0, 0x98, 9]);
         advance_timer(&mut timer);
-        assert_eq!(timer.fraction_bcd, TIMER_STEP);
+        assert_eq!(timer.encoded()[0], TIMER_STEP);
     }
     #[test]
     fn timer_crossing_saturation_reaches_first_middle_99_then_freezes_on_following_call() {
-        let mut timer = RaceTimer {
-            fraction_bcd: 0x90,
-            middle_bcd: 0x98,
-            high_bcd: 9,
-        };
+        let mut timer = RaceTimer::from_encoded([0x90, 0x98, 9]);
         advance_timer(&mut timer);
-        assert_eq!(
-            timer,
-            RaceTimer {
-                fraction_bcd: 0x06,
-                middle_bcd: 0x99,
-                high_bcd: 9
-            }
-        );
+        assert_eq!(timer, RaceTimer::from_encoded([0x06, 0x99, 9]));
         advance_timer(&mut timer);
-        assert_eq!(timer.fraction_bcd, 0x06);
+        assert_eq!(timer.encoded()[0], 0x06);
     }
     #[test]
     fn race_record_initialization_writes_only_explicit_truck_fields_and_preserves_powertrain_history()
@@ -1543,7 +1488,7 @@ mod tests {
             truck.heading = 0xabcd;
             truck.speed = 0xef12;
             truck.tile_attributes = 0xffff;
-            truck.nitro_stock_bcd = 0x42;
+            truck.nitro = crate::trucks::nitro::NitroStock::from_encoded(0x42);
             truck.acceleration_fraction = 0x1234;
             truck.steering_fraction = 99;
             truck.steering_lock = 8;
@@ -1559,7 +1504,7 @@ mod tests {
         );
         assert!(t.iter().all(|v| v.heading == 0x0040
             && v.speed == 0
-            && v.nitro_stock_bcd == 0x42
+            && v.nitro.encoded() == 0x42
             && v.acceleration_fraction == 0x1234
             && v.steering_fraction == 99
             && v.steering_lock == 8
@@ -1708,7 +1653,7 @@ mod tests {
             blocked_coordinate_by_quadrant: [0; 4],
         };
         let ai = AiTables {
-            bearings: [0; 256],
+            bearings: crate::trucks::bearings::BearingTable { cells: [0; 256] },
             turn_steps: [0; 4],
             waypoint_timeouts: [100; 8],
             parameter_thresholds: [0; 8],
@@ -1726,10 +1671,7 @@ mod tests {
             truck.surface_summary = 20;
             truck.contact_cooldown = 2;
         }
-        let r = Route {
-            words: vec![0x9001, 0x9001, 0x9001, 0x9001, 0xff02],
-            checkpoint_count: 2,
-        };
+        let r = Route::from_words(vec![0x9001, 0x9001, 0x9001, 0x9001, 0xff02], 2);
         (
             RaceState {
                 route_tail_byte: 0,
@@ -1812,7 +1754,7 @@ mod tests {
             resources.animations.tiles[24]
         );
         assert_eq!(r.video.sprites.x[0], r.trucks[0].screen_x);
-        assert_eq!(r.timer.fraction_bcd, TIMER_STEP);
+        assert_eq!(r.timer.encoded()[0], TIMER_STEP);
         assert!(r.trucks.iter().all(|t| t.speed == 0
             && t.controller == ControllerWord(BUTTON_B)
             && t.contact_cooldown == 1));
@@ -1849,7 +1791,7 @@ mod tests {
         let mut random = RandomState([0; 5]);
         let (exit, _) = update_frame_services(&mut r, &env, &mut random).unwrap();
         assert_eq!(exit, FrameExit::HumanPostrace);
-        assert_eq!(r.timer.fraction_bcd, TIMER_STEP);
+        assert_eq!(r.timer.encoded()[0], TIMER_STEP);
         assert!(
             r.trucks
                 .iter()
@@ -1859,11 +1801,7 @@ mod tests {
     #[test]
     fn selected_race_preparation_orders_real_owner_setup_and_one_service_before_ready() {
         let (mut r, motion, terrain, sampling, ai, banners, route) = frame_fixture();
-        r.timer = RaceTimer {
-            fraction_bcd: 0x99,
-            middle_bcd: 0x99,
-            high_bcd: 9,
-        };
+        r.timer = RaceTimer::from_encoded([0x99, 0x99, 9]);
         r.progress.winner_plus_one = 4;
         r.progress.banner_state = 30;
         r.progress.drivers[0].lap = 5;
@@ -1939,14 +1877,7 @@ mod tests {
         assert_eq!(r.progress.winner_plus_one, 0);
         assert_eq!(r.progress.drivers.map(|d| d.lap), [1; TRUCKS]);
         assert_eq!(r.progress.drivers.map(|d| d.checkpoint), [1; TRUCKS]);
-        assert_eq!(
-            r.timer,
-            RaceTimer {
-                fraction_bcd: TIMER_STEP,
-                middle_bcd: 0,
-                high_bcd: 0
-            }
-        );
+        assert_eq!(r.timer, RaceTimer::from_encoded([TIMER_STEP, 0, 0]));
         assert!(r.trucks.iter().all(|t| t.heading == 0x0080 && t.speed == 0));
     }
     #[test]
@@ -1971,10 +1902,7 @@ mod tests {
         words[0] = 0x2002;
         words[1] = 0x3002;
         words.push(0xff42);
-        let route = Route {
-            words,
-            checkpoint_count: 66,
-        };
+        let route = Route::from_words(words, 66);
         let mut t = trucks();
         let mut p = progress();
         p.active_humans = 1;

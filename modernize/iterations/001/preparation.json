@@ -1,0 +1,12 @@
+{
+  "workspace_commit": "48ca7ce6ee44dc1549a957d7fc0aca0084b2a2ed",
+  "snapshot": "modernize/baseline-source.tar.gz",
+  "sha256": "bd9cd93d7064fa3d83f1523595067186563cca761130feb536712166e18cb625",
+  "toolkit_commit": "eba6a4c7b7e2552ef536d03c7b5e9e381cde7026",
+  "toolkit_status": "?? .README.md.swp\n",
+  "coverage": "Existing bounded startup/six frame pairs/initial audio/short racing only; not recertified by compilation. No fresh original runtime comparison, browser runtime, desktop runtime or full-game QA.",
+  "checks": [
+    "python3 run.py check: PASS",
+    "python3 run.py audit: PASS; 1527 regions/1408 units/22 uncertainties; semantic correctness not assessed"
+  ]
+}

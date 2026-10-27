@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "iteration": 1,
+  "status": "completed",
+  "baseline": "modernize/baseline.json",
+  "candidates": [
+    {
+      "id": "M1",
+      "category": "modernization",
+      "title": "Native nitro inventory",
+      "files": [
+        "port/src/trucks/motion.rs",
+        "port/src/frontend/shop.rs",
+        "port/src/frontend/results.rs",
+        "port/src/presentation/mod.rs",
+        "port/src/game/snapshots.rs"
+      ],
+      "current_design": "Truck.nitro_stock_bcd is a packed decimal byte; motion manually borrows, shop increments decimal and shares stock_mut with upgrade bytes, HUD/results consume packed stock.",
+      "proposed_model": "Truck owns a native NitroStock count with consume/refill operations. Shop uses item-specific stock operations instead of treating nitro and upgrades as the same mutable byte. Encode packed digits only at HUD, source asset caps and legacy snapshot/debug boundaries.",
+      "removed_machinery": "Packed inventory storage, nibble borrow in movement, packed-decimal inventory increments in shop.",
+      "remaining_boundaries": "Decode source shop caps; encode HUD digits and compatible semantic debug/legacy snapshot fields.",
+      "benefit": "One inventory rule across purchasing, inactive conversion and driving; changing inventory presentation no longer affects movement.",
+      "difficulty": "medium",
+      "difficulty_reason": "Crosses shop, movement and serialization; byte-edge compatibility needs explicit characterization.",
+      "impact": "high",
+      "impact_reason": "Replaces one shared representation across the complete inventory lifecycle.",
+      "difficulty_rank": 2,
+      "impact_rank": 1,
+      "risk": "medium: press-edge/history and capped inactive-conversion order must remain exact.",
+      "sources": [
+        "reference/source/game.asm:6056",
+        "port/src/trucks/motion.trace.md",
+        "port/src/frontend/shop.trace.md: inactive conversion and purchases"
+      ],
+      "owners_order": "Truck owns stock. Shop checks affordability then cap before increment/debit; inactive conversion decrements wallet before cap; motion retains prepared guard/history before consumption and effects.",
+      "preserve": [
+        "BCD 10\u219209 consumption and 79\u219280 conversion",
+        "prepared guard and held-button history",
+        "same speed, sprite and sound order",
+        "cap comparisons and extra wallet debit before capped early exit",
+        "clone, restore and debug compatibility"
+      ],
+      "tests": [
+        "trucks::motion::tests:: nitro contracts around lines 919-1013",
+        "frontend::shop::tests::inactive_conversion_decimal_seventy_nine_to_eighty_consumes_extra_unit_before_cap",
+        "frontend::shop::tests::inactive_already_capped_decrements_without_normalization_or_selected_change",
+        "frontend::shop::tests::each_item_uses_its_cost_cap_and_stock_field_without_cross_mutation"
+      ],
+      "coverage_gaps": [
+        "Fresh source/reference-backed natural purchase\u2192consume integration and HUD review required.",
+        "Establish all accepted noncanonical stock/cap byte behavior before choosing a compatibility conversion; never silently normalize old snapshots."
+      ],
+      "dependencies": [],
+      "overlaps": "R1 touches scheduler shop call site only; no dependency. M2 shares snapshot/HUD files but separate state.",
+      "bounded_scope": "Nitro only, keeping wallet arithmetic, upgrades, button histories and movement physics intact."
+    },
+    {
+      "id": "M2",
+      "category": "modernization",
+      "title": "Native race elapsed units",
+      "files": [
+        "port/src/race.rs",
+        "port/src/frontend/results.rs",
+        "port/src/presentation/mod.rs",
+        "port/src/game/snapshots.rs",
+        "port/src/game.rs"
+      ],
+      "current_design": "RaceTimer stores three packed decimal bytes. advance_timer propagates decimal carry and immediately returns tile codes; results compare/store the upper two bytes.",
+      "proposed_model": "Store elapsed source timing units as a native integer, advance by sixteen per service and freeze at the same threshold crossing. Separate visible digits/record time encoding from time advancement; do not call the units milliseconds.",
+      "removed_machinery": "Three-byte packed timer state and decimal carry chain in regular gameplay.",
+      "remaining_boundaries": "HUD tile conversion, original two-byte record format and legacy snapshot/debug encoding.",
+      "benefit": "Time progression, record comparison and rendering have explicit independent roles, with a native quantity usable by future timing consumers.",
+      "difficulty": "medium",
+      "difficulty_reason": "Small state owner but saturation overshoot and accepted legacy byte states require care.",
+      "impact": "medium",
+      "impact_reason": "Removes arithmetic encoding across HUD and results, with a smaller reach than nitro.",
+      "difficulty_rank": 1,
+      "impact_rank": 2,
+      "risk": "medium: saturation retains fraction, prepared/winner frames still advance, record precision truncates.",
+      "sources": [
+        "reference/source/game.asm:14734-14801",
+        "port/src/race.trace.md",
+        "port/src/frontend/results.trace.md"
+      ],
+      "owners_order": "RaceState owns timer. Prepared/running/finished service and postrace HUD paths advance at existing call positions; results read high/middle precision only.",
+      "preserve": [
+        "increment sixteen source units, not wall time",
+        "crossing 9:98.90\u21929:99.06 then freeze retaining .06",
+        "prepared and winner frame service order",
+        "record comparison/rounding and tile output",
+        "compatible public observations and restored historical saves"
+      ],
+      "tests": [
+        "race::tests::timer_adds_decimal_sixteen_with_fraction_and_middle_carry",
+        "race::tests::timer_crossing_saturation_reaches_first_middle_99_then_freezes_on_following_call",
+        "race::tests::timer_freezes_only_when_both_high_and_middle_thresholds_reached_retaining_fraction",
+        "race::tests::prepared_frame_executes_all_owners_in_source_order_and_increments_timer_before_return",
+        "race::tests::winner_frame_still_advances_hud_timer_and_copies_input_before_postrace_dispatch"
+      ],
+      "coverage_gaps": [
+        "Fresh integrated timer/record boundary observations against source and faithful reference required.",
+        "Inventory accepted noncanonical BCD timer snapshot states; derive compatibility rather than reduce accepted state silently."
+      ],
+      "dependencies": [],
+      "overlaps": "M1 shares HUD/snapshot boundaries only; independent implementation.",
+      "bounded_scope": "Timer and direct display/record consumers only; no scheduler cadence change."
+    },
+    {
+      "id": "R1",
+      "category": "refactoring",
+      "title": "Extract name/shop scene scheduling",
+      "files": [
+        "port/src/game/scheduler.rs",
+        "port/src/game/state.rs",
+        "port/src/game/tests.rs"
+      ],
+      "current_design": "The large scheduler mixes NMI service, frontend domain calls, window ownership transfer, retained history and scene dispatch. Names and Shop arms each contain domain advance plus fade/window/ack/completion handling.",
+      "proposed_model": "Keep the NMI loop and dispatch order in place; move names and shop scene steps into cohesive methods returning an explicit yield/continue result. Retain distinct phase semantics rather than merge superficially similar branches.",
+      "before_after": "Before: long Names/Shop match arms inside the scene pump. After: short dispatch arms calling advance_names_scene/advance_shop_scene with explicit scheduling result; each helper owns its complete scene handoff.",
+      "smell": "Mixed responsibilities in a roughly 600-line scene pump obscure whether a frontend completion yields or advances again during the same NMI.",
+      "benefit": "Future name/shop phase changes can be reviewed in one local method without navigating unrelated race/loss/NMI logic; explicit scheduling result makes same-NMI continuation reviewable.",
+      "difficulty": "low",
+      "difficulty_reason": "Structural extraction with existing owners and explicit return values; no game model conversion.",
+      "impact": "medium",
+      "impact_reason": "Makes a central frontend orchestration boundary easier to maintain, bounded to two arms.",
+      "difficulty_rank": 1,
+      "impact_rank": 1,
+      "risk": "medium: moving break/continue incorrectly changes visible waits or sound ordering.",
+      "sources": [
+        "port/src/game/scheduler.rs:758-878",
+        "port/src/frontend/names.trace.md",
+        "port/src/frontend/shop.trace.md",
+        "port/src/game/tests.rs"
+      ],
+      "owners_order": "Keep Port/State ownership, shared window moves, pause history transfer, sound flush position, scene loop bounds and begin_shop/postrace sequence.",
+      "preserve": [
+        "Names FinalWait starts contraction; Shop FinalWait starts expansion",
+        "fade animation counter transfers",
+        "Ack window reclaim and finish_page order",
+        "same-NMI Shop completion continuation versus Names yield",
+        "all scene/event/frame/audio observations"
+      ],
+      "tests": [
+        "port/src/game/tests.rs: existing natural frontend/race replay and snapshot contracts",
+        "frontend::names::tests",
+        "frontend::shop::tests"
+      ],
+      "coverage_gaps": [
+        "Add targeted Game transition regressions for Ack/completion yield behavior before extraction; fresh natural frontend replay and relevant captures required."
+      ],
+      "dependencies": [],
+      "overlaps": "M1 changes domain shop stock; this changes only its scheduler caller. Neither requires the other.",
+      "bounded_scope": "No new framework, new state owner or alteration to game model; only two frontend scene handlers."
+    }
+  ],
+  "rankings": {
+    "modernization_impact": [
+      "M1",
+      "M2"
+    ],
+    "modernization_difficulty_lowest_first": [
+      "M2",
+      "M1"
+    ],
+    "refactoring_impact": [
+      "R1"
+    ],
+    "refactoring_difficulty_lowest_first": [
+      "R1"
+    ]
+  },
+  "selection": {
+    "ids": [
+      "M1",
+      "M2",
+      "R1"
+    ],
+    "authorization": "User: do all three"
+  },
+  "menu_presented": true,
+  "investigation": {
+    "strongest_conversion_considered": "Native wallet balances replacing six digit arrays throughout awards, purchases and results.",
+    "why_deferred": "Source shop normalization is deferred; raw byte wrap/sign threshold 8A, capped inactive conversion leaves unnormalized debit, and highest borrow mutates previous wallet tail or selected_wallet. A plain integer balance loses these conditional effects. Need a source-backed model of pending raw operations and accepted snapshots before offering this deeper conversion. See shop.trace.md and tests at lines 181-297.",
+    "next_probe": "Characterize exact raw-wallet states at every normalization caller and reference natural capped-conversion entry; determine whether a native pending-debit model can preserve conditional alias effects without retaining digit machinery.",
+    "other_direction": "Window/sprite continuation ownership already uses semantic enums and preserves observable NMI waits; removing them wholesale would not be a demonstrated modernization.",
+    "provenance": "modernize/preparation.json",
+    "validation": "627 library tests pass; full optimized check and audit pass; prior bounded QA retained, no new gameplay certification."
+  },
+  "outcomes": {
+    "M1": "retained",
+    "M2": "retained",
+    "R1": "retained"
+  },
+  "evidence": "modernize/changes.json"
+}

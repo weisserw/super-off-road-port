@@ -218,7 +218,7 @@ pub fn write_record(
     Ok(())
 }
 pub fn compare_record(pending: &mut u8, time: RaceTimer, stored: [u8; 2]) {
-    if [time.high_bcd, time.middle_bcd] < stored {
+    if time.record_encoded() < stored {
         *pending = pending.wrapping_add(1);
     } else {
         *pending = 0;
@@ -341,7 +341,7 @@ pub fn draw_times(
         session.records.truck_names[usize::from(winner) * 3..usize::from(winner) * 3 + 3]
             .try_into()
             .unwrap(),
-        [timer.high_bcd, timer.middle_bcd],
+        timer.record_encoded(),
     );
     draw_time_row(memory, 0x4889, 0x4892, record.name, record.time);
     Ok(())
@@ -390,7 +390,7 @@ pub fn advance_awards(
                 added,
                 key,
                 TrackRecord {
-                    time: [time.high_bcd, time.middle_bcd],
+                    time: time.record_encoded(),
                     name,
                 },
             )?;
@@ -409,7 +409,7 @@ pub fn advance_awards(
                 session.records.truck_names[usize::from(rank[0]) * 3..usize::from(rank[0]) * 3 + 3]
                     .try_into()
                     .unwrap(),
-                [time.high_bcd, time.middle_bcd],
+                time.record_encoded(),
             );
         }
         tick_awards(state, [ControllerWord(0); TRUCKS]);
@@ -726,7 +726,7 @@ pub fn begin_postrace(
     presentation::update_hud_digits(
         memory,
         progress.drivers.map(|driver| driver.lap),
-        trucks.each_ref().map(|truck| truck.nitro_stock_bcd),
+        trucks.each_ref().map(|truck| truck.nitro),
         timer,
     );
     state.phase = PostracePhase::HudWait;

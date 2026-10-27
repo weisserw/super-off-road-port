@@ -472,3 +472,11 @@ and Sound interfaces. Stage 4 must compose these owners in Game, not replace imp
 with phase/effect logs. Runtime debug remains the honest skeleton until real state is wired.
 
 Stage5 bounded evidence: natural startup/name/shop/initial Racing and46ticks of throttle/steer/nitro passed with reviewed captures and active PCM. Six independently aligned original full-frame pairs are exact (license/software/two highscore scroll phases/grid/countdown), including the shared $077D countdown/banner word. Initial30frame captured music has exact8voice sequence/duration/DSPpitch/sample/gain endpoint progression; native interpolation waveform/amplitude differences remain explicit. No full-game traversal, physical audio playback, desktop window, or expanded gameplay coverage is claimed. See debug/report.md and debug/qa.json.
+
+## Modernization iteration 1 representation links
+
+The source rules and expectations in this document remain authoritative. Native nitro inventory and race elapsed units now live in `port/src/trucks/nitro.rs` and `port/src/race/time.rs`. Their source asset/save/display encodings remain at boundaries, including lossless compatibility for exceptional old save bytes. Name/shop scene extraction preserves NMI waits, window/history ownership and sound order. See [architecture.md](architecture.md#modernization-iteration-1) and [modernize/changes.json](modernize/changes.json) for attributable changes and fresh validation; earlier QA records still describe their recorded builds.
+
+## Modernization iteration 2 representation links
+
+Source route and hazard rules retain their existing expectations. `port/src/world/tracks/route.rs` decodes node geometry and traversal actions at the asset boundary; separate acceptance, steering, ranking and grid views preserve source distinctions. `port/src/world/objects/hazard.rs` expresses lifecycle stages, remaining response ticks and remaining complete reactions while preserving legacy wire fields and conditional states. `port/src/trucks/bearings.rs` consolidates the identical AI/contact lookup resource. Source traces remain unchanged historical evidence. See [architecture.md](architecture.md#modernization-iteration-2), the iteration2 source-backed contracts in `port/src/game/iteration_two_tests.rs`, and [modernize/changes.json](modernize/changes.json).

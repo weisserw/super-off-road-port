@@ -54,7 +54,8 @@ pub struct Truck {
     pub upgrades: Upgrades,
     pub acceleration_fraction: u16,
     pub steering_fraction: u8,
-    pub nitro_stock_bcd: u8,
+    #[serde(rename = "nitro_stock_bcd")]
+    pub nitro: super::nitro::NitroStock,
     pub nitro_button_history: u8,
     #[serde(with = "crate::snapshot::array")]
     pub wheels: [Wheel; WHEELS_PER_TRUCK],
@@ -153,8 +154,6 @@ pub fn use_nitro(truck: &mut Truck, prepared: bool, active_humans: u8) -> Vec<Mo
     use crate::controls::BUTTON_Y;
     const CURRENT_PRESS: u8 = 0x80;
     const PREVIOUS_PRESS: u8 = 0x40;
-    const BCD_NIBBLE: u8 = 0x0f;
-    const BCD_BORROW_ADJUSTMENT: u8 = 6;
     if prepared {
         return Vec::new();
     }
@@ -162,14 +161,9 @@ pub fn use_nitro(truck: &mut Truck, prepared: bool, active_humans: u8) -> Vec<Mo
     truck.nitro_button_history =
         (truck.nitro_button_history >> 1) | if held { CURRENT_PRESS } else { 0 };
     if truck.nitro_button_history & (CURRENT_PRESS | PREVIOUS_PRESS) != CURRENT_PRESS
-        || truck.nitro_stock_bcd == 0
+        || !truck.nitro.consume()
     {
         return Vec::new();
-    }
-    let old = truck.nitro_stock_bcd;
-    truck.nitro_stock_bcd = old.wrapping_sub(1);
-    if old & BCD_NIBBLE == 0 {
-        truck.nitro_stock_bcd = truck.nitro_stock_bcd.wrapping_sub(BCD_BORROW_ADJUSTMENT);
     }
     set_low(&mut truck.speed, NITRO_SPEED);
     let mut effects = Vec::new();
@@ -544,7 +538,7 @@ pub fn update_trucks(
     environment: &MotionEnvironment<'_>,
     terrain_history: &mut u8,
     contact_animations: &mut [crate::world::objects::ContactAnimation; TRUCKS],
-    contact_tables: &super::contact::ContactTables,
+    contact_tables: &super::bearings::BearingTable,
 ) -> Result<FleetFrame> {
     use crate::world::terrain::{project, sample_wheels};
     let mut frame = FleetFrame {
@@ -577,7 +571,7 @@ pub fn update_trucks(
         committed.steering_fraction = powertrain.steering_fraction;
         committed.acceleration_fraction = powertrain.acceleration_fraction;
         committed.nitro_button_history = powertrain.nitro_button_history;
-        committed.nitro_stock_bcd = powertrain.nitro_stock_bcd;
+        committed.nitro = powertrain.nitro;
         committed.nitro_animation = powertrain.nitro_animation;
         frame.phases.push(MotionPhase::Displacement(slot));
         let mut working = WorkingMotion {
@@ -916,7 +910,7 @@ mod tests {
     fn nitro_prepared_frame_preserves_edge_history_stock_speed_and_animation() {
         let mut t = truck();
         t.nitro_button_history = 0x91;
-        t.nitro_stock_bcd = 0x10;
+        t.nitro = crate::trucks::nitro::NitroStock::from_encoded(0x10);
         t.speed = 0xab22;
         t.controller = ControllerWord(BUTTON_Y);
         let before = t.clone();
@@ -926,7 +920,7 @@ mod tests {
     #[test]
     fn nitro_press_decimal_borrow_hold_release_and_repress_have_distinct_effects() {
         let mut t = truck();
-        t.nitro_stock_bcd = 0x10;
+        t.nitro = crate::trucks::nitro::NitroStock::from_encoded(0x10);
         t.controller = ControllerWord(BUTTON_Y);
         t.speed = 0xab22;
         assert_eq!(
@@ -938,7 +932,7 @@ mod tests {
         );
         assert_eq!(
             (
-                t.nitro_stock_bcd,
+                t.nitro.encoded(),
                 t.speed,
                 t.nitro_button_history,
                 t.nitro_animation
@@ -946,13 +940,13 @@ mod tests {
             (9, 0xab7c, 0x80, 1)
         );
         assert!(use_nitro(&mut t, false, 1).is_empty());
-        assert_eq!((t.nitro_stock_bcd, t.nitro_button_history), (9, 0xc0));
+        assert_eq!((t.nitro.encoded(), t.nitro_button_history), (9, 0xc0));
         t.controller = ControllerWord(0);
         assert!(use_nitro(&mut t, false, 1).is_empty());
         assert_eq!(t.nitro_button_history, 0x60);
         t.controller = ControllerWord(BUTTON_Y);
         use_nitro(&mut t, false, 1);
-        assert_eq!((t.nitro_stock_bcd, t.nitro_button_history), (8, 0xb0));
+        assert_eq!((t.nitro.encoded(), t.nitro_button_history), (8, 0xb0));
     }
     #[test]
     fn nitro_empty_still_latches_edge_and_attract_still_boosts_without_audio() {
@@ -960,21 +954,21 @@ mod tests {
         t.controller = ControllerWord(BUTTON_Y);
         assert!(use_nitro(&mut t, false, 1).is_empty());
         assert_eq!(t.nitro_button_history, 0x80);
-        t.nitro_stock_bcd = 1;
+        t.nitro = crate::trucks::nitro::NitroStock::from_encoded(1);
         assert!(use_nitro(&mut t, false, 1).is_empty());
-        assert_eq!(t.nitro_stock_bcd, 1);
+        assert_eq!(t.nitro.encoded(), 1);
         t.nitro_button_history = 0;
         assert_eq!(
             use_nitro(&mut t, false, 0),
             vec![MotionEffect::NitroSprite(EffectSprite { x: 100, y: 90 })]
         );
-        assert_eq!((t.nitro_stock_bcd, t.speed), (0, NITRO_SPEED.into()));
+        assert_eq!((t.nitro.encoded(), t.speed), (0, NITRO_SPEED.into()));
     }
     #[test]
     fn nitro_offscreen_skips_sprite_but_global_other_human_enables_sound() {
         let mut t = truck();
         t.controller = ControllerWord(BUTTON_Y);
-        t.nitro_stock_bcd = 1;
+        t.nitro = crate::trucks::nitro::NitroStock::from_encoded(1);
         t.screen_x = 0x100;
         t.nitro_animation = 7;
         assert_eq!(
@@ -993,7 +987,7 @@ mod tests {
             let mut t = truck();
             t.controller = ControllerWord(buttons | BUTTON_RIGHT);
             t.steering_fraction = 255;
-            t.nitro_stock_bcd = 1;
+            t.nitro = crate::trucks::nitro::NitroStock::from_encoded(1);
             update_powertrain(&mut t, &tables(), true, 1, false, frame);
             assert_eq!(
                 (t.heading, t.speed, t.acceleration_fraction),
@@ -1006,11 +1000,11 @@ mod tests {
         let mut t = truck();
         t.controller = ControllerWord(BUTTON_Y | BUTTON_LEFT | BUTTON_B);
         t.steering_fraction = 255;
-        t.nitro_stock_bcd = 0x10;
+        t.nitro = crate::trucks::nitro::NitroStock::from_encoded(0x10);
         t.nitro_button_history = 0x31;
         assert!(update_powertrain(&mut t, &tables(), true, 1, true, 0).is_empty());
         assert_eq!((t.heading, t.speed, t.acceleration_fraction), (8, 1, 128));
-        assert_eq!((t.nitro_stock_bcd, t.nitro_button_history), (0x10, 0x31));
+        assert_eq!((t.nitro.encoded(), t.nitro_button_history), (0x10, 0x31));
     }
     #[test]
     fn negative_acceleration_can_cross_zero_without_positive_limit_branch() {
@@ -1550,7 +1544,7 @@ mod tests {
         let mut history = 0;
         let mut contacts =
             std::array::from_fn(|_| crate::world::objects::ContactAnimation::default());
-        let bearings = super::super::contact::load_contact_tables(
+        let bearings = super::super::bearings::BearingTable::load(
             &std::fs::read("../input/game.rom").unwrap(),
         )
         .unwrap();

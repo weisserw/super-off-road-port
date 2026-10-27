@@ -5,6 +5,7 @@ use crate::presentation::{
     memory,
     transitions::{self, FadeDirection},
 };
+use crate::trucks::nitro::NitroStock;
 use crate::{
     controls::{CONTROLLER_COUNT, ControllerWord},
     presentation::{Display, MapImage, VideoMemory, transitions::Fade},
@@ -17,8 +18,8 @@ pub const SOFTWARE_WAIT: u16 = 110;
 pub const HIGHSCORE_WAIT: u16 = 500;
 pub const HIGHSCORE_INITIAL_SCROLL: u16 = 0x118;
 pub const HIGHSCORE_FINAL_SCROLL: u16 = 0x1d6;
-pub const ATTRACT_NITRO: u8 = 0x99;
-pub const AI_INITIAL_NITRO: u8 = 0x15;
+pub const ATTRACT_NITRO: NitroStock = NitroStock::new(99);
+pub const AI_INITIAL_NITRO: NitroStock = NitroStock::new(15);
 pub const FRONTEND_AUDIO: u16 = 0x0201;
 pub const FRONTEND_TILES_ROM: std::ops::Range<usize> = 0x35400..0x37980;
 pub const FRONTEND_TAIL_ROM: std::ops::Range<usize> = 0x2dac0..0x2e400;
@@ -212,7 +213,7 @@ pub fn finish_attract_presentation(
     session.attract_rotation = session.attract_rotation.wrapping_add(1) & 3;
     session.order_slot = assets.attract_slots[usize::from(session.attract_rotation)];
     for truck in trucks {
-        truck.nitro_stock_bcd = ATTRACT_NITRO;
+        truck.nitro = ATTRACT_NITRO;
     }
     finish_blank(session, display);
     session.phase = EntryPhase::ReadyForRace;
@@ -227,7 +228,7 @@ pub fn finish_driver_selection(session: &mut Session, trucks: &mut [Truck; 4]) {
     session.active_humans = session.joined_pages[0] | session.joined_pages[1].wrapping_shl(2);
     for (slot, truck) in trucks.iter_mut().enumerate() {
         if session.active_humans & (1 << slot) == 0 {
-            truck.nitro_stock_bcd = AI_INITIAL_NITRO;
+            truck.nitro = AI_INITIAL_NITRO;
         }
     }
     session.order_slot = 0;
@@ -510,7 +511,7 @@ mod tests;
 
 fn clear_stock_upgrades(trucks: &mut [Truck; 4]) {
     for truck in trucks {
-        truck.nitro_stock_bcd = 0;
+        truck.nitro = NitroStock::default();
         truck.upgrades = Default::default();
     }
 }

@@ -5,7 +5,6 @@ use crate::{
     presentation::{
         self, HudTables, TrackPresentation, memory::SharedGraphics, sprites::AnimationTables,
     },
-    trucks::contact::ContactTables,
     world::{
         objects::{self, ObjectContent, ObjectTables},
         tracks::{self, TrackContent},
@@ -20,7 +19,6 @@ pub struct RaceAssets {
     pub presentation: TrackPresentation,
     pub objects: ObjectContent,
     pub object_tables: ObjectTables,
-    pub contacts: ContactTables,
     pub graphics: SharedGraphics,
     pub hud: HudTables,
     pub animations: AnimationTables,
@@ -87,7 +85,6 @@ impl RaceAssets {
             graphics: presentation::memory::load_shared(&rom)?,
             hud: presentation::load_hud_tables(&rom)?,
             animations: presentation::sprites::load_animations(&rom)?,
-            contacts: crate::trucks::contact::load_contact_tables(&rom)?,
             object_tables: objects::load_object_tables(&rom)?,
             rom,
             track,

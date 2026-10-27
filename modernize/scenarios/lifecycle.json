@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "adapter": "iteration_adapter.py",
+  "tests": [{
+    "id": "native-inventory-timer-frontend",
+    "kind": "gameplay",
+    "expectations": {"original-fidelity": {
+      "source": ["reference/source/game.asm:consume_nitro_on_press_edge", "reference/source/game.asm:advance_and_draw_race_timer", "port/src/race.trace.md", "port/src/frontend/shop.trace.md", "port/src/frontend/names.trace.md"],
+      "rules": "Natural joining, name exit and nitro purchase reach racing with one charge. Movement uses the prior retained controller word, then consumes on the new Y edge; held/empty stock does not consume further. Every racing service advances sixteen source timer units. Rewind retains only the successful recipe branch, and fresh guarded replay reproduces the semantic end state. Inspect shop, stock-one racing and consumed-stock frames; compare complete-route PCM/frame hashes with faithful baseline separately.",
+      "limits": "Bounded first race only. Source contracts cover rollover/caps/saturation and conditional states separately; invalid BCD is a faithful-port compatibility policy, not a hardware claim."
+    }}
+  }],
+  "suites": {"all": ["native-inventory-timer-frontend"]}
+}

@@ -6,6 +6,8 @@ Build instructions and platform limits are in [BUILDING.md](BUILDING.md). `pytho
 
 The executable accepts `--rom`, `--assets`, `--settings`, `--headless` and the shared debug options. Supply the ROM SHA256 in port/src/config.rs. Records last for the session and full snapshots; the original cartridge has no battery-backed save. Desktop and browser consume the same Game APIs and MemoryAssets validation.
 
+Internal modernization keeps the existing controls, timing and save format. Nitro inventory, race time and hazard responses use native quantities; routes use decoded waypoint geometry and traversal actions. Source encodings remain at display, asset and compatibility boundaries. The iteration's scope and validation are recorded in [modernize/changes.json](modernize/changes.json).
+
 ## GitHub Pages
 
 The [Pages workflow](.github/workflows/pages.yml) builds and publishes the browser

@@ -1,1 +1,620 @@
-{"version": 1, "changes": []}
+{
+  "version": 1,
+  "iteration": 2,
+  "status": "completed",
+  "changes": [
+    {
+      "baseline": "modernize/baseline.json",
+      "baseline_source_sha256": "42eeeb26ae91a344724ad6814400525a7ddfe18a196f90e95073dd6d99188622",
+      "starting_checkpoint": "modernize/baseline-source.tar.gz",
+      "starting_tests_checkpoint": "modernize/evidence/preimplementation-contracts.rs",
+      "build_identity": "modernize/evidence/build-identity.json",
+      "retained_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+      "retained_binary_sha256": "f2f60380b6d1450cbfd860f3e095bf16a20d15b651b05a39b5aca66dc558d4e5",
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter modernization",
+          "result": "PASS against faithful implementation before target edits;4 tests",
+          "evidence": "modernize/evidence/preimplementation-contracts.log"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter timer",
+          "result": "PASS;34 selected tests after representation conversions (before R1 extraction)",
+          "evidence": "modernize/evidence/M2-timer-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS;631 library tests including all affected frontend/motion/pickup/results/scheduler/snapshot contracts",
+          "evidence": "modernize/evidence/all-fast.json"
+        },
+        {
+          "command": "python3 run.py check",
+          "result": "PASS;631 tests, fmt, optimized desktop/web Clippy and builds with Rust1.90.0 and Cargo.lock",
+          "evidence": "modernize/evidence/optimized-check.json"
+        },
+        {
+          "command": "port.workspace + port.validate_ledger (toolkit read-only audit functions)",
+          "result": "PASS; frozen identity and1527regions/1408units/22uncertainties; no semantic certification implied",
+          "evidence": "modernize/evidence/current-accounting-audit.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest modernize/scenarios/lifecycle.json --suite all --expectation original-fidelity --evidence modernize/evidence/modernized-lifecycle",
+          "result": "PASS; fresh natural purchase/consume, timer, snapshot branching and identity-guarded recipe replay",
+          "evidence": "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/result.json"
+        },
+        {
+          "command": "python3 modernize/scenarios/compare_lifecycle.py modernize/evidence/baseline-lifecycle-002 modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/fresh",
+          "result": "PASS;four complete state/frame landmarks, complete-route PCM hash and all checkpoint fields except build identity identical",
+          "evidence": "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/fresh/baseline-comparison.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest modernize/scenarios/initial-sanity.json --suite initial --expectation original-fidelity --include-original-fidelity-sanity --evidence modernize/evidence/fresh-original-sanity",
+          "result": "PASS;six exact selected full original/native frames (no reuse),8voice fields at both endpoints30frames apart",
+          "evidence": "modernize/evidence/fresh-original-sanity/initial-original-sanity/result.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest debug/gameplay.json --suite initial --expectation source-rules --evidence modernize/evidence/fresh-native-smoke",
+          "result": "PASS;natural frontend route and short throttle/steer/nitro driving with active finite PCM",
+          "evidence": "modernize/evidence/fresh-native-smoke/initial-native-smoke/result.json"
+        },
+        {
+          "command": "python3 modernize/scenarios/original_inventory.py modernize/evidence/original-inventory-002",
+          "result": "PASS; original natural shop purchase\u2192racing\u2192consume/hold,128timer units over8frames; regenerated after adding pinned setup-origin hash guard",
+          "evidence": "modernize/evidence/original-inventory-002/result.json"
+        }
+      ],
+      "presentation_reviews": [
+        "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/review.json",
+        "modernize/evidence/fresh-original-sanity/initial-original-sanity/review.json",
+        "modernize/evidence/fresh-native-smoke/initial-native-smoke/review.json"
+      ],
+      "remaining_uncertainty": [
+        "Existing source/platform uncertainties remain unchanged.",
+        "No whole-game QA, desktop/browser runtime or physical playback was run.",
+        "Noncanonical decimal save arithmetic preserves faithful-port policy; original invalid-BCD hardware behavior remains unmeasured.",
+        "Original runtime observation of extreme timer saturation/capped conversion/pickup overflow was not added; source-derived unit contracts retain those expectations.",
+        "Original/native PCM retains the already documented linear/Gaussian interpolation difference; no bit-exact original waveform claim."
+      ],
+      "source_grounded_contract_corrections": "modernize/design.json; new preimplementation fixture/setup mistakes corrected against source/faithful contracts before implementation. No existing expected outcome was changed to pass the conversion.",
+      "outcome": "retained",
+      "gameplay_changes": "none intended or observed in required bounded comparisons",
+      "qa_records": "Existing debug acceptance/QA records preserved; fresh evidence kept separately under modernize/evidence.",
+      "id": "M1",
+      "iteration": 1,
+      "category": "modernization",
+      "title": "Native nitro inventory",
+      "before": "Truck stores packed decimal byte; motion borrows nibbles, shop increments packed values through shared raw stock_mut, pickup converts and re-encodes.",
+      "after": "Truck owns NitroStock in charges; consume/refill/award/cap rules operate on native counts. Shop assets decode nitro cap separately from upgrade caps; gameplay callers share inventory operations.",
+      "removed_machinery": [
+        "packed inventory state in ordinary gameplay",
+        "movement nibble borrow",
+        "shop/pickup packed inventory arithmetic",
+        "shared mutable byte interface coupling nitro to upgrades"
+      ],
+      "remaining_boundary_encodings": [
+        "source cap loader",
+        "HUD digit projection and source-shaped bar display",
+        "version2 nitro_stock_bcd serialization and encoded debug nitro",
+        "isolated legacy variant for nondecimal accepted save bytes"
+      ],
+      "files": [
+        "port/src/trucks/nitro.rs",
+        "port/src/trucks/motion.rs",
+        "port/src/trucks/mod.rs",
+        "port/src/frontend/shop.rs",
+        "port/src/frontend/attract.rs",
+        "port/src/world/objects.rs",
+        "port/src/presentation/mod.rs",
+        "port/src/game.rs",
+        "port/src/frontend/results.rs",
+        "port/src/race.rs"
+      ],
+      "test_ids": [
+        "game::modernization_tests::modernization_legacy_snapshot_preserves_every_nitro_byte_and_unusual_timer",
+        "game::modernization_tests::modernization_conditional_nitro_consumption_preserves_legacy_vectors",
+        "trucks::motion::tests::nitro_press_decimal_borrow_hold_release_and_repress_have_distinct_effects",
+        "frontend::shop::tests::inactive_conversion_decimal_seventy_nine_to_eighty_consumes_extra_unit_before_cap",
+        "frontend::shop::tests::inactive_already_capped_decrements_without_normalization_or_selected_change",
+        "world::objects::tests::nitro_pickup_bcd_overflow_retains_old_stock_and_rotates_selected_truck",
+        "native-inventory-timer-frontend"
+      ],
+      "scope_note": "Pickup award caller discovered during implementation investigation belongs to the selected inventory lifecycle; no new target or gameplay feature was added."
+    },
+    {
+      "baseline": "modernize/baseline.json",
+      "baseline_source_sha256": "42eeeb26ae91a344724ad6814400525a7ddfe18a196f90e95073dd6d99188622",
+      "starting_checkpoint": "modernize/baseline-source.tar.gz",
+      "starting_tests_checkpoint": "modernize/evidence/preimplementation-contracts.rs",
+      "build_identity": "modernize/evidence/build-identity.json",
+      "retained_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+      "retained_binary_sha256": "f2f60380b6d1450cbfd860f3e095bf16a20d15b651b05a39b5aca66dc558d4e5",
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter modernization",
+          "result": "PASS against faithful implementation before target edits;4 tests",
+          "evidence": "modernize/evidence/preimplementation-contracts.log"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter timer",
+          "result": "PASS;34 selected tests after representation conversions (before R1 extraction)",
+          "evidence": "modernize/evidence/M2-timer-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS;631 library tests including all affected frontend/motion/pickup/results/scheduler/snapshot contracts",
+          "evidence": "modernize/evidence/all-fast.json"
+        },
+        {
+          "command": "python3 run.py check",
+          "result": "PASS;631 tests, fmt, optimized desktop/web Clippy and builds with Rust1.90.0 and Cargo.lock",
+          "evidence": "modernize/evidence/optimized-check.json"
+        },
+        {
+          "command": "port.workspace + port.validate_ledger (toolkit read-only audit functions)",
+          "result": "PASS; frozen identity and1527regions/1408units/22uncertainties; no semantic certification implied",
+          "evidence": "modernize/evidence/current-accounting-audit.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest modernize/scenarios/lifecycle.json --suite all --expectation original-fidelity --evidence modernize/evidence/modernized-lifecycle",
+          "result": "PASS; fresh natural purchase/consume, timer, snapshot branching and identity-guarded recipe replay",
+          "evidence": "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/result.json"
+        },
+        {
+          "command": "python3 modernize/scenarios/compare_lifecycle.py modernize/evidence/baseline-lifecycle-002 modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/fresh",
+          "result": "PASS;four complete state/frame landmarks, complete-route PCM hash and all checkpoint fields except build identity identical",
+          "evidence": "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/fresh/baseline-comparison.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest modernize/scenarios/initial-sanity.json --suite initial --expectation original-fidelity --include-original-fidelity-sanity --evidence modernize/evidence/fresh-original-sanity",
+          "result": "PASS;six exact selected full original/native frames (no reuse),8voice fields at both endpoints30frames apart",
+          "evidence": "modernize/evidence/fresh-original-sanity/initial-original-sanity/result.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest debug/gameplay.json --suite initial --expectation source-rules --evidence modernize/evidence/fresh-native-smoke",
+          "result": "PASS;natural frontend route and short throttle/steer/nitro driving with active finite PCM",
+          "evidence": "modernize/evidence/fresh-native-smoke/initial-native-smoke/result.json"
+        },
+        {
+          "command": "python3 modernize/scenarios/original_inventory.py modernize/evidence/original-inventory-002",
+          "result": "PASS; original natural shop purchase\u2192racing\u2192consume/hold,128timer units over8frames; regenerated after adding pinned setup-origin hash guard",
+          "evidence": "modernize/evidence/original-inventory-002/result.json"
+        }
+      ],
+      "presentation_reviews": [
+        "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/review.json",
+        "modernize/evidence/fresh-original-sanity/initial-original-sanity/review.json",
+        "modernize/evidence/fresh-native-smoke/initial-native-smoke/review.json"
+      ],
+      "remaining_uncertainty": [
+        "Existing source/platform uncertainties remain unchanged.",
+        "No whole-game QA, desktop/browser runtime or physical playback was run.",
+        "Noncanonical decimal save arithmetic preserves faithful-port policy; original invalid-BCD hardware behavior remains unmeasured.",
+        "Original runtime observation of extreme timer saturation/capped conversion/pickup overflow was not added; source-derived unit contracts retain those expectations.",
+        "Original/native PCM retains the already documented linear/Gaussian interpolation difference; no bit-exact original waveform claim."
+      ],
+      "source_grounded_contract_corrections": "modernize/design.json; new preimplementation fixture/setup mistakes corrected against source/faithful contracts before implementation. No existing expected outcome was changed to pass the conversion.",
+      "outcome": "retained",
+      "gameplay_changes": "none intended or observed in required bounded comparisons",
+      "qa_records": "Existing debug acceptance/QA records preserved; fresh evidence kept separately under modernize/evidence.",
+      "id": "M2",
+      "iteration": 1,
+      "category": "modernization",
+      "title": "Native race elapsed units",
+      "before": "RaceTimer exposes three packed bytes; advance_timer propagates decimal carry and returns tile codes; results read packed fields.",
+      "after": "RaceTimer owns elapsed source units, advances by16 with the same pre-add saturation and retained fraction, and exposes independent visible digits and record-boundary encoding. Tile selection lives in presentation.",
+      "removed_machinery": [
+        "three packed state fields for ordinary elapsed time",
+        "decimal carry chain from ordinary service",
+        "tile encoding from race time advancement"
+      ],
+      "remaining_boundary_encodings": [
+        "original two-byte record storage/comparison",
+        "HUD digits\u2192tiles in presentation",
+        "version2 timer serialization/debug fields",
+        "isolated legacy timer byte state/arithmetic for nondecimal saves"
+      ],
+      "files": [
+        "port/src/race/time.rs",
+        "port/src/race.rs",
+        "port/src/presentation/mod.rs",
+        "port/src/frontend/results.rs"
+      ],
+      "test_ids": [
+        "game::modernization_tests::modernization_conditional_timer_carry_keeps_existing_byte_semantics",
+        "game::modernization_tests::modernization_legacy_snapshot_preserves_every_nitro_byte_and_unusual_timer",
+        "race::tests::timer_adds_decimal_sixteen_with_fraction_and_middle_carry",
+        "race::tests::timer_crossing_saturation_reaches_first_middle_99_then_freezes_on_following_call",
+        "race::tests::timer_freezes_only_when_both_high_and_middle_thresholds_reached_retaining_fraction",
+        "race::tests::prepared_frame_executes_all_owners_in_source_order_and_increments_timer_before_return",
+        "presentation::tests::hud_digit_slots_reverse_truck_order_and_call_real_timer_even_after_winner",
+        "frontend::results::tests::time_rows_use_three_name_tiles_and_only_display_selected_bcd_nibbles",
+        "native-inventory-timer-frontend"
+      ]
+    },
+    {
+      "baseline": "modernize/baseline.json",
+      "baseline_source_sha256": "42eeeb26ae91a344724ad6814400525a7ddfe18a196f90e95073dd6d99188622",
+      "starting_checkpoint": "modernize/baseline-source.tar.gz",
+      "starting_tests_checkpoint": "modernize/evidence/preimplementation-contracts.rs",
+      "build_identity": "modernize/evidence/build-identity.json",
+      "retained_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+      "retained_binary_sha256": "f2f60380b6d1450cbfd860f3e095bf16a20d15b651b05a39b5aca66dc558d4e5",
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter modernization",
+          "result": "PASS against faithful implementation before target edits;4 tests",
+          "evidence": "modernize/evidence/preimplementation-contracts.log"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter timer",
+          "result": "PASS;34 selected tests after representation conversions (before R1 extraction)",
+          "evidence": "modernize/evidence/M2-timer-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS;631 library tests including all affected frontend/motion/pickup/results/scheduler/snapshot contracts",
+          "evidence": "modernize/evidence/all-fast.json"
+        },
+        {
+          "command": "python3 run.py check",
+          "result": "PASS;631 tests, fmt, optimized desktop/web Clippy and builds with Rust1.90.0 and Cargo.lock",
+          "evidence": "modernize/evidence/optimized-check.json"
+        },
+        {
+          "command": "port.workspace + port.validate_ledger (toolkit read-only audit functions)",
+          "result": "PASS; frozen identity and1527regions/1408units/22uncertainties; no semantic certification implied",
+          "evidence": "modernize/evidence/current-accounting-audit.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest modernize/scenarios/lifecycle.json --suite all --expectation original-fidelity --evidence modernize/evidence/modernized-lifecycle",
+          "result": "PASS; fresh natural purchase/consume, timer, snapshot branching and identity-guarded recipe replay",
+          "evidence": "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/result.json"
+        },
+        {
+          "command": "python3 modernize/scenarios/compare_lifecycle.py modernize/evidence/baseline-lifecycle-002 modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/fresh",
+          "result": "PASS;four complete state/frame landmarks, complete-route PCM hash and all checkpoint fields except build identity identical",
+          "evidence": "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/fresh/baseline-comparison.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest modernize/scenarios/initial-sanity.json --suite initial --expectation original-fidelity --include-original-fidelity-sanity --evidence modernize/evidence/fresh-original-sanity",
+          "result": "PASS;six exact selected full original/native frames (no reuse),8voice fields at both endpoints30frames apart",
+          "evidence": "modernize/evidence/fresh-original-sanity/initial-original-sanity/result.json"
+        },
+        {
+          "command": "python3 /root/romatlas/scripts/qa_harness.py --manifest debug/gameplay.json --suite initial --expectation source-rules --evidence modernize/evidence/fresh-native-smoke",
+          "result": "PASS;natural frontend route and short throttle/steer/nitro driving with active finite PCM",
+          "evidence": "modernize/evidence/fresh-native-smoke/initial-native-smoke/result.json"
+        },
+        {
+          "command": "python3 modernize/scenarios/original_inventory.py modernize/evidence/original-inventory-002",
+          "result": "PASS; original natural shop purchase\u2192racing\u2192consume/hold,128timer units over8frames; regenerated after adding pinned setup-origin hash guard",
+          "evidence": "modernize/evidence/original-inventory-002/result.json"
+        }
+      ],
+      "presentation_reviews": [
+        "modernize/evidence/modernized-lifecycle/native-inventory-timer-frontend/review.json",
+        "modernize/evidence/fresh-original-sanity/initial-original-sanity/review.json",
+        "modernize/evidence/fresh-native-smoke/initial-native-smoke/review.json"
+      ],
+      "remaining_uncertainty": [
+        "Existing source/platform uncertainties remain unchanged.",
+        "No whole-game QA, desktop/browser runtime or physical playback was run.",
+        "Noncanonical decimal save arithmetic preserves faithful-port policy; original invalid-BCD hardware behavior remains unmeasured.",
+        "Original runtime observation of extreme timer saturation/capped conversion/pickup overflow was not added; source-derived unit contracts retain those expectations.",
+        "Original/native PCM retains the already documented linear/Gaussian interpolation difference; no bit-exact original waveform claim."
+      ],
+      "source_grounded_contract_corrections": "modernize/design.json; new preimplementation fixture/setup mistakes corrected against source/faithful contracts before implementation. No existing expected outcome was changed to pass the conversion.",
+      "outcome": "retained",
+      "gameplay_changes": "none intended or observed in required bounded comparisons",
+      "qa_records": "Existing debug acceptance/QA records preserved; fresh evidence kept separately under modernize/evidence.",
+      "id": "R1",
+      "iteration": 1,
+      "category": "refactoring",
+      "title": "Extract name/shop scene scheduling",
+      "before": "Long Names/Shop arms mix domain service, fade/window/history handoff and control of the central NMI pump.",
+      "after": "advance_names_scene and advance_shop_scene contain complete cohesive frontend steps and return SceneStep::Yield/Continue; the NMI pump keeps its dispatch/order and common view/sound flush.",
+      "removed_machinery": [
+        "mixed frontend scene orchestration from the central dispatcher (structural extraction only)"
+      ],
+      "remaining_boundary_encodings": [
+        "existing scene/phase enums and source waits are unchanged"
+      ],
+      "files": [
+        "port/src/game/scheduler.rs"
+      ],
+      "test_ids": [
+        "game::modernization_tests::modernization_frontend_handoffs_preserve_nmi_yield_and_window_owner",
+        "game::tests::finishing_a_race_reaches_the_podium_and_next_race_without_faulting",
+        "all frontend::names::tests and frontend::shop::tests",
+        "native-inventory-timer-frontend",
+        "initial-native-smoke",
+        "initial-original-sanity"
+      ],
+      "invariants": [
+        "Names installs Shop synchronously then yields before first fade service",
+        "Shop completion retains same-NMI race preparation or postrace continuation",
+        "window is moved/reclaimed once at the same phase",
+        "menu/pause button history transfer unchanged",
+        "view synchronization and sound flushing occur after the same scene pump"
+      ]
+    },
+    {
+      "iteration": 2,
+      "baseline": "modernize/baseline.json",
+      "starting_checkpoint": "modernize/iteration-002-preparation.json",
+      "starting_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+      "retained_source_sha256": "9e1c230648f122a75db00bc354cad9ec335d80546b73ab4b2352ea7d51d938ec",
+      "retained_binary_sha256": "1aa7148864a7844744454888d6b4fffd7c9da8f41cb0060b4e58ca9ed05ed63b",
+      "build_identity": "modernize/evidence/iteration-002/build-identity.json",
+      "implementation_patch": "modernize/evidence/iteration-002/implementation.patch",
+      "validation_record": "iteration-002",
+      "source_grounded_contract_corrections": "modernize/design-iteration-002.json",
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Natural original redirect traversal on tracks8/13 was not recorded. Real-ROM forward/reverse redirect actions and bias-before-branch RNG histories are independent source-backed contracts; the natural original integration covers ordinary waypoints/laps.",
+        "Historical exceptional counters/partial routes retain native compatibility/error policies; no original malformed-state reachability or hardware-memory-safety claim.",
+        "Existing initialization, subframe timing, composite-tail and native DSP interpolation uncertainties remain explicit and unchanged."
+      ],
+      "outcome": "retained",
+      "intentional_gameplay_changes": false,
+      "id": "iteration-002-M1",
+      "candidate_id": "M1",
+      "category": "modernization",
+      "title": "Decoded native route geometry and traversal actions",
+      "before": "Route Vec<u16> interpreted by each human/AI/ranking/grid caller; source markers, coordinate/extent masks and width-dependent indexing remain in gameplay.",
+      "after": "Immutable RouteNode/Waypoint/RouteAxis and GridOrigin; explicit human traversal/AI next-target policies, independent rank geometry and lookup-window policies. Gameplay reads decoded concepts.",
+      "removed_machinery": [
+        "raw route-word reads/marker decoding from gameplay",
+        "repeated gameplay coordinate/extent decoding",
+        "implicit source jump-word interpretation in target selection"
+      ],
+      "remaining_boundary_encodings": [
+        "ROM/TrackFile/TrackContent route words retain exact serialization",
+        "nullable terminal/partial records and count",
+        "64-node source lookup policy versus full-index AI cache/rank lookup",
+        "known copied-tail byte effect"
+      ],
+      "files": [
+        "port/src/world/tracks/route.rs",
+        "port/src/world/tracks.rs",
+        "port/src/race.rs",
+        "port/src/trucks/ai.rs",
+        "port/src/game/scheduler.rs",
+        "port/src/game/tests.rs"
+      ],
+      "test_ids": [
+        "game::iteration_two_tests::iteration_two_original_redirects_keep_bias_then_branch_rng_and_wire_identity",
+        "game::iteration_two_tests::iteration_two_steering_discards_upper_coordinate_bits_after_source_reduction",
+        "world::tracks::tests::all_thirty_two_route_views_keep_terminal_and_checkpoint_count",
+        "race::tests::conditional_human_record_index_multiplies_at_byte_width_before_route_access",
+        "race human route skip/wrap/atomic rejection contracts",
+        "AI cached-target timeout, redirect, rank and signed-boundary contracts",
+        "native-hazard-route",
+        "original-hazard-route"
+      ],
+      "coverage": "Original/native natural ordinary route progression and second lap observed; tracks8/13 FD/FE branches retain real-ROM/source-backed contracts with both outcomes/RNG histories."
+    },
+    {
+      "iteration": 2,
+      "baseline": "modernize/baseline.json",
+      "starting_checkpoint": "modernize/iteration-002-preparation.json",
+      "starting_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+      "retained_source_sha256": "9e1c230648f122a75db00bc354cad9ec335d80546b73ab4b2352ea7d51d938ec",
+      "retained_binary_sha256": "1aa7148864a7844744454888d6b4fffd7c9da8f41cb0060b4e58ca9ed05ed63b",
+      "build_identity": "modernize/evidence/iteration-002/build-identity.json",
+      "implementation_patch": "modernize/evidence/iteration-002/implementation.patch",
+      "validation_record": "iteration-002",
+      "source_grounded_contract_corrections": "modernize/design-iteration-002.json",
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Natural original redirect traversal on tracks8/13 was not recorded. Real-ROM forward/reverse redirect actions and bias-before-branch RNG histories are independent source-backed contracts; the natural original integration covers ordinary waypoints/laps.",
+        "Historical exceptional counters/partial routes retain native compatibility/error policies; no original malformed-state reachability or hardware-memory-safety claim.",
+        "Existing initialization, subframe timing, composite-tail and native DSP interpolation uncertainties remain explicit and unchanged."
+      ],
+      "outcome": "retained",
+      "intentional_gameplay_changes": false,
+      "id": "iteration-002-M2",
+      "candidate_id": "M2",
+      "category": "modernization",
+      "title": "Native dynamic-hazard lifecycle and response quantities",
+      "before": "Numeric kind progression plus timer/uses word underflow and animation combinations implicitly encode lifecycle; source uses0 means a remaining response.",
+      "after": "Named HazardStage, ResponseClock and ReactionBudget. Normal depletion/completion use native quantities and explicit transitions; animation cursor remains presentation/contact cadence data. Legacy words are isolated at compatibility boundaries.",
+      "removed_machinery": [
+        "normal numeric kind increment/dispatch",
+        "signed timer underflow as the normal completion model",
+        "signed uses underflow as the normal remaining-reaction model"
+      ],
+      "remaining_boundary_encodings": [
+        "version2 kind/timer/uses/animation fields and semantic observations",
+        "exceptional legacy counters and animation29 deferred completion",
+        "exact source animation/tile/palette/contact windows and retained inactive data"
+      ],
+      "files": [
+        "port/src/world/objects/hazard.rs",
+        "port/src/world/objects.rs",
+        "port/src/game/snapshots.rs"
+      ],
+      "test_ids": [
+        "game::iteration_two_tests::iteration_two_hazard_response_depletion_and_struck_transition_preserve_order",
+        "game::iteration_two_tests::iteration_two_historical_hazard_state_combinations_round_trip_losslessly",
+        "all dynamic geometry/contact/tile-before-decrement/palette3-4/full-word speed/slot-order/underflow contracts in world::objects::tests",
+        "native-hazard-route",
+        "original-hazard-route"
+      ],
+      "coverage": "Natural source and native response/depletion/projected sprite match; native full-frame/whole-route PCM match starting build; conditional historical wire-state combinations round-trip. Human-gated contact audio command remains source-unit coverage, not a new original human-contact waveform observation."
+    },
+    {
+      "iteration": 2,
+      "baseline": "modernize/baseline.json",
+      "starting_checkpoint": "modernize/iteration-002-preparation.json",
+      "starting_source_sha256": "c74df71f8c9be0e58f16ee3493219159046dd0a4314d4c1413299f06537b08b4",
+      "retained_source_sha256": "9e1c230648f122a75db00bc354cad9ec335d80546b73ab4b2352ea7d51d938ec",
+      "retained_binary_sha256": "1aa7148864a7844744454888d6b4fffd7c9da8f41cb0060b4e58ca9ed05ed63b",
+      "build_identity": "modernize/evidence/iteration-002/build-identity.json",
+      "implementation_patch": "modernize/evidence/iteration-002/implementation.patch",
+      "validation_record": "iteration-002",
+      "source_grounded_contract_corrections": "modernize/design-iteration-002.json",
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Natural original redirect traversal on tracks8/13 was not recorded. Real-ROM forward/reverse redirect actions and bias-before-branch RNG histories are independent source-backed contracts; the natural original integration covers ordinary waypoints/laps.",
+        "Historical exceptional counters/partial routes retain native compatibility/error policies; no original malformed-state reachability or hardware-memory-safety claim.",
+        "Existing initialization, subframe timing, composite-tail and native DSP interpolation uncertainties remain explicit and unchanged."
+      ],
+      "outcome": "retained",
+      "intentional_gameplay_changes": false,
+      "id": "iteration-002-R1",
+      "candidate_id": "R1",
+      "category": "refactoring",
+      "title": "Shared bearing-table resource",
+      "before": "AI and contact independently define/load the same256-byte ROM table; selected RaceAssets owns/reloads contact data despite its global source identity.",
+      "after": "One BearingTable definition/loader under immutable Resources.ai; movement/contact and late-frame AI borrow it. Selected RaceAssets has no duplicate table; fixture injection remains possible through the shared type.",
+      "removed_machinery": [
+        "duplicate bearing ROM location/loader/type definition",
+        "track-specific ownership/reloading of global contact bearings"
+      ],
+      "remaining_boundary_encodings": [
+        "all256 original table cells and source quantized heading bytes; no quantizer/steering/collision model change"
+      ],
+      "files": [
+        "port/src/trucks/bearings.rs",
+        "port/src/trucks/mod.rs",
+        "port/src/trucks/ai.rs",
+        "port/src/trucks/contact.rs",
+        "port/src/trucks/motion.rs",
+        "port/src/race/assets.rs",
+        "port/src/race.rs"
+      ],
+      "test_ids": [
+        "game::iteration_two_tests::iteration_two_bearing_loaders_preserve_every_overridden_cell",
+        "trucks::contact::tests::bearing_loader_preserves_all_rom_cells_and_checks_bounds",
+        "AI signed quantizer/heading contracts",
+        "contact angle/reduction/working-versus-committed state contracts",
+        "native-hazard-route",
+        "initial-native-smoke"
+      ],
+      "coverage": "Every cell retained with a deliberately overridden ROM window; full motion/contact/AI contracts and fresh short human driving plus longer natural AI route comparisons pass. This is structural resource refactoring, not modernization."
+    }
+  ],
+  "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",
+  "superseded_evidence": [
+    "modernize/evidence/preimplementation-contract-attempt-001.log",
+    "modernize/evidence/preimplementation-contract-attempt-002.log",
+    "modernize/evidence/baseline-lifecycle (failed input-order assumption)",
+    "modernize/evidence/original-inventory-001 (passes; repeated only after adding setup hash guard)",
+    "modernize/evidence/M1-working.patch (intermediate, superseded by final working tree)",
+    "modernize/evidence/iteration-002/original-hazard-discovery-001 (request-bound setup failure; not passed)",
+    "modernize/evidence/iteration-002/baseline-integration/original-hazard-route/result.json (lap-observation request-bound setup failure)",
+    "modernize/evidence/iteration-002/optimized-check-before-comment.json (passing pre-comment build; rebuilt binaries byte-identical)",
+    "modernize/evidence/iteration-002/implementation-before-comment.patch",
+    "modernize/evidence/iteration-002/baseline-integration/native-hazard-route (passing state/frame assertions; sound selector corrected and rerun in baseline-integration-002)",
+    "modernize/evidence/iteration-002/retained-integration/native-hazard-route (passing state/frame assertions; sound selector corrected and rerun in retained-integration-002)"
+  ],
+  "toolkit_edits": false,
+  "commits_publication_deployment": false,
+  "completed_iterations": [
+    1,
+    2
+  ],
+  "iteration_validation": [
+    {
+      "id": "iteration-002",
+      "iteration": 2,
+      "commands": [
+        {
+          "id": "preimplementation-contracts",
+          "command": "python3 run.py check-fast --test-filter iteration_two",
+          "result": "PASS on starting implementation;5 independently source-backed contracts before conversion",
+          "evidence": "modernize/evidence/iteration-002/preimplementation-contracts.log"
+        },
+        {
+          "id": "development",
+          "command": "python3 run.py check-fast",
+          "result": "PASS;636 library tests,0failures/0ignored",
+          "evidence": "modernize/evidence/iteration-002/all-fast.json"
+        },
+        {
+          "id": "optimized",
+          "command": "python3 run.py check",
+          "result": "PASS;636 tests; all six fmt/optimized Clippy/test/desktop/web build gates with Rust1.90.0/Cargo.lock. Rechecked after a comment-only source-provenance correction; native and wasm bytes unchanged.",
+          "evidence": "modernize/evidence/iteration-002/optimized-check.json"
+        },
+        {
+          "id": "original-identity-and-accounting",
+          "command": "toolkit port.workspace + port.validate_ledger",
+          "result": "PASS; frozen source/ROM and original1527regions/1408units/22uncertainties preserved; no semantic certification from accounting",
+          "evidence": "modernize/evidence/iteration-002/accounting-audit-retained.json"
+        },
+        {
+          "id": "natural-baseline",
+          "command": "qa_harness.py --manifest modernize/scenarios/iteration2-baseline.json --suite all --expectation original-fidelity --include-original-fidelity-sanity",
+          "result": "Native case PASS. Original response/depletion assertions passed, but the first complete original case was setup_failure from request budget during later lap probing; not counted as a complete pass.",
+          "evidence": "modernize/evidence/iteration-002/baseline-integration/result.json"
+        },
+        {
+          "id": "natural-original",
+          "command": "qa_harness.py --manifest modernize/scenarios/iteration2-baseline.json --test original-hazard-route --expectation original-fidelity --include-original-fidelity-sanity",
+          "result": "PASS after compact lap-only observation fixes the tooling budget. Natural origin hash/ROM validation and source-aligned response/depletion/lap assertions pass.",
+          "evidence": "modernize/evidence/iteration-002/baseline-reference-002/original-hazard-route/result.json"
+        },
+        {
+          "id": "natural-retained",
+          "command": "qa_harness.py --manifest modernize/scenarios/iteration2.json --test native-hazard-route --expectation original-fidelity",
+          "result": "PASS; fresh natural setup, response/depletion/lap states, persistent branch and guarded current-build replay",
+          "evidence": "modernize/evidence/iteration-002/retained-integration-002/native-hazard-route/result.json"
+        },
+        {
+          "id": "natural-differential",
+          "command": "python3 modernize/scenarios/compare_iteration2.py BASELINE RETAINED",
+          "result": "PASS; exact response/depletion/lap semantic states, full selected frames and complete-route PCM/checkpoint fields except build identity",
+          "evidence": "modernize/evidence/iteration-002/retained-integration-002/native-hazard-route/baseline-comparison.json"
+        },
+        {
+          "id": "original-hazard-component-comparison",
+          "command": "Compare original/native source-aligned hazard fields and sprite words",
+          "result": "PASS for kind/animation/timer/uses/coordinates/tile at response and depletion; no whole-screen racing equality claim",
+          "evidence": "modernize/evidence/iteration-002/original-native-hazard-comparison.json"
+        },
+        {
+          "id": "original-startup",
+          "command": "qa_harness.py --manifest modernize/scenarios/initial-sanity.json --suite initial --expectation original-fidelity --include-original-fidelity-sanity",
+          "result": "PASS;six exact full fresh RGB pairs and all8voice progression fields at both30frame endpoints; separate captured-audio/visual review complete",
+          "evidence": "modernize/evidence/iteration-002/fresh-original-sanity/initial-original-sanity/result.json"
+        },
+        {
+          "id": "prior-lifecycle",
+          "command": "qa_harness.py --manifest modernize/scenarios/lifecycle.json --suite all --expectation original-fidelity; compare_lifecycle.py ITERATION1 RETAINED",
+          "result": "PASS; source purchase/consume/timer assertions, four exact state/frame landmarks and unchanged route PCM hash",
+          "evidence": "modernize/evidence/iteration-002/fresh-lifecycle/native-inventory-timer-frontend/fresh/baseline-comparison.json"
+        },
+        {
+          "id": "driving",
+          "command": "qa_harness.py --manifest debug/gameplay.json --suite initial --expectation source-rules",
+          "result": "PASS;short natural driving/steering/audio regression and presentation review",
+          "evidence": "modernize/evidence/iteration-002/fresh-native-smoke/initial-native-smoke/result.json"
+        },
+        {
+          "id": "sound-suppression-oracle-correction",
+          "command": "qa_harness.py --manifest modernize/scenarios/iteration2-baseline.json --test native-hazard-route; qa_harness.py --manifest modernize/scenarios/iteration2.json --test native-hazard-route; compare_iteration2.py",
+          "result": "PASS for both binaries after correcting0702 host encoding to command2/argument7. Response/depletion/lap states and frame/PCM hashes equal earlier captures and each other.",
+          "evidence": "modernize/evidence/iteration-002/retained-integration-002/native-hazard-route/baseline-comparison.json"
+        }
+      ],
+      "reviews": [
+        "modernize/evidence/iteration-002/baseline-integration-002/native-hazard-route/review.json",
+        "modernize/evidence/iteration-002/retained-integration-002/native-hazard-route/review.json",
+        "modernize/evidence/iteration-002/baseline-reference-002/original-hazard-route/review.json",
+        "modernize/evidence/iteration-002/fresh-original-sanity/initial-original-sanity/review.json",
+        "modernize/evidence/iteration-002/fresh-lifecycle/native-inventory-timer-frontend/review.json",
+        "modernize/evidence/iteration-002/fresh-native-smoke/initial-native-smoke/review.json"
+      ],
+      "test_migration": "Existing source fixture values/expectations remain. Route fixtures use from_words/from_encoded and read encoded_words only at the fixture boundary; dynamic fixture setters/assertions use wire constructors/encoded compatibility access. Source grid/waypoint APIs accept decoded types. Bearing fixtures share a type but retain explicit injectable contents.",
+      "prior_records": "modernize/iterations/001/changes.json",
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Natural original redirect traversal on tracks8/13 was not recorded. Real-ROM forward/reverse redirect actions and bias-before-branch RNG histories are independent source-backed contracts; the natural original integration covers ordinary waypoints/laps.",
+        "Historical exceptional counters/partial routes retain native compatibility/error policies; no original malformed-state reachability or hardware-memory-safety claim.",
+        "Existing initialization, subframe timing, composite-tail and native DSP interpolation uncertainties remain explicit and unchanged."
+      ]
+    }
+  ]
+}

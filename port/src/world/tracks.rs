@@ -33,13 +33,8 @@ pub struct Descriptor {
     pub backgrounds: [CpuSource; 2],
     pub graphics: CpuSource,
 }
-/// Route words retain source packed rectangle/control encoding; race/AI decode
-/// their own consumers. The terminal word is retained, not a coordinate pair.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct Route {
-    pub words: Vec<u16>,
-    pub checkpoint_count: u8,
-}
+mod route;
+pub use route::{GridOrigin, HumanTraversal, NextTarget, Route, Waypoint};
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TrackContent {
     pub projection_offset: [u16; 2],
@@ -93,8 +88,6 @@ const REVERSED_BIT: u8 = 0x80;
 const ORIGINAL_ID_MASK: u8 = 0x7f;
 const ROUTE_TERMINAL: u16 = 0xff00;
 const ROUTE_TERMINAL_MASK: u16 = 0xff00;
-const GRID_X_MASK: u16 = 0xbfe0;
-const GRID_Y_MASK: u16 = 0xffe0;
 const REVERSE_GRID_STEP: u16 = 0xfc00;
 const GRID_COLUMN_STEP: u16 = 0x300;
 const GRID_TOP_STEP: u16 = 0x100;
@@ -212,10 +205,7 @@ pub fn decode_route(bytes: &[u8]) -> Result<Route> {
         let value = word(pair, 0);
         words.push(value);
         if value & ROUTE_TERMINAL_MASK == ROUTE_TERMINAL {
-            return Ok(Route {
-                words,
-                checkpoint_count: value as u8,
-            });
+            return Ok(Route::from_words(words, value as u8));
         }
     }
     anyhow::bail!("route has no complete terminal word")
@@ -234,14 +224,14 @@ pub fn decode_headings(bytes: &[u8]) -> Result<Vec<[u8; 2]>> {
         })
         .collect())
 }
-pub fn prepare_grid(route_start: [u16; 2], heading: u8, order_slot: u8) -> Grid {
+pub fn prepare_grid(route_start: GridOrigin, heading: u8, order_slot: u8) -> Grid {
     let displacement = if heading == 0 {
         REVERSE_GRID_STEP
     } else {
         u16::from(heading)
     };
-    let base_x = (route_start[0] & GRID_X_MASK).wrapping_add(displacement);
-    let base_y = route_start[1] & GRID_Y_MASK;
+    let base_x = route_start.0[0].wrapping_add(displacement);
+    let base_y = route_start.0[1];
     let next_x = base_x.wrapping_add(GRID_COLUMN_STEP);
     let top = base_y.wrapping_sub(GRID_TOP_STEP);
     let bottom = top.wrapping_add(GRID_ROW_STEP);
@@ -319,7 +309,7 @@ impl TrackFile {
             terrain: content.terrain,
             backgrounds: content.backgrounds,
             graphics: content.graphics,
-            routes: content.routes.map(|route| route.words),
+            routes: content.routes.map(|route| route.encoded_words()),
             headings: content.headings,
             objects: content.objects,
             presentation: content.presentation,
@@ -341,7 +331,7 @@ impl TrackFile {
             let bytes: Vec<u8> = words.iter().flat_map(|word| word.to_le_bytes()).collect();
             let decoded = decode_route(&bytes)?;
             ensure!(
-                decoded.words.len() == words.len()
+                decoded.word_len() == words.len()
                     && decoded.checkpoint_count != 0
                     && words.len() >= 3,
                 "invalid track route terminal/count"
@@ -382,14 +372,15 @@ impl TrackFile {
 /// File tracks must include the last AI checkpoint, not just a terminal word
 /// carrying its index. Original variable-length source views remain decoded as-is.
 pub fn validate_playable_route(route: &Route) -> Result<()> {
-    let records = route.words.len().saturating_sub(1) / 2;
+    let words = route.encoded_words();
+    let records = words.len().saturating_sub(1) / 2;
     ensure!(
-        route.words.len() % 2 == 1
+        words.len() % 2 == 1
             && usize::from(route.checkpoint_count) < records
             && route.checkpoint_count != 0,
         "file route lacks full last checkpoint record"
     );
-    for record in route.words[..route.words.len() - 1].chunks_exact(2) {
+    for record in words[..words.len() - 1].chunks_exact(2) {
         if matches!((record[0] >> 8) as u8, 0xfd | 0xfe) {
             ensure!(
                 usize::from(record[1] as u8) < records,
@@ -397,7 +388,7 @@ pub fn validate_playable_route(route: &Route) -> Result<()> {
             );
         }
     }
-    ensure!(route.words[..route.words.len()-1].chunks_exact(2).any(|record| !matches!((record[0]>>8) as u8,0xfd|0xfe) && record[0]&0x4000==0),"file route contains no human checkpoint");
+    ensure!(words[..words.len()-1].chunks_exact(2).any(|record| !matches!((record[0]>>8) as u8,0xfd|0xfe) && record[0]&0x4000==0),"file route contains no human checkpoint");
     Ok(())
 }
 /// Both frontends merge replacements and additions through the same collection
@@ -640,10 +631,14 @@ mod tests {
                 Direction::Reversed
             };
             let r = load_route(&b, (view % 16) as u8, direction).unwrap();
-            assert_eq!(r.words.len(), word_counts[view], "route view {view}");
+            assert_eq!(
+                r.encoded_words().len(),
+                word_counts[view],
+                "route view {view}"
+            );
             assert_eq!(r.checkpoint_count, checkpoints[view]);
             assert_eq!(
-                *r.words.last().unwrap(),
+                *r.encoded_words().last().unwrap(),
                 0xff00 | u16::from(checkpoints[view])
             );
         }
@@ -651,13 +646,7 @@ mod tests {
     #[test]
     fn route_high_ff_termination_is_not_low_ff_or_a_fixed_pair_count() {
         let route = decode_route(&[0xff, 0x12, 0x00, 0x80, 0x03, 0xff, 0xaa]).unwrap();
-        assert_eq!(
-            route,
-            Route {
-                words: vec![0x12ff, 0x8000, 0xff03],
-                checkpoint_count: 3
-            }
-        );
+        assert_eq!(route, Route::from_words(vec![0x12ff, 0x8000, 0xff03], 3));
         assert!(decode_route(&[0, 0, 1]).is_err());
         assert!(decode_route(&[]).is_err());
         assert!(load_route(&rom(), 16, Direction::Forward).is_err());
@@ -666,13 +655,13 @@ mod tests {
     fn reverse_nine_and_overlapping_views_are_loaded_independently() {
         let b = rom();
         let nine = load_route(&b, 9, Direction::Reversed).unwrap();
-        assert_eq!(&nine.words[..2], &[0x0dc1, 0x03ca]);
+        assert_eq!(&nine.encoded_words()[..2], &[0x0dc1, 0x03ca]);
         assert_eq!(nine.checkpoint_count, 6);
         let forward = load_route(&b, 8, Direction::Forward).unwrap();
         let reverse = load_route(&b, 8, Direction::Reversed).unwrap();
-        assert_eq!(forward.words.len(), 61);
-        assert_eq!(reverse.words.len(), 63);
-        assert_ne!(forward.words, reverse.words);
+        assert_eq!(forward.encoded_words().len(), 61);
+        assert_eq!(reverse.encoded_words().len(), 63);
+        assert_ne!(forward.encoded_words(), reverse.encoded_words());
         assert!(load_route(&b[..0x5800], 0, Direction::Forward).is_err());
     }
     #[test]
@@ -697,7 +686,7 @@ mod tests {
     #[test]
     fn nonzero_heading_offsets_x_and_even_slot_retains_grid_rows() {
         assert_eq!(
-            prepare_grid([0x17e1, 0x04c8], 0x80, 0),
+            prepare_grid([0x17e1, 0x04c8].into(), 0x80, 0),
             Grid {
                 x: [0x1860, 0x1860, 0x1b60, 0x1b60],
                 y: [0x03c0, 0x05a0, 0x03c0, 0x05a0],
@@ -709,7 +698,7 @@ mod tests {
     #[test]
     fn zero_heading_selects_negative_step_and_exchanges_x_columns() {
         assert_eq!(
-            prepare_grid([0x17e1, 0x04c8], 0, 0),
+            prepare_grid([0x17e1, 0x04c8].into(), 0, 0),
             Grid {
                 x: [0x16e0, 0x16e0, 0x13e0, 0x13e0],
                 y: [0x03c0, 0x05a0, 0x03c0, 0x05a0],
@@ -721,7 +710,7 @@ mod tests {
     #[test]
     fn odd_order_independently_swaps_rows_and_arithmetic_wraps() {
         assert_eq!(
-            prepare_grid([0x401f, 0x000f], 0, 63),
+            prepare_grid([0x401f, 0x000f].into(), 0, 63),
             Grid {
                 x: [0xff00, 0xff00, 0xfc00, 0xfc00],
                 y: [0x00e0, 0xff00, 0x00e0, 0xff00],
@@ -731,7 +720,7 @@ mod tests {
         );
         // Heading need not be the original table's $80: source tests zero only.
         assert_eq!(
-            prepare_grid([0xbfff, 0xffff], 1, 2).x,
+            prepare_grid([0xbfff, 0xffff].into(), 1, 2).x,
             [0xbfe1, 0xbfe1, 0xc2e1, 0xc2e1]
         );
     }
@@ -800,14 +789,8 @@ mod tests {
             backgrounds: [vec![0; BACKGROUND_BYTES], vec![0; BACKGROUND_BYTES]],
             graphics: vec![0; GRAPHICS_BYTES],
             routes: [
-                Route {
-                    words: vec![0x0101, 0x0201, 0x0101, 0x0201, 0xff01],
-                    checkpoint_count: 1,
-                },
-                Route {
-                    words: vec![0x0101, 0x0201, 0x0101, 0x0201, 0xff01],
-                    checkpoint_count: 1,
-                },
+                Route::from_words(vec![0x0101, 0x0201, 0x0101, 0x0201, 0xff01], 1),
+                Route::from_words(vec![0x0101, 0x0201, 0x0101, 0x0201, 0xff01], 1),
             ],
             headings: [0x80, 0],
             presentation: Some(crate::presentation::TrackPresentation {
