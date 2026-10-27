@@ -6,6 +6,25 @@ Build instructions and platform limits are in [BUILDING.md](BUILDING.md). `pytho
 
 The executable accepts `--rom`, `--assets`, `--settings`, `--headless` and the shared debug options. Supply the ROM SHA256 in port/src/config.rs. Records last for the session and full snapshots; the original cartridge has no battery-backed save. Desktop and browser consume the same Game APIs and MemoryAssets validation.
 
+## GitHub Pages
+
+The [Pages workflow](.github/workflows/pages.yml) builds and publishes the browser
+app on every push to `main`, and can also be run manually from Actions. In the
+repository's **Settings → Pages**, select **GitHub Actions** as the publishing
+source. The deployment job reports the site URL.
+
+Like the DuckTales workflow, it checks out a pinned ROMAtlas revision beside this
+repository, installs Rust 1.90.0 and wasm-bindgen 0.2.129, then packages `web-dist/`
+with relative URLs, the configured ROM (verified against `workspace.json`), and
+the title “Super Off Road”. Only that generated directory is uploaded to Pages.
+Update the ROMAtlas commit in the workflow when adopting toolkit changes.
+
+To build the same static site locally with the sibling `/root/romatlas` checkout:
+
+```sh
+python3 scripts/build-pages.py
+```
+
 ## Content replacements and added tracks
 
 An asset folder may contain `resources.json` and/or `tracks.json`, using version1 manifests with `entries` (`id`, `file`) and optional `order`. Files are relative safe paths. Empty manifests in examples/original-only/ are working original-content-only defaults: all16 tracks and the original64-slot forward/reverse sequence remain selected. No ROM bytes are distributed there.
