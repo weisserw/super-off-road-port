@@ -39,6 +39,22 @@ The six dynamic hazards own named `HazardStage` values, a `ResponseClock`, and a
 
 See [modernize/changes.json](modernize/changes.json) for per-target evidence and limits. Iteration1 records are also preserved in [modernize/iterations/001](modernize/iterations/001).
 
+## Modernization iteration 3 — selected targets in progress
+
+M1: `WorldObjects::pickup` owns a `PickupPhase`: absent, available with a
+`PickupKind`, or award display with a native `PickupReward`. Immutable
+`PickupAssets` decodes collection outcomes and sprite pairs before gameplay.
+The selected old count chooses a decoded reward independently of the spawned
+kind; file overrides can deliberately cross the reward-category threshold or
+return to a collectable phase. Collection applies that quantity directly to
+NitroStock or pending money, then projects and starts/ticks the award lifetime
+in the established order. Version2 saves and public observations still expose
+state0..11; incidental state11 graphics and retained fields are preserved.
+
+Iteration progress, checks and individual commits are tracked in
+`modernize/status.json` and `modernize/changes.json`. Other selected targets are
+not implemented by this M1 change.
+
 ## Preserved Stage1/2 architecture record
 
 # Native port architecture

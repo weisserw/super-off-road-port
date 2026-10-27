@@ -7,6 +7,9 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 
+mod pickup;
+pub use pickup::{PickupAssets, PickupKind, PickupPhase, PickupReward};
+
 pub const DYNAMIC_SLOTS: usize = 6;
 pub const PICKUP_CHOICES: usize = 4;
 pub const PICKUP_TYPES: usize = 2;
@@ -61,9 +64,7 @@ pub struct ObjectContent {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ObjectTables {
-    pub pickup_award_bases: [u16; PICKUP_TYPES],
-    pub pickup_tiles: [u16; 11],
-    pub pickup_extra_tiles: [u16; 9],
+    pub pickups: PickupAssets,
     pub dynamic_vertical: [u16; 3],
     pub dynamic_y_deltas: [i8; DYNAMIC_RESPONSE_TICKS as usize],
     pub dynamic_tiles: [u16; 35],
@@ -97,9 +98,11 @@ pub fn load_object_tables(rom: &[u8]) -> Result<ObjectTables> {
         .get(THREE_COORDINATES_ROM..THREE_COORDINATES_ROM + 6)
         .context("truncated special sprite coordinates")?;
     Ok(ObjectTables {
-        pickup_award_bases: words(rom, AWARD_ROM)?,
-        pickup_tiles: words(rom, PRIMARY_TILES_ROM)?,
-        pickup_extra_tiles: words(rom, EXTRA_TILES_ROM)?,
+        pickups: PickupAssets::decode(
+            words(rom, AWARD_ROM)?,
+            words(rom, PRIMARY_TILES_ROM)?,
+            words(rom, EXTRA_TILES_ROM)?,
+        ),
         dynamic_vertical: words(rom, DYNAMIC_VERTICAL_ROM)?,
         dynamic_y_deltas: std::array::from_fn(|index| deltas[index] as i8),
         dynamic_tiles: words(rom, DYNAMIC_TILES_ROM)?,
@@ -212,8 +215,8 @@ pub fn apply_placements(objects: &mut Vec<PlacedObject>, list: &PlacementList) -
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Pickup {
-    /// Source word: 0 absent, 1/2 collectable, 3..10 award display.
-    pub state: u16,
+    #[serde(rename = "state")]
+    pub phase: PickupPhase,
     pub placement: Placement,
     #[serde(with = "crate::snapshot::array")]
     pub counts: [u16; PICKUP_TYPES],
@@ -250,11 +253,11 @@ pub fn try_spawn_pickup(
         return;
     }
     pickup.placement = choices[usize::from(choice & 3)];
-    let kind = usize::from(animation & 1);
-    if pickup.counts[kind] >= PICKUP_TYPE_CAP {
+    let kind = PickupKind::for_frame(animation);
+    if pickup.counts[kind.index()] >= PICKUP_TYPE_CAP {
         return;
     }
-    pickup.state = kind as u16 + 1;
+    pickup.phase = PickupPhase::Available(kind);
     // New spawn state1/2 is within the validated finite tile domain.
     project_pickup(pickup, projection, tables).expect("validated initial pickup state");
 }
@@ -263,29 +266,14 @@ pub fn project_pickup(
     projection: Projection,
     tables: &ObjectTables,
 ) -> Result<()> {
-    const FIRST_AWARD_STATE: u16 = 3;
     const PAIR_CENTER: u16 = 8;
     const PAIR_SEPARATION: u16 = 0x10;
-    ensure!(pickup.state != 0, "cannot project absent pickup");
-    let tile = *tables
-        .pickup_tiles
-        .get(usize::from(pickup.state - 1))
-        .context("invalid pickup state")?;
-    let extra = if pickup.state >= FIRST_AWARD_STATE {
-        Some(
-            *tables
-                .pickup_extra_tiles
-                .get(usize::from(pickup.state - FIRST_AWARD_STATE))
-                .context("invalid pickup award state")?,
-        )
-    } else {
-        None
-    };
+    let art = tables.pickups.art(pickup.phase)?;
     pickup.sprites[0] = ObjectSprite {
         coordinates: screen_coordinates(pickup.placement, projection),
-        tile_attributes: tile,
+        tile_attributes: art.primary,
     };
-    if let Some(extra) = extra {
+    if let Some(extra) = art.extra {
         pickup.sprites[0].coordinates = pickup.sprites[0].coordinates.wrapping_sub(PAIR_CENTER);
         pickup.sprites[1] = ObjectSprite {
             coordinates: pickup.sprites[0].coordinates.wrapping_add(PAIR_SEPARATION),
@@ -303,30 +291,29 @@ pub fn collect_pickup(
     projection: Projection,
     tables: &ObjectTables,
 ) -> Result<Vec<u16>> {
-    const FIRST_MONEY_STATE: u16 = 7;
-    const MONEY_STATE_BASE: u16 = 6;
-    const NITRO_STATE_BASE: u16 = 2;
-    ensure!(matches!(pickup.state, 1 | 2), "invalid collectable pickup");
+    let PickupPhase::Available(kind) = pickup.phase else {
+        anyhow::bail!("invalid collectable pickup");
+    };
     let slot = usize::from(animation & 3);
     if !pickup_near(pickup.placement, trucks[slot].world) {
         return Ok(Vec::new());
     }
-    let kind = usize::from(pickup.state - 1);
-    let old_count = pickup.counts[kind];
+    let old_count = pickup.counts[kind.index()];
     ensure!(old_count <= PICKUP_TYPE_CAP, "unsupported pickup count");
     if old_count < PICKUP_TYPE_CAP {
-        pickup.counts[kind] += 1;
+        pickup.counts[kind.index()] += 1;
     }
-    pickup.state = old_count + tables.pickup_award_bases[kind];
-    let command = if pickup.state >= FIRST_MONEY_STATE {
-        pending_awards[slot] =
-            pending_awards[slot].wrapping_add((pickup.state - MONEY_STATE_BASE) as u8);
-        PICKUP_MONEY_SOUND
-    } else {
-        trucks[slot]
-            .nitro
-            .award_pickup(pickup.state - NITRO_STATE_BASE);
-        PICKUP_NITRO_SOUND
+    let collection = tables.pickups.collection(kind, old_count)?;
+    pickup.phase = collection.phase;
+    let command = match collection.reward {
+        PickupReward::Money(units) => {
+            pending_awards[slot] = pending_awards[slot].wrapping_add(units);
+            PICKUP_MONEY_SOUND
+        }
+        PickupReward::Nitro(charges) => {
+            trucks[slot].nitro.award_pickup(charges);
+            PICKUP_NITRO_SOUND
+        }
     };
     project_pickup(pickup, projection, tables)?;
     pickup.lifetime = PICKUP_AWARD_LIFETIME;
@@ -346,7 +333,7 @@ pub fn tick_pickup_award(pickup: &mut Pickup, animation: u8) {
     }
     pickup.lifetime = pickup.lifetime.wrapping_sub(1);
     if pickup.lifetime == 0 {
-        pickup.state = 0;
+        pickup.phase = PickupPhase::Absent;
         for sprite in &mut pickup.sprites {
             sprite.coordinates = HIDDEN_COORDINATES;
         }
@@ -366,8 +353,8 @@ pub fn service_pickup(
     tables: &ObjectTables,
 ) -> Result<Vec<u16>> {
     use crate::runtime::RandomResultWidth;
-    match pickup.state {
-        0 => {
+    match pickup.phase {
+        PickupPhase::Absent => {
             let gate = random.next(RandomResultWidth::Byte) as u8;
             if gate == 0 {
                 let choice = random.next(RandomResultWidth::Byte) as u8;
@@ -375,7 +362,7 @@ pub fn service_pickup(
             }
             Ok(Vec::new())
         }
-        1 | 2 => collect_pickup(
+        PickupPhase::Available(_) => collect_pickup(
             pickup,
             trucks,
             pending_awards,
@@ -848,7 +835,7 @@ pub fn initialize_world(
     for sprite in &mut world.pickup.sprites {
         sprite.coordinates = HIDDEN_COORDINATES;
     }
-    world.pickup.state = 0;
+    world.pickup.phase = PickupPhase::Absent;
     world.pickup.counts.fill(0);
     world.pending_awards.fill(0);
     Ok(sounds)
@@ -894,9 +881,11 @@ mod tests {
     fn tables() -> ObjectTables {
         let b = rom();
         ObjectTables {
-            pickup_award_bases: [7, 3],
-            pickup_tiles: std::array::from_fn(|i| word(&b, 0x48f1 + i * 2)),
-            pickup_extra_tiles: std::array::from_fn(|i| word(&b, 0x48df + i * 2)),
+            pickups: PickupAssets::decode(
+                [7, 3],
+                std::array::from_fn(|i| word(&b, 0x48f1 + i * 2)),
+                std::array::from_fn(|i| word(&b, 0x48df + i * 2)),
+            ),
             dynamic_vertical: [0x1a0, 0x1a0, 0x30],
             dynamic_y_deltas: std::array::from_fn(|i| b[0x4dc6 + i] as i8),
             dynamic_tiles: std::array::from_fn(|i| word(&b, 0x4df2 + i * 2)),
@@ -928,7 +917,7 @@ mod tests {
     }
     fn pickup(kind: u16) -> Pickup {
         Pickup {
-            state: kind,
+            phase: PickupPhase::from_encoded(kind),
             placement: placement(),
             ..Pickup::default()
         }
@@ -1126,7 +1115,7 @@ mod tests {
                 let mut p = pickup(0);
                 try_spawn_pickup(&mut p, &choices, 0, choice, frame, projection(), &tables());
                 assert_eq!(p.placement, choices[choice as usize]);
-                assert_eq!(p.state, u16::from(frame) + 1);
+                assert_eq!(p.phase.encoded(), u16::from(frame) + 1);
             }
         }
     }
@@ -1140,11 +1129,11 @@ mod tests {
             height: 11,
         }; 4];
         try_spawn_pickup(&mut p, &choices, 0, 0, 0, projection(), &tables());
-        assert_eq!(p.state, 0);
+        assert_eq!(p.phase.encoded(), 0);
         assert_eq!(p.placement, choices[0]);
         assert_eq!(p.lifetime, 123);
         try_spawn_pickup(&mut p, &choices, 0, 0, 1, projection(), &tables());
-        assert_eq!(p.state, 2);
+        assert_eq!(p.phase.encoded(), 2);
     }
     #[test]
     fn pickup_award_uses_old_count_then_saturates_count_and_byte_awards_wrap() {
@@ -1164,10 +1153,40 @@ mod tests {
                 &tables(),
             )
             .unwrap();
-            assert_eq!(p.state, 7 + old);
+            assert_eq!(p.phase.encoded(), 7 + old);
             assert_eq!(p.counts[0], (old + 1).min(4));
             assert_eq!(awards[0], (255u16 + 1 + old) as u8);
             assert_eq!(sounds, [PICKUP_MONEY_SOUND]);
+            assert_eq!(p.lifetime, 79);
+        }
+    }
+    #[test]
+    fn iteration_three_pickup_override_can_change_reward_category_and_retained_phase() {
+        // The source chooses the reward from the resulting state, not from the
+        // spawned type. Overrides may cross the money/nitro threshold or return
+        // to a collectable state; preserve that behavior at the asset boundary.
+        for (base, old_count, expected_state, nitro, money) in [
+            (6, 0, 6, 4, 0),
+            (6, 1, 7, 0, 1),
+            (2, 0, 2, 0, 0),
+            (7, 4, 11, 0, 5),
+            (3, 4, 7, 0, 1),
+        ] {
+            let mut data = tables();
+            let b = rom();
+            data.pickups = PickupAssets::decode(
+                [base, 3],
+                std::array::from_fn(|i| word(&b, 0x48f1 + i * 2)),
+                std::array::from_fn(|i| word(&b, 0x48df + i * 2)),
+            );
+            let mut p = pickup(1);
+            p.counts[0] = old_count;
+            let mut ts = trucks();
+            let mut awards = [0; TRUCKS];
+            collect_pickup(&mut p, &mut ts, &mut awards, 0, 1, projection(), &data).unwrap();
+            assert_eq!(p.phase.encoded(), expected_state);
+            assert_eq!(ts[0].nitro.encoded(), nitro);
+            assert_eq!(awards[0], money);
             assert_eq!(p.lifetime, 79);
         }
     }
@@ -1190,7 +1209,7 @@ mod tests {
             &tables(),
         )
         .unwrap();
-        assert_eq!(p.state, 11);
+        assert_eq!(p.phase.encoded(), 11);
         assert_eq!(p.sprites[0].tile_attributes, 0xc208);
         assert_eq!(p.sprites[1].tile_attributes, 0x24ca);
     }
@@ -1214,7 +1233,7 @@ mod tests {
             .unwrap();
             assert_eq!(ts[3].nitro.encoded(), expected);
             assert_eq!(ts[0].nitro.encoded(), 0);
-            assert_eq!(p.state, 3 + old_count);
+            assert_eq!(p.phase.encoded(), 3 + old_count);
             assert_eq!(sound, [PICKUP_NITRO_SOUND]);
         }
     }
@@ -1249,14 +1268,14 @@ mod tests {
         assert_eq!(p.sprites[0].coordinates, 0xff12);
         assert_eq!(p.lifetime, 1);
         tick_pickup_award(&mut p, 1);
-        assert_eq!(p.state, 0);
+        assert_eq!(p.phase.encoded(), 0);
         assert_eq!(p.sprites[0].coordinates, HIDDEN_COORDINATES);
         assert_eq!(p.sprites[0].tile_attributes, 9);
-        p.state = 3;
+        p.phase = PickupPhase::from_encoded(3);
         p.lifetime = 0;
         tick_pickup_award(&mut p, 1);
         assert_eq!(p.lifetime, 0xffff);
-        assert_eq!(p.state, 3);
+        assert_eq!(p.phase.encoded(), 3);
     }
     #[test]
     fn pickup_packed_xy_pair_centering_propagates_x_borrow_into_y() {
@@ -1293,7 +1312,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(rng.0, [0xdf, 0x12, 0x34, 0x56, 0x78]);
-        assert_eq!(p.state, 0);
+        assert_eq!(p.phase.encoded(), 0);
         assert_eq!(p.lifetime, 17);
     }
     #[test]
@@ -1317,7 +1336,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(rng.0, [0x0f, 0, 1, 255, 255]);
-        assert_eq!(p.state, 2);
+        assert_eq!(p.phase.encoded(), 2);
         assert_eq!(p.lifetime, 17);
         assert_eq!(a, [0; 4]);
     }
@@ -1341,7 +1360,7 @@ mod tests {
             &tables(),
         )
         .unwrap();
-        assert_eq!(p.state, 1);
+        assert_eq!(p.phase.encoded(), 1);
         assert_eq!(rng, old);
         assert_eq!(a, [0; 4]);
     }
@@ -1775,7 +1794,7 @@ mod tests {
             ]
         );
         assert_eq!(w.pending_awards[1], 1);
-        assert_eq!(w.pickup.state, 7);
+        assert_eq!(w.pickup.phase.encoded(), 7);
         assert_eq!(ts[1].speed, 0);
         assert_eq!(w.dynamic[5].stage.encoded(), 3);
         assert_eq!(w.placements[0].animation, 0);
@@ -1802,7 +1821,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(ts[1].nitro.encoded(), 2);
-        assert_eq!(w.pickup.state, 0);
+        assert_eq!(w.pickup.phase.encoded(), 0);
         assert_eq!(w.pickup.counts, [0, 0]);
         assert_eq!(w.pending_awards, [0; 4]);
         assert_eq!(

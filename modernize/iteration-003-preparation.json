@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "iteration": 3,
+  "faithful_baseline": "modernize/baseline.json",
+  "starting_source_sha256": "9e1c230648f122a75db00bc354cad9ec335d80546b73ab4b2352ea7d51d938ec",
+  "workspace_commit": "bd58ea12cde5f1a5b60c7f4a6c30eb67b3c879ca",
+  "source_snapshot": "modernize/evidence/iteration-003/starting-source.tar.gz",
+  "snapshot_sha256": "3fadf890cbc91c0cfb91a6930eff781100ebfafb0322f1b9acda1119f89b08ee",
+  "readiness": "PASS",
+  "previous_iteration": "modernize/iterations/002/status.json",
+  "validation_review": "Source exactly matches retained iteration2: 636 tests and bounded original hazard/lap plus faithful-build frame/audio/state evidence. Fresh run.py audit passes all six optimized checks and accounting (1527 regions, 1408 units, 22 uncertainties). No gameplay QA rerun; no semantic certification by readiness/audit.",
+  "provenance": {
+    "rom_sha256": "24b687f95bb9737d223738f13c00aeaa7d697fa9e2fd50597b81d0cfa2160daa",
+    "dependencies": "port/Cargo.lock, Rust1.90.0",
+    "reference": "Frozen source hashes in workspace.json; original source/assets stay local."
+  },
+  "coverage_limits": [
+    "No whole-game QA, desktop/browser runtime or physical audio claim.",
+    "Pickup collection/expiry and postrace/loss branches need selected-target natural original/starting-build integration evidence; prior hazard/lap evidence does not cover these.",
+    "Noncanonical snapshots and raw resource overrides require compatibility contracts."
+  ],
+  "fresh_checks": [
+    {
+      "command": "python3 scripts/port_modernize.py check /root/super-off-road",
+      "cwd": "/root/romatlas",
+      "result": "PASS; source matches retained iteration2",
+      "evidence": "modernize/evidence/iteration-003/readiness.json"
+    },
+    {
+      "command": "python3 run.py audit",
+      "result": "PASS; six optimized checks, 1527 regions/1408 units/22 uncertainties; accounting complete, semantic correctness not assessed"
+    },
+    {
+      "command": "python3 run.py check",
+      "result": "PASS; fmt, locked optimized tests, desktop and web Clippy/build; no window/browser launched"
+    }
+  ]
+}

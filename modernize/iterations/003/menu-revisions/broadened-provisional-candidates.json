@@ -1,0 +1,551 @@
+{
+  "version": 1,
+  "iteration": 3,
+  "status": "awaiting_selection",
+  "faithful_baseline": "modernize/baseline.json",
+  "starting_checkpoint": "modernize/iteration-003-preparation.json",
+  "previous_menu": "modernize/iterations/002/candidates.json",
+  "ids_scoped_to_iteration": true,
+  "candidates": [
+    {
+      "id": "M2",
+      "category": "modernization",
+      "title": "Decode terrain into native surface patches and obstruction queries",
+      "files": [
+        "port/src/world/terrain.rs",
+        "port/src/trucks/motion.rs",
+        "port/src/trucks/contact.rs",
+        "port/src/game/resources.rs",
+        "port/src/game/snapshots.rs"
+      ],
+      "current_design": "Terrain retains Vec<u8>. Every wheel/contact probe reconstructs corner/control neighborhoods using source row words and wrapped3-byte column products, then shifts packed marker/block pairs and searches encoded neighbor controls. WheelSamples re-encodes blocked direction as direction+1.",
+      "proposed_model": "Decode immutable SurfacePatch views with explicit height geometry, four triangle marker/block properties and ordered obstruction decisions. Wheel queries return typed Height/Blocked results; motion consumes semantic contact flags. Keep a loader-owned coordinate-view mapping for source aliases and explicit unavailable-patch/neighbor entries.",
+      "removed_machinery": [
+        "Repeated raw cell offsets and packed control-pair interpretation during sampling",
+        "Direction-plus-one encoding between wheel sampler and motion",
+        "Raw neighbor-pattern matching in the query path"
+      ],
+      "remaining_boundaries": [
+        "Original TrackFile terrain bytes and resource identity remain asset/save boundaries.",
+        "Byte-width coordinate aliases stay in a decoded address-to-patch mapping; this is not a uniform44x44 rewrite.",
+        "Unavailable patch/neighbor entries preserve query-time failure and short-circuit access, including configured preceding-control zero policy.",
+        "Integer interpolation, marker history and source direction fallback remain exact; do not invent physical compass meanings."
+      ],
+      "benefit": "Terrain queries describe surfaces and obstructions directly for both driving and pair separation; content validation and source layout are localized to decoding.",
+      "impact": "high",
+      "difficulty": "high",
+      "impact_reason": "Shared by every wheel probe, truck recovery and pair separation; removes packed terrain interpretation across gameplay.",
+      "difficulty_reason": "Overlapping/nonaligned views, lazy edge reads and observable history/order span terrain, motion and collision.",
+      "behavioral_risk": "high: geometry, block decisions, history and read/error order affect nearly all movement.",
+      "source_references": [
+        "port/src/world/terrain.rs:Terrain/neighborhood/cell_index/sample_at/classify/sample_wheels",
+        "port/src/trucks/motion.rs:resolve_blocked_motion/update_trucks",
+        "port/src/trucks/contact.rs:separate_pair",
+        "port/src/world/terrain.trace.md: Neighborhood decode and blocking branches",
+        "reference/source/game.asm:6411-6743, physical174F..192A",
+        "modernize/evidence/iteration-003/broader-census.json:terrain"
+      ],
+      "owners_order": "Resources/selected terrain owns immutable geometry; race owns persistent marker history. Wheels scan3\u21920, trucks0\u21923; pair separation samples current then other and later pairs see earlier mutations.",
+      "invariants": [
+        "Column3*x wraps at byte width; Y high doubling wraps before row lookup.",
+        "Marker bit shifts even for blocked results; previous blocked-wheel heights stay retained.",
+        "First open cardinal neighbor wins; later unavailable reads are not evaluated.",
+        "Reflection is ones complement, with original signed products and final byte wrap; track8 bias stays exact.",
+        "Pair separation retains committed midpoint and sequential history effects."
+      ],
+      "proposed_tests": [
+        "terrain::tests::neighborhood_reproduces_byte_width_coordinate_index_wrap_before_word_addition",
+        "terrain::tests::first_open_neighbor_at_top_edge_does_not_read_unneeded_upper_cell",
+        "terrain::tests::fully_blocked_cell_searches_all_neighbor_diagonal_cases_then_falls_back",
+        "terrain::tests::blocked_wheel_keeps_prior_height_sets_direction_plus_one_and_preserves_scan_order",
+        "contact::tests::both_terrain_classifications_append_surface_markers_in_current_then_other_order",
+        "Add preimplementation decode parity over all16 windows, source index views, controls and lazy errors; full affected driving/contact integration."
+      ],
+      "coverage_gaps": [
+        "Need fresh original/starting-build driving recipes covering terrain edges, blocked turns, track8 bias and pair separation; existing short smoke is insufficient.",
+        "Old synthetic raw terrain fixtures must retain their behavior through a decode boundary.",
+        "Full relevant motion/contact/race integration is required because this changes shared sampling state."
+      ],
+      "dependencies": [],
+      "overlaps": "M6 consumes terrain during separation but changes only response representation. R2 changes powertrain proposal plumbing. Shared motion/contact files; coordinate patches if jointly selected.",
+      "bounded_scope": "Terrain representation, direct sampling and blocked-wheel consumers only; preserve motion equations and collision response rules.",
+      "impact_rank": 1,
+      "difficulty_rank": 4
+    },
+    {
+      "id": "M3",
+      "category": "modernization",
+      "title": "Compile music and effect streams into native score events",
+      "files": [
+        "port/src/sound/definitions.rs",
+        "port/src/sound/sequencer.rs",
+        "port/src/sound/host.rs",
+        "port/src/sound/synthesis.rs"
+      ],
+      "current_design": "Song/effect voices hold DataAddress cursors and source-address call/loop frames. parse_to_note repeatedly reads raw bytes, decodes even command tokens, collects operands and interprets branches at runtime. Note length consumption depends on live fixed/forced-duration state.",
+      "proposed_model": "At immutable asset loading, compile typed Note/Rest/Control/Call/Loop event nodes with semantic operands and event handles. Model both duration-consumption continuations for a note. Playback executes native score events and musical repetitions, with a source-address map for overlapping entries and legacy snapshots.",
+      "removed_machinery": [
+        "Runtime sequence byte fetching and even-token command dispatch",
+        "Runtime operand-vector construction and little-endian target decoding",
+        "Source-address program counters/call targets in ordinary playback"
+      ],
+      "remaining_boundaries": [
+        "ROM upload records, override bytes and source offsets remain asset provenance and snapshot/debug mapping.",
+        "Overlapping entries and both duration interpretations require context-aware nodes; no single linear disassembly.",
+        "Invalid/missing nodes remain deferred playback errors, preserving accepted load/snapshot behavior and atomicity.",
+        "Live141-byte envelope configuration overlap, auxiliary streams, DSP writes and synthesis remain existing boundaries; no mixer/timing conversion."
+      ],
+      "benefit": "Songs/effects become inspectable musical instructions and repetitions rather than byte streams; new content can be validated independently of playback mechanics.",
+      "impact": "high",
+      "difficulty": "high",
+      "impact_reason": "Changes the shared main sequencer for all music/effects and removes ongoing source-format interpretation.",
+      "difficulty_reason": "Fixed/forced duration changes instruction boundaries; calls, loops, reload commands and arbitrary restored cursors require a compatibility graph.",
+      "behavioral_risk": "high: event boundaries, voice order, duration and key masks affect sound throughout the game.",
+      "source_references": [
+        "port/src/sound/sequencer.rs:parse_to_note/apply_command/read_sequence_byte/load_song",
+        "port/src/sound/definitions.rs:SequenceData/SongDefinition/EffectDefinition/load_audio",
+        "port/src/sound/synthesis.rs:restore_snapshot_json/observe",
+        "port/src/sound/audio.trace.md: Sequence commands, note/duration and immutable tables",
+        "reference/source/game.asm:21195-21210,22042-22342"
+      ],
+      "owners_order": "AudioDefinitions owns immutable events; Driver owns8 voice playheads and semantic repetition state. Preserve host immediate/delayed updates, voice service order, load-song global replacement and ordered pending DSP writes.",
+      "invariants": [
+        "Fixed duration omits a byte; ForceDuration consumes once, including rests.",
+        "Call stores continuation after operands; loop0 wraps to255; nested stacks keep type/order and limits.",
+        "Stop does not invent key-off or reset pitch.",
+        "ReloadSongOne replaces driver during parsing; transaction failures preserve live state.",
+        "4096 zero-time command limit, song0 silent-reset policy, key masks and source-byte arithmetic stay exact."
+      ],
+      "proposed_tests": [
+        "sound::sequencer::tests::nested_calls_push_pointer_after_operands_and_return_last_in_first_out",
+        "sound::sequencer::tests::fixed_duration_stream_does_not_consume_following_note_as_duration",
+        "sound::sequencer::tests::loop_zero_count_wraps_to255_instead_of_early_exit",
+        "sound::sequencer::tests::reload_c2_forces_song_one_even_when_selected_song_differs",
+        "sound::sequencer::tests::unbalanced_stack_or_missing_operand_rejected_without_partial_voice_mutation",
+        "sound::sequencer::tests::complete_driver_commits_prior_key_on_then_new_key_off_and_six_registers_per_voice",
+        "Add preimplementation dual-context/overlap/legacy-address/error-node contracts; all song/effect playback and snapshot continuation comparison."
+      ],
+      "coverage_gaps": [
+        "Existing original music evidence covers selected early voice states, not every song/effect or command.",
+        "Need fresh representative original music/effect landmarks and faithful-build DSP/PCM comparisons over every original selector.",
+        "The native mixer interpolation difference remains documented; no new bit-exact original PCM claim.",
+        "Asset compiler must retain dormant invalid nodes rather than reject bytes merely because they decode badly outside active paths."
+      ],
+      "dependencies": [],
+      "overlaps": "Independent of gameplay candidates; M4 effects are visual sprite effects, not this audio sequencer.",
+      "bounded_scope": "Main song/effect score execution only. Retain auxiliary stream interpreter, envelopes, modulation arithmetic, host cadence and native mixer.",
+      "impact_rank": 2,
+      "difficulty_rank": 5
+    },
+    {
+      "id": "M1",
+      "category": "modernization",
+      "title": "Native pickup lifecycle and reward model",
+      "files": [
+        "port/src/world/objects.rs",
+        "port/src/game/snapshots.rs",
+        "port/src/game.rs",
+        "port/src/game/modernization_tests.rs"
+      ],
+      "current_design": "Pickup.state is simultaneously absent/collectable type, awarded amount and sprite table index. collect_pickup derives money versus nitro from the resulting display-state threshold, then service_pickup dispatches on that same word.",
+      "proposed_model": "PickupPhase::Absent / Available(PickupKind) / AwardDisplay(PickupReward) owns explicit lifecycle. Decode award-base and presentation mappings at the asset boundary; collection produces a money/nitro quantity and the display consumes it. Keep unusual accepted mappings in an explicit compatibility representation if required.",
+      "removed_machinery": [
+        "Numeric state thresholds as normal lifecycle dispatch",
+        "Sprite-state subtraction as normal reward arithmetic",
+        "Raw award-base interpretation during collection"
+      ],
+      "remaining_boundaries": [
+        "Version2 state0..11 and existing debug fields encode at save/observation boundaries.",
+        "ROM/override award bases and tile tables retain exact identity; nonstandard mappings must be characterized, not normalized away.",
+        "Packed sprite coordinate borrowing and word lifetime wrapping remain presentation/compatibility policies."
+      ],
+      "benefit": "Collection rules and reward quantities become readable independently of sprite numbering; a reward or display change has one explicit owner.",
+      "impact": "medium",
+      "impact_reason": "Replaces state/reward representation across spawn, collection, expiry, initialization, nitro and deferred money integration, bounded to one world object.",
+      "impact_rank": 3,
+      "difficulty": "medium",
+      "difficulty_reason": "Finite lifecycle with strong unit contracts, but restored state11, arbitrary table mappings, lifetime0 and initialization side effects need explicit compatibility.",
+      "difficulty_rank": 1,
+      "behavioral_risk": "medium: RNG consumption, reward category/quantity, shared nitro/money writes, timer and visible sprite effects must remain exact.",
+      "source_references": [
+        "port/src/world/objects.rs:Pickup/try_spawn_pickup/project_pickup/collect_pickup/tick_pickup_award/service_pickup/initialize_world",
+        "port/src/world/objects.trace.md: Pickup service, geometry, awards and sprite pair",
+        "reference/source/game.asm:15050-15301; physical45C7..46F3 and4873..4905",
+        "port/src/game/snapshots.rs:validate world snapshot"
+      ],
+      "owners_order": "WorldObjects owns pickup and pending awards; service order composites\u2192pickup\u2192hazards\u2192placements. Spawn writes placement before cap test, draws choice only on zero gate. Rotating frame&3 truck can collect regardless of human mask. Collection projects, installs80 then ticks immediately. Initialization services old pickup before clearing it/counts/awards.",
+      "invariants": [
+        "One RNG draw on failed gate, two on zero gate; type selected by frame parity.",
+        "Old count determines reward; count saturates4; conditional capped money pickup produces state11.",
+        "Pending money byte wraps; NitroStock overflow retains previous stock; any human enables sound.",
+        "Miss does not tick/redraw; expiry decrements wrapping word; lifetime0 wraps.",
+        "Packed sprite X borrow/carry into Y and every-four-frame rise remain exact.",
+        "Old pickup can award nitro during world initialization before reset."
+      ],
+      "proposed_tests": [
+        "world::objects::tests::pickup_award_uses_old_count_then_saturates_count_and_byte_awards_wrap",
+        "world::objects::tests::pickup_expiry_moves_y_each_four_frames_and_zero_timer_wraps_instead_of_expiring",
+        "world::objects::tests::pickup_packed_xy_pair_centering_propagates_x_borrow_into_y",
+        "world::objects::tests::inactive_pickup_service_consumes_one_rng_at_failed_gate_and_does_not_tick_lifetime",
+        "world::objects::tests::world_initialization_services_old_pickup_before_resetting_counts_and_pending_awards",
+        "Add preimplementation full state0..11 save roundtrip and override award-base characterization; fresh natural spawn\u2192collect\u2192award\u2192expiry original/starting-build comparison."
+      ],
+      "coverage_gaps": [
+        "No retained natural original collection/expiry comparison establishes this target yet; discover using persistent branches and recipes.",
+        "Characterize accepted table overrides and state11 before choosing the compatibility mapping.",
+        "Review award sprites and sound requests/PCM; existing hazard captures do not certify pickup presentation."
+      ],
+      "dependencies": [],
+      "overlaps": "M4 shares world/snapshot files but not pickup state; R1 settles the existing pending-award bytes. No selection dependency.",
+      "bounded_scope": "One pickup lifecycle and direct reward/save/observation consumers, no wallet normalization, placement or hazard rewrite."
+    },
+    {
+      "id": "M5",
+      "category": "modernization",
+      "title": "Native truck pose assets instead of runtime strip-source commands",
+      "files": [
+        "port/src/trucks/motion.rs",
+        "port/src/presentation/sprites.rs",
+        "port/src/race.rs",
+        "port/src/game/resources.rs",
+        "port/src/game/scheduler.rs",
+        "port/src/game/snapshots.rs"
+      ],
+      "current_design": "body_pose packs a game pose into a source-like bank/address selector; RaceVideo stores4 selectors. Every uninhibited present_boundary reconstructs8 PoseStrip records, translates CPU addresses and reads ROM spans into fixed VRAM locations.",
+      "proposed_model": "Keep the computed body pose as a PoseId. Decode immutable TruckPose graphics once at the asset boundary, including the source two-strip layout. Stage selected native pose assets for the same NMI presentation point; adapt legacy selector saves at the boundary.",
+      "removed_machinery": [
+        "Pose bit permutation and bank/address selector storage during normal gameplay",
+        "Eight reconstructed transfer commands per present boundary",
+        "Normal runtime CPU-address-to-ROM lookup for truck poses"
+      ],
+      "remaining_boundaries": [
+        "Exact strip bytes and interstrip VRAM holes stay the renderer output contract; native backend can still copy decoded bytes there.",
+        "Original graphics overrides feed the same loader and retain identity.",
+        "Arbitrary accepted historical selectors require validated source-compatible asset views; do not restrict imports to normal416 poses.",
+        "One-NMI staging and video inhibition remain intentional presentation policies."
+      ],
+      "benefit": "Body tilt/heading selects a named pose asset directly, separating game pose selection from original graphics-bank mechanics.",
+      "impact": "medium",
+      "difficulty": "medium",
+      "impact_reason": "Eliminates hardware-shaped pose representation across physics and NMI presentation, bounded to four truck graphics.",
+      "difficulty_reason": "Finite normal domain is416 distinct poses; legacy unaligned/boundary selectors and transfer atomicity still need compatibility.",
+      "behavioral_risk": "medium: wrong strips, early presentation or changed holes alter trucks visibly.",
+      "source_references": [
+        "port/src/trucks/motion.rs:body_pose/pack_pose",
+        "port/src/presentation/sprites.rs:pose_strips/upload_poses/present_boundary",
+        "port/src/race.rs:RaceVideo/update_frame_services",
+        "reference/source/game.asm:3168-3190,4058-4126",
+        "modernize/evidence/iteration-003/broader-census.json:pose"
+      ],
+      "owners_order": "Resources owns immutable pose graphics; race stages4 selections after suspension update; scheduler NMI presents the preceding selection before current-frame motion. Renderer owns final graphics memory.",
+      "invariants": [
+        "Flat tilt keeps32 headings; nonzero tilt halves heading before OR.",
+        "Select bank once before second source+0x200, including word wrap.",
+        "Two64-byte strips per truck keep destination stride and untouched gaps.",
+        "Inhibit skips pose/OAM presentation together; validate all source spans before mutation.",
+        "Retain version2 selectors and working_pose observations."
+      ],
+      "proposed_tests": [
+        "trucks::motion::tests::pose_flat_body_uses_full_heading_and_nonzero_tilt_halves_heading",
+        "trucks::motion::tests::pose_packing_rearranges_strip_bits_at_all_bank_boundary_values",
+        "presentation::tests::pose_upload_plan_selects_bank_once_and_keeps_two_strips_per_truck",
+        "presentation::tests::pose_upload_copies_real_rom_strips_and_leaves_interstrip_space",
+        "presentation::tests::nmi_presents_prior_staging_and_pose_state_without_mutating_staged_oam",
+        "Add preimplementation all416 pose equivalence, graphics override and restored-selector boundary cases; turning/airborne frame review."
+      ],
+      "coverage_gaps": [
+        "416 is asset-domain coverage, not proof every pose is naturally reached.",
+        "Need original/starting-build visible pose samples across turning and tilt, with NMI inhibit/uninhibit snapshot continuation.",
+        "Legacy selector error timing and atomic upload must be characterized before eager decoding."
+      ],
+      "dependencies": [],
+      "overlaps": "Shares motion/race/presentation files with M4 and R2; independent pose data and no selection dependency.",
+      "bounded_scope": "Four truck poses only; preserve renderer layout, world projection, sprite priority and all motion equations.",
+      "impact_rank": 4,
+      "difficulty_rank": 2
+    },
+    {
+      "id": "M6",
+      "category": "modernization",
+      "title": "Native pair-contact response decisions instead of packed sector codes",
+      "files": [
+        "port/src/trucks/contact.rs",
+        "port/src/trucks/motion.rs"
+      ],
+      "current_design": "contact_angles packs two relative heading sectors into nibbles. respond_motion selects cases02,00/22,11/13/31/33 and parity/nibble tests to choose speed exchange, turns and sound rules.",
+      "proposed_model": "Classify typed relative sectors into explicit PairResponse decisions: reversed exchange, parallel exchange, paired deflection, current deflection or other deflection with their turn directions. Execute those actions against the existing working-current/committed-other owners; preserve sector wire/debug encoding only as an observation.",
+      "removed_machinery": [
+        "Packed two-nibble sector value as gameplay response selector",
+        "Hexadecimal dispatch cases and parity tests spread through response execution"
+      ],
+      "remaining_boundaries": [
+        "Shared bearing-table quantization and relative-byte wrap stay geometry rules.",
+        "Packed sectors can remain a derived observation/direct legacy adapter; they cannot remain the internal decision authority.",
+        "Speed/heading low-byte preservation and conditional isolated entry stay established policies."
+      ],
+      "benefit": "Collision behavior can be read as named response rules with explicit participants, while preserving the asymmetric original response table.",
+      "impact": "medium",
+      "difficulty": "medium",
+      "impact_reason": "Replaces collision response selection for every near pair, though the response mathematics and separation stay intact.",
+      "difficulty_reason": "All16 sector pairs and callers are bounded; asymmetry, byte arithmetic and sound thresholds need separate action fields.",
+      "behavioral_risk": "medium: misclassifying one pair changes speed, turn or impact sound; response ordering is unchanged.",
+      "source_references": [
+        "port/src/trucks/contact.rs:ContactAngles/contact_angles/respond_motion/service_contacts",
+        "port/src/trucks/contact.trace.md: Response cases and width-sensitive sound",
+        "reference/source/game.asm:554-839 physical0312..0492"
+      ],
+      "owners_order": "Contact service reads committed positions/current working heading, scans other trucks3\u21920, executes response then separation per pair, commits other immediately and current at scan completion. No simultaneous-fleet solver.",
+      "invariants": [
+        "All16 sector combinations preserve exact asymmetric cases; no symmetric physical-model replacement.",
+        "Byte-wrapping differences/absolute magnitudes and signed-versus-unsigned impact tests stay distinct.",
+        "Other heading parity turn and high-byte preservation remain exact.",
+        "Conditional83E1 helper remains separate, without invented natural callers.",
+        "Response always proceeds to separation, even silent/attract cases."
+      ],
+      "proposed_tests": [
+        "trucks::contact::tests::all_sixteen_sector_pairs_follow_exact_dispatch_without_conditional_dead_entry",
+        "trucks::contact::tests::reverse_case_exchanges_negated_speed_bytes_and_threshold_includes_32",
+        "trucks::contact::tests::asymmetric_even_current_quarters_only_positive_speed_and_uses_unsigned_sound_test",
+        "trucks::contact::tests::zero_cooldown_scan_visits_other_slots_descending_without_filtering_their_cooldowns",
+        "Add preimplementation decision/participant tests for all16 pairs; integrated natural collision original/starting-build observations."
+      ],
+      "coverage_gaps": [
+        "All16 pairs have source-backed unit coverage but no full natural original collision matrix.",
+        "Need representative original contact/audio and complete faithful-build pair regression; conditional isolated entry remains source-backed only."
+      ],
+      "dependencies": [],
+      "overlaps": "M2 supplies terrain used after response; no dependency. R2 changes proposal construction before collision but preserves the same WorkingMotion/Truck interface.",
+      "bounded_scope": "Pair response classification/execution only; preserve distance, bearing quantizer, scan/cooldown, separation and fleet commit algorithm.",
+      "impact_rank": 5,
+      "difficulty_rank": 3
+    },
+    {
+      "id": "M4",
+      "category": "modernization",
+      "title": "Native sprite animation players with one owner per effect",
+      "files": [
+        "port/src/presentation/sprites.rs",
+        "port/src/race.rs",
+        "port/src/trucks/motion.rs",
+        "port/src/world/objects.rs",
+        "port/src/game/snapshots.rs"
+      ],
+      "current_design": "Sixteen raw cursors are assembled from truck nitro_animation, world contact cursor, middle slots and truck effect_cooldown, animated through FE/FF streams, then copied back. Contact gates inspect exact cursor values; effect_cooldown is actually an animation cursor.",
+      "proposed_model": "Decode frame/hold/finish actions and native clip entries. Each effect owns an AnimationPlayer with semantic clip/frame phase and readiness/contact-window queries; stage its sprite at the existing animation service point. Use an adapter for the16-slot presentation order and legacy cursor wire fields, with no second mutable player.",
+      "removed_machinery": [
+        "FE/FF interpretation and global numeric cursor layout in normal effect playback",
+        "Gather/advance/scatter mutable cursor views",
+        "Misleading numeric cooldown representation and cursor-number tests in contact consumers"
+      ],
+      "remaining_boundaries": [
+        "All31 source frame pairs and synthetic FE actions remain decoded asset data.",
+        "Cursor24..30 and old snapshots need explicit compatibility entry mapping, including historical middle slots.",
+        "OAM layout/coordinates and staged-to-visible transfer remain renderer boundaries.",
+        "Source-equivalent gates at cursors12/17 and animation pacing remain exact."
+      ],
+      "benefit": "Nitro, surface and truck-contact effects have explicit animation lifecycle and one authority; adding an effect cannot accidentally duplicate an aliased cooldown.",
+      "impact": "medium",
+      "difficulty": "high",
+      "impact_reason": "Crosses motion, world and rendering ownership for all16 animated slots; removes source-array alias orchestration.",
+      "difficulty_reason": "Some cursor fields control contact eligibility; compatibility suffixes and shared pacing must be mapped before removing aliases.",
+      "behavioral_risk": "high: an extra advance or changed phase gate affects both visible frames and speed/contact behavior.",
+      "source_references": [
+        "port/src/race.rs:cursor_view/apply_cursor_view/update_frame_services",
+        "port/src/presentation/sprites.rs:AnimationTables/animate",
+        "port/src/trucks/motion.rs:contact_effect",
+        "port/src/world/objects.rs:ContactAnimation/special_surface",
+        "port/src/presentation/rendering.trace.md: Contact cursor animation and canonical alias followup",
+        "reference/source/game.asm:2153-2231 physical07B0..0804"
+      ],
+      "owners_order": "Effect owners remain canonical; race services animations after sprite packing and before human routes/world service. Descending presentation slots and four-frame pacing stay fixed; geometry already staged by motion must not be overwritten.",
+      "invariants": [
+        "Normal frames write before increment; FE holds every field; FF hides Y and resets regardless pacing.",
+        "Each effect advances once, including truck effect suffix slots12..15.",
+        "Contact availability at legacy12/17 and offscreen rejection retain speed/sound effects.",
+        "All31 entries and accepted restored cursors preserve exact behavior."
+      ],
+      "proposed_tests": [
+        "presentation::tests::animation_ff_hides_resets_even_offpace_fe_preserves_everything",
+        "presentation::tests::animation_writes_before_fourth_frame_increment_and_preserves_xy",
+        "presentation::tests::full_31_animation_pairs_include_unselected_suffix_without_invented_access",
+        "race::tests::prepared_frame_executes_all_owners_in_source_order_and_increments_timer_before_return",
+        "trucks::motion::tests::contact_effect_checks_existing_projection_byte_and_x_plus_four_carry",
+        "Add preimplementation all-cursor phase/gate mapping and legacy roundtrips; natural nitro/surface/contact frame sequences."
+      ],
+      "coverage_gaps": [
+        "Need source-backed animation-gate mapping before internal fields change.",
+        "Natural original suffix24 producer is unestablished; retain conditional contracts without claiming reachability.",
+        "Fresh original/starting-build contact and nitro/surface presentation plus speed/sound comparisons required."
+      ],
+      "dependencies": [],
+      "overlaps": "R2 touches powertrain nitro output; coordinate signatures if selected together. M1 shares objects/snapshot files only. M5 uses poses rather than animation cursors.",
+      "bounded_scope": "Only16 generic effect players and direct readiness/gate consumers; no hazard animation, world rules or renderer rewrite.",
+      "impact_rank": 6,
+      "difficulty_rank": 6
+    },
+    {
+      "id": "R2",
+      "category": "refactoring",
+      "title": "Explicit powertrain proposal inputs and outputs",
+      "files": [
+        "port/src/trucks/motion.rs",
+        "port/src/trucks/contact.rs"
+      ],
+      "current_design": "update_trucks clones the entire Truck to run steer/nitro/accelerate, manually copies6 retained fields back, then builds WorkingMotion. Unrelated wheels, projections and contacts are cloned even though powertrain does not use them.",
+      "code_smell": "Mutation ownership is encoded by a handwritten copy-back list. A future powertrain field can be updated on the clone and silently discarded if that list is not changed; a direct update can instead commit speed/heading too early for collision.",
+      "before_after": "Before: cloned Truck plus manual field reconciliation. After: a focused powertrain state/input view and PowertrainOutcome carrying retained updates, proposed speed/heading and effects; update_trucks applies this explicitly before existing displacement/terrain/contact phases.",
+      "proposed_model": "Make the existing proposal-versus-committed structure explicit without changing motion rules or state ownership. Do not turn sequential fleet contacts into a batch solver or remove transactional collision clones.",
+      "benefit": "The compiler exposes every powertrain output and protects the committed-versus-proposed boundary when adding a powertrain field; reviewers can see why speed/heading are delayed.",
+      "impact": "medium",
+      "impact_reason": "Clarifies the per-truck update boundary used on every motion service and removes an error-prone reconciliation list.",
+      "difficulty": "medium",
+      "difficulty_reason": "Bounded to powertrain interfaces, but commit timing, nitro side effects and preserved high bytes need integration checks.",
+      "behavioral_risk": "medium: accidental early current speed/heading commits change blocked recovery and later pair responses.",
+      "source_references": [
+        "port/src/trucks/motion.rs:update_powertrain/update_trucks/WorkingMotion",
+        "port/src/trucks/motion.trace.md: Fleet caller order and working versus committed ownership",
+        "port/src/trucks/contact.trace.md: Natural caller and sequential visibility"
+      ],
+      "owners_order": "Truck remains sole retained actor owner; powertrain creates proposed speed/heading and immediate stock/fraction/history updates. Keep terrain\u2192special surface\u2192blocked response\u2192project/shadow\u2192pair contact\u2192commit, in ascending truck order.",
+      "invariants": [
+        "Steer\u2192nitro\u2192accelerate order and source-width arithmetic remain unchanged.",
+        "Prepared frames still steer/accumulate while suppressing nitro latch.",
+        "Current committed speed/heading/world stay old until existing commit; other trucks mutate sequentially in pair service.",
+        "No change to error atomicity, cooldowns, input latency or effect staging."
+      ],
+      "proposed_tests": [
+        "trucks::motion::tests::powertrain_steers_then_boosts_then_applies_normal_drag_or_speed_limit",
+        "trucks::motion::tests::prepared_powertrain_still_steers_and_accumulates_but_does_not_latch_nitro",
+        "trucks::motion::tests::four_truck_service_preserves_proposal_object_projection_pair_commit_order_and_input_latency",
+        "trucks::contact::tests::contact_bearing_uses_committed_positions_but_working_current_heading",
+        "Add preimplementation retained-field/proposal boundary fixture with nonzero high bytes and multi-pair contact; fresh starting-build driving comparison."
+      ],
+      "coverage_gaps": [
+        "Existing order test covers phases but not every powertrain retained-field mutation in a near-pair scenario.",
+        "Run full affected motion/contact/race integration because proposal ownership is shared; preserve natural original driving expectations."
+      ],
+      "dependencies": [],
+      "overlaps": "M4 changes animation fields carried by nitro output; M5 changes later pose selection; M2/M6 touch consumers after powertrain. Independent selections; coordinate signatures if combined.",
+      "bounded_scope": "Powertrain inputs/results and fleet call site only. No physics, collision algorithm, general actor abstraction or performance project.",
+      "impact_rank": 1,
+      "difficulty_rank": 1
+    },
+    {
+      "id": "R1",
+      "category": "refactoring",
+      "title": "Cohesive postrace and loss scheduler handlers",
+      "files": [
+        "port/src/game/scheduler.rs",
+        "port/src/game/tests.rs"
+      ],
+      "current_design": "Port::advance combines global NMI/input dispatch with a nested PostracePhase match and seven loss scenes, interleaving transition orchestration, awards, sound and menu handoffs.",
+      "code_smell": "The postrace/loss block occupies roughly210 lines inside global advance; reviewing an awards-to-shop or continue change requires tracking inner and outer continue/break effects through unrelated scenes.",
+      "before_after": "Before: nested phase dispatch embedded in advance. After: advance_postrace_scene and advance_loss_scene return existing SceneStep::Continue/Yield; advance retains NMI prefix, central loop and sync/flush suffix. Reuse existing postrace_owner and domain functions.",
+      "proposed_model": "Extract cohesive scheduler methods with explicit same-NMI versus next-NMI results, following the established names/shop pattern. Retain current game model, phase enums and domain ownership.",
+      "benefit": "Postrace/loss changes can be reviewed locally with explicit scheduling effects; reduces mixed responsibilities in global dispatch without introducing another state machine.",
+      "impact": "medium",
+      "impact_reason": "Improves a central scene driver and localizes awards/loss/continue/shop orchestration with a concrete existing extraction pattern.",
+      "impact_rank": 2,
+      "difficulty": "medium",
+      "difficulty_reason": "Straight structural change but multiple same-NMI continues, separate loss-upload waits and final flush order require integrated checks.",
+      "difficulty_rank": 2,
+      "behavioral_risk": "medium: an incorrect yield changes presentation, captured input or sound timing despite unchanged domain calls.",
+      "source_references": [
+        "port/src/game/scheduler.rs:advance Scene::Postrace through Scene::LossRestart, advance_names_scene, advance_shop_scene",
+        "port/src/frontend/results.rs:advance_postrace",
+        "port/src/frontend/results.trace.md:postrace/loss/continue contracts",
+        "architecture.md:Scheduler continuation ownership"
+      ],
+      "owners_order": "State continues to own all scene/phase/transition values; results owns domain awards and loss rules. Preserve global NMI/input prefix and sync_race_views/flush_sounds suffix, and continue versus break at every branch.",
+      "invariants": [
+        "FadeOut completion, Contract completion, ConvertInactive and Complete retain same-NMI continuation.",
+        "HudWait, PodiumSetup and loss upload/release retain separate waits.",
+        "Awards commit/blink/dismissal and pending award settlement occur in the same order once.",
+        "Window transfer, sampled input, video inhibition, menu history and sound flush remain unchanged."
+      ],
+      "proposed_tests": [
+        "frontend::results::tests::postrace_entry_services_hud_time_before_first_wait_without_early_continuation_increment",
+        "frontend::results::tests::postrace_first_nmi_installs_map_and_defers_checkpoint_rank_until_window_done",
+        "frontend::results::tests::postrace_podium_setup_mutates_money_graphics_audio_and_starts400_timer",
+        "frontend::results::tests::postrace_completed_contraction_settles_pickups_once_before_nonhuman_shop_route",
+        "Add preimplementation integrated same-NMI handoff and separate loss-upload/release regressions; fresh postrace\u2192shop and loss\u2192continue/restart recipes."
+      ],
+      "coverage_gaps": [
+        "Domain tests do not alone prove scheduler NMI boundaries.",
+        "Need natural selected-path integration with original and starting-build state/frame/audio comparisons; record/penalty branches need source-backed fixtures where natural setup is unavailable."
+      ],
+      "dependencies": [],
+      "overlaps": "Independent of all modernization targets. M1 changes pickup production but preserves pending-award bytes consumed here.",
+      "bounded_scope": "Only postrace/loss scheduler orchestration; no new phase model, wallet rules, transitions or audio algorithms."
+    }
+  ],
+  "rankings": {
+    "modernization_impact_highest_first": [
+      "M2",
+      "M3",
+      "M1",
+      "M5",
+      "M6",
+      "M4"
+    ],
+    "modernization_difficulty_lowest_first": [
+      "M1",
+      "M5",
+      "M6",
+      "M2",
+      "M3",
+      "M4"
+    ],
+    "refactoring_impact_highest_first": [
+      "R2",
+      "R1"
+    ],
+    "refactoring_difficulty_lowest_first": [
+      "R2",
+      "R1"
+    ],
+    "tie_policy": "Menu sorts high impact before medium, then medium difficulty before high. Ordinal ties use inspected reach/maintenance benefit, not claimed quantitative scores; ratings are coarse."
+  },
+  "selection": {
+    "ids": [],
+    "authorization": null
+  },
+  "menu_presented": true,
+  "investigation": {
+    "scope": "Read actual state, loaders, execution, callers, snapshots, source-backed tests/traces across pickup, wallet, terrain, motion, pair contact, pose/effect presentation, windows/countdown, names/shop/postrace scheduler and sound definitions/sequencing/voice/host. No implementation or test edits.",
+    "evidence": "modernize/evidence/iteration-003/broader-census.json",
+    "strongest_plausible_conversion": "Terrain surface/obstruction representation (M2) and compiled score events (M3) have the largest bounded cross-system reach. Both are offered despite high difficulty and missing targeted natural integration; selecting them authorizes filling those gaps first. A whole native scene-graph renderer or whole-vehicle physics rewrite is broader than a bounded iteration and would conflate established projection/collision/staging policies.",
+    "wallet_followup": {
+      "result": "Deferred as an unresolved representation design, not dismissed for risk or weak existing tests.",
+      "completed_probe": "Censused writers, every normalization boundary and readers which observe raw state; checked normalization and capped-conversion test/source contracts.",
+      "specific_blocker": "A canonical native balance plus signed deferred debit cannot distinguish repeated raw per-digit byte wrap, 8A normalization branch, prefix-only affordability and predecessor-owner mutation. Capped conversion produces rawFF from an initially canonical wallet before any normalization; this cannot be relegated to malformed-save compatibility. A raw-digit owner behind native method names would still preserve the hardware-shaped model.",
+      "next_probe": "Construct an exhaustive state-transition characterization for each operation between normalization boundaries (including repeated capped conversions and pending awards up to255), then specify a native settled-balance plus bounded domain pending-state model with an injective legacy mapping. Establish original natural cap/setup reachability separately. No money target claimed until that model is sound.",
+      "references": [
+        "port/src/frontend/shop.rs:purchase/convert_inactive/normalize_digits",
+        "port/src/frontend/results.rs:settle_pickup_awards/insert_all_scores",
+        "port/src/frontend/attract.rs:advance_panel",
+        "port/src/frontend/shop.trace.md: Byte normalization and inactive conversion",
+        "modernize/evidence/iteration-003/broader-census.json:wallet_boundaries"
+      ]
+    },
+    "window_review": {
+      "result": "Deferred as a separate modernization target.",
+      "specific_dependency": "Window selector changes which prior buffer is displayed while build writes the opposite one; setup primes twice and retained tail rows survive. Removing double buffering without a native staged-mask timeline would alter observable geometry. Existing Window is already an owned native transition; merely naming front/back fields would be refactoring, not a full conversion.",
+      "next_probe": "Trace per-phase build/show/enable events across frontend, ready, pause and postrace, then identify which retained histories/tails are observable before proposing a single staged-mask owner.",
+      "references": [
+        "port/src/presentation/transitions.rs:build_window/prime_window/show_window/enable_window",
+        "port/src/presentation/transitions/tests.rs:window_builder_toggles_display_selector_but_writes_opposite_buffer"
+      ]
+    },
+    "other_findings": [
+      "Graphics rectangle paths already draw directly into VideoMemory; no fictional upload-buffer removal candidate.",
+      "Names/shop already use native phases and explicit continuations; replacing them wholesale adds no demonstrated benefit over focused R1.",
+      "Motion retains fixed-width arithmetic because speed high bytes, wheel fractions and commit ordering are observable. A float physics conversion has no fidelity contract; M2 and R2 address concrete representation/ownership costs instead.",
+      "Shared graphics/HUD/object table loading in RaceAssets duplicates immutable data. Consolidation is legitimate refactoring, but R2 addresses a more direct mutation-correctness maintenance cost and the menu has at most2 refactoring entries.",
+      "Six modernization targets are supported; no formatting or helper-only work is counted as modernization."
+    ],
+    "validation": "Starting implementation identity and pinned source snapshot unchanged from iteration3 preparation. Previous-turn fresh full check and audit passed. Only metadata and local investigation evidence changed; no additional compilation or gameplay QA run was needed for menu expansion."
+  },
+  "menu_revision": 2,
+  "supersedes": "modernize/iterations/003/menu-revisions/initial-candidates.json"
+}

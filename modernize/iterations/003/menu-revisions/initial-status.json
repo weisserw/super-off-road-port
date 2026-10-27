@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "workflow": "modernization-beta",
+  "status": "awaiting_selection",
+  "iteration": 3,
+  "selection_status": "pending",
+  "pilot_started": false,
+  "active_candidate": null,
+  "baseline": "modernize/baseline.json",
+  "starting_checkpoint": "modernize/iteration-003-preparation.json",
+  "previous_iteration": "modernize/iterations/002/status.json",
+  "candidates": "modernize/candidates.json",
+  "selected_candidates": [],
+  "changes": "modernize/changes.json",
+  "changes_note": "Preserved historical outcomes; no iteration3 implementation until selection.",
+  "next_action": "User selects M1, R1 or all; establish target fidelity contracts before implementation.",
+  "validation_status": "PASS: readiness, fresh audit and full python3 run.py check (six optimized gates); no runtime or whole-game QA claim."
+}

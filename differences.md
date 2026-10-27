@@ -30,3 +30,14 @@ follow original early-return order; malformed/missing copied data still errors.
 Modernization iteration1 retains the same gameplay and version2 save/debug wire values while storing ordinary nitro as a charge count and race time as elapsed source units. Noncanonical decimal bytes accepted by historical saves retain an isolated faithful-port compatibility path rather than being rejected or normalized on import. That path preserves the previous native conditional policy; no new original-hardware invalid-BCD observation is claimed. Name/shop handlers were structurally extracted with the same NMI yield/continuation decisions. Fresh bounded original and faithful-build evidence is tracked separately in modernize/changes.json.
 
 Modernization iteration2 introduces no intentional gameplay divergence. Packed route words decode into immutable nodes with explicit geometry/traversal policies, while original content/JSON encoding, consumer index windows and route-tail effects remain boundaries. Steering's final byte reduction discards coordinate bits14/15; tests verify they do not create an observable bias-carry effect, correcting the candidate menu's overly cautious claim. Acceptance and ranking still retain their distinct masks. Dynamic hazards now use explicit stages and native response quantities, preserving source uses0→one response, contact/presentation order and conditional legacy counters. The AI/contact bearing table has one immutable owner. Natural original attract-mode observations establish track2 response/depletion and lap progression; real-ROM redirect branches remain source-backed domain contracts rather than a claim of natural original traversal on tracks8/13. Existing hardware timing, initialization and audio synthesis limits remain unchanged.
+
+Modernization iteration3 M1 introduces no intentional pickup rule change. Numeric
+pickup state is now a save/asset/presentation encoding around explicit lifecycle
+and reward values. Original and valid override rewards decode at loading;
+nonstandard phases retain their prior deferred projection rejection. Natural
+original attract collection and expiry are recorded independently of native
+startup parity: their first spawned kinds/collector slots can differ because
+loading crosses different source NMIs. Exact starting-build state/frame/PCM
+comparisons use the same native recipe, without editing game state or bypassing
+checkpoint identity guards. This does not establish whole-game or physical
+console fidelity.

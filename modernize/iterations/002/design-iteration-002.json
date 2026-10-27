@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "iteration": 2,
+  "route_model": {
+    "normal_state": "Immutable RouteNode/Waypoint/RouteAxis; human policy and AI next-target action decoded once. Ranking center is distinct from checkpoint center. GridOrigin is semantic.",
+    "retained_boundaries": "Exact original word wire form, count/terminal/partial words, source-copy tail byte and64-node versus full-index access policies.",
+    "source_correction": "The menu suggested a bit14 carry effect must remain in steering. Source subtract/shift6/byte truncation uses only bits6..13, so bits14/15 cannot influence the resulting quantized byte, including across bias addition. Pre-conversion tests establish invariance; acceptance/ranking upper-bit distinctions remain preserved.",
+    "bounds_policy": "Original code reads both words before updating bias/progress; validation of missing content is an established native boundary policy, not a claim that the original ROM checks bounds."
+  },
+  "hazard_model": {
+    "stages": {
+      "0": "Inactive",
+      "1": "Reactive",
+      "2": "Depleted",
+      "3": "Struck"
+    },
+    "clock": "Complete or remaining ticks normally; exceptional expired source words preserved only for historical conditional state/animation29 compatibility.",
+    "budget": "Source nonnegative uses decodes to remaining complete responses=uses+1; normal completion/depletion does not rely on signed underflow. Conditional historical words preserve previous semantics.",
+    "ordering": "Contact eligibility at cursor0/18; geometry and source-selected truck; contact changes full speed; tile/palette before animation decrement; response tick/Y motion or completion; budget depletion; descending hazards see preceding speed changes."
+  },
+  "refactoring": "One BearingTable loaded under Resources.ai; contact/movement and AI share it, selected RaceAssets does not own a duplicate. Domain vector reduction and correction remain in their callers.",
+  "scenario_provenance": {
+    "native": "Deterministic seed0, no input/state writes, natural attract track6 completion\u2192order2/track2; persistent bookmarks and guarded fresh recipe replay.",
+    "original": "Deterministic emulator reset, no inputs/state writes, bounded frame chunks followed by bookmark rewind/refinement. Natural response snapshot at original frame7806 is hash pinned; the recorded full origin recipe and suffix remain separate.",
+    "policy": "Do not compare original physical ticks to native loading latency or whole-screen racing actor alignment. Source-aligned target hazard fields and sprite values are compared directly; full native frames/PCM compare to the starting build.",
+    "setup_gaps_resolved": [
+      "Initial original discovery exceeded its request budget during one-frame refinement; raised bound with compact diagnostics, no game rule change.",
+      "Original integration exceeded request budget during repeated full observations of lap setup. Kept failed result; switched lap probe to reading only lap bytes and retained the same success rule."
+    ]
+  },
+  "remaining_gap": "No natural original play-through to tracks8/13 redirects was claimed. Independent frozen-source derivation and real-ROM forward/reverse FD/FE contracts cover both branch outcomes and RNG ordering.",
+  "source_grounded_test_oracle_correction": "The new audio-suppression assertion initially reversed the two0702 host bytes. Existing Port::send_sound decodes little-endian command2/argument7; fixed selector and freshly reran the starting/retained native cases. No gameplay expectation or implementation changed."
+}

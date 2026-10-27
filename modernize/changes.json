@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "iteration": 2,
-  "status": "completed",
+  "iteration": 3,
+  "status": "in_progress",
   "changes": [
     {
       "baseline": "modernize/baseline.json",
@@ -493,6 +493,79 @@
         "initial-native-smoke"
       ],
       "coverage": "Every cell retained with a deliberately overridden ROM window; full motion/contact/AI contracts and fresh short human driving plus longer natural AI route comparisons pass. This is structural resource refactoring, not modernization."
+    },
+    {
+      "id": "M1",
+      "iteration": 3,
+      "category": "modernization",
+      "title": "Native pickup lifecycle and rewards",
+      "baseline": "modernize/baseline.json",
+      "starting_checkpoint": "modernize/iteration-003-preparation.json",
+      "starting_binary_sha256": "1aa7148864a7844744454888d6b4fffd7c9da8f41cb0060b4e58ca9ed05ed63b",
+      "retained_source_sha256": "c709e82f29306aee6af45070733791eb5efc86716331db51b21fe8432a70679a",
+      "retained_binary_sha256": "e1ba6894f49ea65ba35c560eacd18db40bbf036542940dc5622eba5ed1a5331f",
+      "design": "modernize/design-iteration-003-M1.json",
+      "before": "Numeric pickup state drives lifecycle, reward category/quantity and sprite lookup.",
+      "after": "PickupPhase/PickupKind/PickupReward own lifecycle and quantities; PickupAssets decodes complete old-count collection outcomes and art at loading.",
+      "removed_machinery": [
+        "Numeric lifecycle range dispatch",
+        "Gameplay award-base interpretation and reward subtraction from sprite state",
+        "Separate raw pickup award/tile arrays at gameplay boundary"
+      ],
+      "remaining_boundary_encodings": [
+        "Version2/public state0..11 via serde",
+        "Original/override award bases and incidental state11 art via decoded resources",
+        "Packed sprite coordinate carries and lifetime wrapping",
+        "Deferred exceptional overflow/direct unknown-state policy"
+      ],
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter iteration_three_pickup",
+          "result": "PASS;2 preimplementation contracts on original numeric model",
+          "evidence": "modernize/evidence/iteration-003/M1-preimplementation/check-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter pickup",
+          "result": "PASS;15 tests",
+          "evidence": "modernize/evidence/iteration-003/M1-pickup-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS;638 library tests",
+          "evidence": "modernize/evidence/iteration-003/M1-all-fast.log"
+        },
+        {
+          "command": "python3 run.py check",
+          "result": "PASS;638 optimized tests, fmt, desktop/web Clippy and builds, Rust1.90.0/Cargo.lock",
+          "evidence": "modernize/evidence/iteration-003/M1-optimized-latest.json"
+        },
+        {
+          "command": "iteration3_pickups.py original --minimum-award7 (actual CLI: --minimum-award 7)",
+          "result": "PASS;natural original money reward delta, count, collection lifetime79\u21921\u21920, persistent branch; original nitro discovery separately retained",
+          "evidence": "modernize/evidence/iteration-003/M1-original-money-verified/result.json"
+        },
+        {
+          "command": "iteration3_pickups.py native + compare_iteration3_pickups.py",
+          "result": "PASS;fresh source-rule natural pickup recipe, branches/replay, exact starting-build state/frame/PCM and original money contract",
+          "evidence": "modernize/evidence/iteration-003/M1-retained-pickups/comparison.json"
+        },
+        {
+          "command": "lifecycle.py + compare_lifecycle.py",
+          "result": "PASS;fresh natural shop/purchase/race/nitro/timer branches/replay;4 exact complete-state/frame landmarks and exact route PCM",
+          "evidence": "modernize/evidence/iteration-003/M1-retained-driving/baseline-comparison.json"
+        }
+      ],
+      "presentation_review": "modernize/evidence/iteration-003/M1-presentation-review.json",
+      "source_grounded_contract_corrections": "Existing raw state assertions now encode the phase; numeric expected values unchanged. New override tests were run before conversion. Natural original/native type/collector parity is documented, never aligned by state writes.",
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Natural attract captures are silent; human pickup sound selection stays covered by source-backed unit tests and existing native audio contracts.",
+        "Unsupported override/state combinations retain compatibility policy rather than establishing original malformed-memory behavior."
+      ],
+      "outcome": "retained",
+      "gameplay_changes": "none intended or observed in required comparisons",
+      "commit_subject": "modernize: model pickup lifecycle and rewards natively",
+      "qa_tooling_commit": "ac29a7a"
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

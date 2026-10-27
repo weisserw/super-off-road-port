@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "iteration": 3,
+  "status": "awaiting_selection",
+  "faithful_baseline": "modernize/baseline.json",
+  "starting_checkpoint": "modernize/iteration-003-preparation.json",
+  "previous_menu": "modernize/iterations/002/candidates.json",
+  "ids_scoped_to_iteration": true,
+  "candidates": [
+    {
+      "id": "M1",
+      "category": "modernization",
+      "title": "Native pickup lifecycle and reward model",
+      "files": [
+        "port/src/world/objects.rs",
+        "port/src/game/snapshots.rs",
+        "port/src/game.rs",
+        "port/src/game/modernization_tests.rs"
+      ],
+      "current_design": "Pickup.state is simultaneously absent/collectable type, awarded amount and sprite table index. collect_pickup derives money versus nitro from the resulting display-state threshold, then service_pickup dispatches on that same word.",
+      "proposed_model": "PickupPhase::Absent / Available(PickupKind) / AwardDisplay(PickupReward) owns explicit lifecycle. Decode award-base and presentation mappings at the asset boundary; collection produces a money/nitro quantity and the display consumes it. Keep unusual accepted mappings in an explicit compatibility representation if required.",
+      "removed_machinery": [
+        "Numeric state thresholds as normal lifecycle dispatch",
+        "Sprite-state subtraction as normal reward arithmetic",
+        "Raw award-base interpretation during collection"
+      ],
+      "remaining_boundaries": [
+        "Version2 state0..11 and existing debug fields encode at save/observation boundaries.",
+        "ROM/override award bases and tile tables retain exact identity; nonstandard mappings must be characterized, not normalized away.",
+        "Packed sprite coordinate borrowing and word lifetime wrapping remain presentation/compatibility policies."
+      ],
+      "benefit": "Collection rules and reward quantities become readable independently of sprite numbering; a reward or display change has one explicit owner.",
+      "impact": "medium",
+      "impact_reason": "Replaces state/reward representation across spawn, collection, expiry, initialization, nitro and deferred money integration, bounded to one world object.",
+      "impact_rank": 1,
+      "difficulty": "medium",
+      "difficulty_reason": "Finite lifecycle with strong unit contracts, but restored state11, arbitrary table mappings, lifetime0 and initialization side effects need explicit compatibility.",
+      "difficulty_rank": 1,
+      "behavioral_risk": "medium: RNG consumption, reward category/quantity, shared nitro/money writes, timer and visible sprite effects must remain exact.",
+      "source_references": [
+        "port/src/world/objects.rs:Pickup/try_spawn_pickup/project_pickup/collect_pickup/tick_pickup_award/service_pickup/initialize_world",
+        "port/src/world/objects.trace.md: Pickup service, geometry, awards and sprite pair",
+        "reference/source/game.asm:15050-15301; physical45C7..46F3 and4873..4905",
+        "port/src/game/snapshots.rs:validate world snapshot"
+      ],
+      "owners_order": "WorldObjects owns pickup and pending awards; service order composites\u2192pickup\u2192hazards\u2192placements. Spawn writes placement before cap test, draws choice only on zero gate. Rotating frame&3 truck can collect regardless of human mask. Collection projects, installs80 then ticks immediately. Initialization services old pickup before clearing it/counts/awards.",
+      "invariants": [
+        "One RNG draw on failed gate, two on zero gate; type selected by frame parity.",
+        "Old count determines reward; count saturates4; conditional capped money pickup produces state11.",
+        "Pending money byte wraps; NitroStock overflow retains previous stock; any human enables sound.",
+        "Miss does not tick/redraw; expiry decrements wrapping word; lifetime0 wraps.",
+        "Packed sprite X borrow/carry into Y and every-four-frame rise remain exact.",
+        "Old pickup can award nitro during world initialization before reset."
+      ],
+      "proposed_tests": [
+        "world::objects::tests::pickup_award_uses_old_count_then_saturates_count_and_byte_awards_wrap",
+        "world::objects::tests::pickup_expiry_moves_y_each_four_frames_and_zero_timer_wraps_instead_of_expiring",
+        "world::objects::tests::pickup_packed_xy_pair_centering_propagates_x_borrow_into_y",
+        "world::objects::tests::inactive_pickup_service_consumes_one_rng_at_failed_gate_and_does_not_tick_lifetime",
+        "world::objects::tests::world_initialization_services_old_pickup_before_resetting_counts_and_pending_awards",
+        "Add preimplementation full state0..11 save roundtrip and override award-base characterization; fresh natural spawn\u2192collect\u2192award\u2192expiry original/starting-build comparison."
+      ],
+      "coverage_gaps": [
+        "No retained natural original collection/expiry comparison establishes this target yet; discover using persistent branches and recipes.",
+        "Characterize accepted table overrides and state11 before choosing the compatibility mapping.",
+        "Review award sprites and sound requests/PCM; existing hazard captures do not certify pickup presentation."
+      ],
+      "dependencies": [],
+      "overlaps": "R1 reads pending awards at settlement but changes no pickup model; independently selectable.",
+      "bounded_scope": "One pickup lifecycle and direct reward/save/observation consumers, no wallet normalization, placement or hazard rewrite."
+    },
+    {
+      "id": "R1",
+      "category": "refactoring",
+      "title": "Cohesive postrace and loss scheduler handlers",
+      "files": [
+        "port/src/game/scheduler.rs",
+        "port/src/game/tests.rs"
+      ],
+      "current_design": "Port::advance combines global NMI/input dispatch with a nested PostracePhase match and seven loss scenes, interleaving transition orchestration, awards, sound and menu handoffs.",
+      "code_smell": "The postrace/loss block occupies roughly210 lines inside global advance; reviewing an awards-to-shop or continue change requires tracking inner and outer continue/break effects through unrelated scenes.",
+      "before_after": "Before: nested phase dispatch embedded in advance. After: advance_postrace_scene and advance_loss_scene return existing SceneStep::Continue/Yield; advance retains NMI prefix, central loop and sync/flush suffix. Reuse existing postrace_owner and domain functions.",
+      "proposed_model": "Extract cohesive scheduler methods with explicit same-NMI versus next-NMI results, following the established names/shop pattern. Retain current game model, phase enums and domain ownership.",
+      "benefit": "Postrace/loss changes can be reviewed locally with explicit scheduling effects; reduces mixed responsibilities in global dispatch without introducing another state machine.",
+      "impact": "medium",
+      "impact_reason": "Improves a central scene driver and localizes awards/loss/continue/shop orchestration with a concrete existing extraction pattern.",
+      "impact_rank": 1,
+      "difficulty": "medium",
+      "difficulty_reason": "Straight structural change but multiple same-NMI continues, separate loss-upload waits and final flush order require integrated checks.",
+      "difficulty_rank": 1,
+      "behavioral_risk": "medium: an incorrect yield changes presentation, captured input or sound timing despite unchanged domain calls.",
+      "source_references": [
+        "port/src/game/scheduler.rs:advance Scene::Postrace through Scene::LossRestart, advance_names_scene, advance_shop_scene",
+        "port/src/frontend/results.rs:advance_postrace",
+        "port/src/frontend/results.trace.md:postrace/loss/continue contracts",
+        "architecture.md:Scheduler continuation ownership"
+      ],
+      "owners_order": "State continues to own all scene/phase/transition values; results owns domain awards and loss rules. Preserve global NMI/input prefix and sync_race_views/flush_sounds suffix, and continue versus break at every branch.",
+      "invariants": [
+        "FadeOut completion, Contract completion, ConvertInactive and Complete retain same-NMI continuation.",
+        "HudWait, PodiumSetup and loss upload/release retain separate waits.",
+        "Awards commit/blink/dismissal and pending award settlement occur in the same order once.",
+        "Window transfer, sampled input, video inhibition, menu history and sound flush remain unchanged."
+      ],
+      "proposed_tests": [
+        "frontend::results::tests::postrace_entry_services_hud_time_before_first_wait_without_early_continuation_increment",
+        "frontend::results::tests::postrace_first_nmi_installs_map_and_defers_checkpoint_rank_until_window_done",
+        "frontend::results::tests::postrace_podium_setup_mutates_money_graphics_audio_and_starts400_timer",
+        "frontend::results::tests::postrace_completed_contraction_settles_pickups_once_before_nonhuman_shop_route",
+        "Add preimplementation integrated same-NMI handoff and separate loss-upload/release regressions; fresh postrace\u2192shop and loss\u2192continue/restart recipes."
+      ],
+      "coverage_gaps": [
+        "Domain tests do not alone prove scheduler NMI boundaries.",
+        "Need natural selected-path integration with original and starting-build state/frame/audio comparisons; record/penalty branches need source-backed fixtures where natural setup is unavailable."
+      ],
+      "dependencies": [],
+      "overlaps": "M1 pending-award ownership remains unchanged; no dependency.",
+      "bounded_scope": "Only postrace/loss scheduler orchestration; no new phase model, wallet rules, transitions or audio algorithms."
+    }
+  ],
+  "rankings": {
+    "modernization_impact_highest_first": [
+      "M1"
+    ],
+    "modernization_difficulty_lowest_first": [
+      "M1"
+    ],
+    "refactoring_impact_highest_first": [
+      "R1"
+    ],
+    "refactoring_difficulty_lowest_first": [
+      "R1"
+    ]
+  },
+  "selection": {
+    "ids": [],
+    "authorization": null
+  },
+  "menu_presented": true,
+  "investigation": {
+    "strongest_plausible_conversion": "Native wallets with deferred transactions considered: broader reach than pickups, but ordinary integer balance loses raw-byte threshold8A normalization, cap-check-after-debit retained state and highest borrow into previous wallet/selected index. A sound full model needs pending-operation and legacy-state mapping. Next probe: enumerate every normalization boundary and accepted pending byte state, then establish natural capped-conversion observations. Deferred with specific representation gap; no wallet helper cleanup offered as modernization.",
+    "other_probe": "AnimationTables stores paired tile/attribute bytes and FE/FF dispatch; a full clip conversion must address cursor aliases shared with contacts (suffix12..15) and supported suffix24..30. Asset-command decoding alone leaves cursor machinery intact; lower reach than complete pickup conversion, not listed as an extra target. Graphics rectangle paths already write directly to native VideoMemory rather than constructing upload queues.",
+    "refactoring_review": "Reviewed postrace domain/scheduler split and established names/shop SceneStep extraction. R1 has concrete mixed-responsibility and control-flow cost. No formatting/naming sweep or speculative framework offered.",
+    "no_implementation_changes": true
+  }
+}

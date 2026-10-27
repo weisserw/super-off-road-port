@@ -12,6 +12,35 @@ fn port() -> Port {
 }
 
 #[test]
+fn iteration_three_pickup_wire_states_and_retained_fields_roundtrip() {
+    let mut game = port();
+    let original: serde_json::Value = serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();
+    // Historical version2 accepts the incidental fifth money-award state11,
+    // arbitrary count words and a zero award lifetime. Import must not normalize.
+    for state in 0..=11 {
+        let mut saved = original.clone();
+        let pickup = &mut saved["state"]["race"]["world"]["pickup"];
+        pickup["state"] = json!(state);
+        pickup["counts"] = json!([65535, 4]);
+        pickup["lifetime"] = json!(0);
+        pickup["sprites"][0]["coordinates"] = json!(65535);
+        game.restore_snapshot_json(&saved.to_string()).unwrap();
+        let exported: serde_json::Value =
+            serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();
+        assert_eq!(
+            exported["state"]["race"]["world"]["pickup"],
+            saved["state"]["race"]["world"]["pickup"]
+        );
+        assert_eq!(game.observe()["world"]["pickup"]["state"], json!(state));
+    }
+    let before = game.snapshot_json().unwrap();
+    let mut invalid: serde_json::Value = serde_json::from_str(&before).unwrap();
+    invalid["state"]["race"]["world"]["pickup"]["state"] = json!(12);
+    assert!(game.restore_snapshot_json(&invalid.to_string()).is_err());
+    assert_eq!(game.snapshot_json().unwrap(), before);
+}
+
+#[test]
 fn modernization_legacy_snapshot_preserves_every_nitro_byte_and_unusual_timer() {
     let mut game = port();
     let original: serde_json::Value = serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();

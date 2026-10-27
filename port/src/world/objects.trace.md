@@ -333,3 +333,24 @@ is navigation, not implementation accounting. Original ledger remains pending.
 The composite X-boundary test originally put the other axis at objectY, although its preceding assertion and source CF97 Y calculation establish that objectY lies outside the shifted Y interval. Source requires (objectY-0100-worldY+0080)<01C0. The allegedly accepted X-upper case therefore correctly failed after implementation. Both X-boundary fixtures now use worldY=objectY-0100, an interior Y, retaining the original lower-reject/upper-accept assertions. Initial39pass/1fail preserved in checks/implementation/domain-results.json; all Stage3 evidence remains. No source rectangle or expectation was loosened.
 
 Stage4 full-state validation: conditional pickup state11 remains accepted. Type1 dynamic timer initializes44 (DYNAMIC_RESPONSE_TICKS) then decrements before indexing the44-byte Y-delta table at physical4DC6; nonnegative restored timers above44 have no supported table lifetime and are rejected before mutation. Negative source completion sentinels remain accepted.
+
+## Modernization iteration3 M1: native pickup lifecycle and decoded awards
+
+The existing source rules above remain authoritative. `objects/pickup.rs` owns
+`PickupPhase`, `PickupKind`, `PickupReward` and immutable decoded `PickupAssets`.
+Normal service no longer compares numeric state ranges, interprets award bases,
+or subtracts sprite-state numbers to award quantities. Both kinds' old-count
+outcomes are decoded once; overrides can cross money/nitro categories or produce
+state2 (a collectable phase with a zero nitro reward), so category is not inferred
+from the spawned kind. Arithmetic overflow in an exceptional base is kept as a
+deferred compatibility outcome rather than rejecting unrelated asset loading.
+Unknown direct-call phases retain deferred presentation rejection; full Game
+snapshots still support exactly state0..11 and retain every other pickup field.
+
+Existing tests' raw-state assertions now use `phase.encoded()` at that boundary;
+the numeric expectations and behavioral fixtures are unchanged. The new save
+roundtrip and override-category contracts were run against the starting faithful
+implementation before conversion. Natural original/starting-build recipes,
+source-backed award/expiry assertions and fresh-build comparisons are separate
+modernization evidence under `modernize/evidence/iteration-003`. They do not
+alter original ledger accounting or supersede whole-game QA records.

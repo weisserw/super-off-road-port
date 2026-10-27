@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "workflow": "modernization-beta",
+  "status": "iteration_complete",
+  "iteration": 2,
+  "selection_status": "completed",
+  "pilot_started": true,
+  "active_candidate": null,
+  "baseline": "modernize/baseline.json",
+  "source_snapshot": "modernize/baseline-source.tar.gz",
+  "starting_checkpoint": "modernize/iteration-002-preparation.json",
+  "previous_iteration": "modernize/iterations/001/status.json",
+  "candidates": "modernize/candidates.json",
+  "selected_candidates": [
+    "M1",
+    "M2",
+    "R1"
+  ],
+  "changes": "modernize/changes.json",
+  "next_action": "Stop: iteration2 complete. Further iterations require a fresh ranked menu and user selection.",
+  "validation_status": "PASS:636 tests, optimized desktop/web gates, original hazard/lap and exact starting-build comparisons, presentation reviews and corrected sound-gate assertion.",
+  "retained_source_sha256": "9e1c230648f122a75db00bc354cad9ec335d80546b73ab4b2352ea7d51d938ec",
+  "retained_binary_sha256": "1aa7148864a7844744454888d6b4fffd7c9da8f41cb0060b4e58ca9ed05ed63b",
+  "outcomes": {
+    "M1": "retained",
+    "M2": "retained",
+    "R1": "retained"
+  }
+}

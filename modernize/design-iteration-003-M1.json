@@ -1,0 +1,35 @@
+{
+  "id": "M1",
+  "before": "Numeric pickup state conflates lifecycle, reward and presentation.",
+  "after": "PickupPhase with native PickupKind/PickupReward; immutable decoded award outcomes and art; version2 state encoding at serde and asset boundaries.",
+  "override_contract": "Original kinds0/1 normally map money/nitro. Override resulting states2..11 can cross categories or return to Available; decode complete outcomes rather than infer reward from spawned kind. Preserve deferred invalid presentation failure and exceptional overflowing base arithmetic in a compatibility outcome.",
+  "invariants": [
+    "placement write before cap",
+    "old count then saturated count increment",
+    "reward then projection then80 lifetime then immediate decrement",
+    "one/two RNG gate consumption",
+    "state11 incidental art",
+    "packed coordinate carries and zero lifetime wrap",
+    "world initialization retained pickup service"
+  ],
+  "original_discovery": "Natural first original award is nitro; retained starting build first award is money because of startup/frame parity. Capture original money separately, do not force alignment by state writes.",
+  "preimplementation_contracts": [
+    "iteration_three_pickup_wire_states_and_retained_fields_roundtrip",
+    "iteration_three_pickup_override_can_change_reward_category_and_retained_phase"
+  ],
+  "preimplementation_sources_sha256": {
+    "modernize/evidence/iteration-003/M1-preimplementation/objects.rs": "0ef7cc21f54d8e7c8fe611381146c3183b44830831b95325e9e7d0397c134f4a",
+    "modernize/evidence/iteration-003/M1-preimplementation/modernization_tests.rs": "e1574a37a3e8ae82a64613c05b2841a4cbb6b42fc51f114f1b158ed0cc9a1f8e"
+  },
+  "preimplementation_results": {
+    "command": "python3 run.py check-fast --test-filter iteration_three_pickup",
+    "result": "PASS against numeric-state implementation;2 tests",
+    "log": "modernize/evidence/iteration-003/M1-preimplementation/check-fast.log",
+    "initial_attempt": "Initial invocation failed rustfmt; formatted new tests and reran successfully before implementation. No expected values changed."
+  },
+  "original_observations": {
+    "first_nitro": "modernize/evidence/iteration-003/M1-original-pickups",
+    "money_with_reward_delta": "modernize/evidence/iteration-003/M1-original-money-verified",
+    "natural_setup": "Reset-only original recipes, persistent20-frame branching followed by single-frame refinement; no state writes."
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "iteration": 2,
+  "status": "completed",
+  "faithful_baseline": "modernize/baseline.json",
+  "starting_checkpoint": "modernize/iteration-002-preparation.json",
+  "previous_menu": "modernize/iterations/001/candidates.json",
+  "ids_scoped_to_iteration": true,
+  "candidates": [
+    {
+      "id": "M1",
+      "category": "modernization",
+      "title": "Decode race routes into native waypoint geometry and traversal actions",
+      "files": [
+        "port/src/world/tracks.rs",
+        "port/src/trucks/ai.rs",
+        "port/src/race.rs",
+        "port/src/race/assets.rs",
+        "port/src/game/snapshots.rs",
+        "port/src/game/resources.rs"
+      ],
+      "current_design": "Route stores Vec<u16> and a terminal count. Human progress, AI steering/next_target/ranking and grid preparation interpret packed coordinates, extent flags, FD/FE/FF control words and index widths during gameplay.",
+      "proposed_model": "Immutable decoded route nodes own waypoint geometry, steering bias properties, ranking targets and traversal actions. Human and AI policies consume those concepts explicitly. Each control node retains geometry when a consumer uses it as a rectangle; it is not simply replaced by a jump instruction.",
+      "removed_machinery": [
+        "raw route-word reads and marker decoding in gameplay",
+        "repeated coordinate/extent masks in human and AI consumers",
+        "implicit mapping from encoded redirects to traversal decisions"
+      ],
+      "remaining_boundaries": [
+        "Original ROM and TrackFile route words retain exact encoding at decode/serialization boundaries.",
+        "Consumer-specific source index wrapping and bit14 carry/ranking distinctions remain explicit observable policies, not a universal index or center.",
+        "Resource identity and accepted overlapping original route views must remain stable."
+      ],
+      "benefit": "Makes checkpoint acceptance, steering targets, redirects and ranking readable as game rules; route extensions can be validated at loading instead of interpreted independently in each consumer.",
+      "impact": "high",
+      "impact_reason": "Changes the route model shared by human lap progression, computer navigation, ranking and grid setup.",
+      "impact_rank": 1,
+      "difficulty": "high",
+      "difficulty_reason": "The same words have distinct consumer meanings; cached pre-timeout records, bias-before-redirect RNG and byte-width versus full-width indexing must remain exact.",
+      "difficulty_rank": 2,
+      "behavioral_risk": "high: route mistakes change laps, race winners, steering and shared RNG sequence.",
+      "source_references": [
+        "port/src/world/tracks.rs:39-42,191-221,384-400",
+        "port/src/race.rs:inside_checkpoint/service_human_routes",
+        "port/src/trucks/ai.rs:desired_heading/ranking/next_target/progress_waypoint/service_computers",
+        "port/src/trucks/ai.trace.md: rectangle, redirect, ranking and width contracts",
+        "port/src/world/tracks.trace.md",
+        "reference/source/game.asm:2377-2764 (computer routing)"
+      ],
+      "owners_order": "Route is immutable selected content. Race::Progress owns checkpoint/lap state. Humans copy input then scan3\u21920; AI services3\u21920 after HUD, caching the pre-timeout target. Bias RNG precedes conditional redirect RNG; rank evaluation precedes next target.",
+      "invariants": [
+        "Human FD/FE/bit14 nodes skip without redirects or RNG; FF wraps immediately.",
+        "AI bias and conditional redirect draws retain order and count.",
+        "Acceptance/steering clear bit14 differently from ranking; steering addition must retain the source bit14 carry effect before masking.",
+        "Human and next_target indices wrap checkpoint*4 at byte width; AI cached targets/ranking use their existing full-width access.",
+        "Wrapped signed/unsigned rectangle edges, tie order, winner overwrites, route-tail lifetime and source byte counter wrapping remain unchanged."
+      ],
+      "proposed_tests": [
+        "Existing race::tests::human_fd_fe_and_bit_fourteen_records_skip_without_reading_redirect_targets",
+        "Existing race::tests::conditional_human_record_index_multiplies_at_byte_width_before_route_access",
+        "Existing trucks::ai::tests::route_fe_unconditionally_redirects_fd_zero_redirects_other_outcomes_skip",
+        "Existing trucks::ai::tests::ranking_y_ties_use_signed_wrapping_word_absolute_and_bit_fourteen_center",
+        "Existing world::tracks::tests::all_thirty_two_route_views_keep_terminal_and_checkpoint_count",
+        "Add decode/consumer contracts for bit14 bias carry and both index interpretations, independently source-checked before conversion."
+      ],
+      "coverage_gaps": [
+        "Need recorded natural original/faithful traversal covering a representative redirect and waypoint/lap transition; iteration1 smoke does not cover these.",
+        "All32 original views and malformed/conditional extension fixtures need retained validation; no normalized route assumptions may discard accepted inputs.",
+        "Because route interpretation touches progress, steering and RNG, run the full relevant race/AI integration regressions, not only loader tests."
+      ],
+      "dependencies": [],
+      "overlaps": "R1 shares AI/resource interfaces, but bearing data and route decoding are independent. M2 shares service integration only.",
+      "bounded_scope": "Route representation and its direct human/AI/ranking/grid consumers; no physics, timing cadence, RNG algorithm or new track behavior."
+    },
+    {
+      "id": "M2",
+      "category": "modernization",
+      "title": "Native lifecycle for the six dynamic hazards",
+      "files": [
+        "port/src/world/objects.rs",
+        "port/src/game/snapshots.rs",
+        "port/src/race.rs",
+        "port/src/game.rs"
+      ],
+      "current_design": "DynamicObject combines numeric kind0..3 with animation, timer and uses words. Their combinations implicitly encode absent, reactive, depleted and struck behavior; service_dynamic mixes transitions, collision eligibility, countdowns and sprite projection.",
+      "proposed_model": "An explicit hazard lifecycle owns the applicable response phase and remaining reactions, with named contact/response/depletion transitions. Animation presentation consumes the resulting phase while preserving the exact display cursor and contact windows. Preserve conditional legacy state combinations at the save boundary where necessary; do not invent physical identities for the source types.",
+      "removed_machinery": [
+        "numeric kind progression and dispersed implicit phase combinations in normal gameplay",
+        "signed-underflow sentinels as the normal representation of response completion or exhausted reactions"
+      ],
+      "remaining_boundaries": [
+        "Original placement/table encodings and exact animation frames remain asset/presentation data.",
+        "Version2 kind/timer/uses/animation values and semantic observations remain compatible, including source-backed conditional states.",
+        "Word/byte wrapping stays where it affects observable sequencing."
+      ],
+      "benefit": "Hazard contact and depletion become explicit game transitions; changing one response can be reviewed without reconstructing every numeric kind/timer/animation combination.",
+      "impact": "medium",
+      "impact_reason": "Substantive control/state conversion for one bounded world subsystem, including its collision and presentation effects.",
+      "impact_rank": 2,
+      "difficulty": "high",
+      "difficulty_reason": "A smaller subsystem than routes, but contact eligibility depends on animation0/18, draw-before-decrement order, special timer underflow and historical retained states.",
+      "difficulty_rank": 1,
+      "behavioral_risk": "high: contact timing, full-word speed changes, exhaustion and later hazards seeing earlier speed changes are observable.",
+      "source_references": [
+        "port/src/world/objects.rs:DynamicObject/initialize_dynamic/dynamic_near/service_dynamic",
+        "port/src/world/objects.trace.md:93-134 (six sequence-dependent slots)",
+        "reference/source/game.asm:15548-16468; physical4905..4E38",
+        "port/src/game/snapshots.rs:dynamic validation"
+      ],
+      "owners_order": "WorldObjects owns six hazards; initializer and service visit5\u21920. Each call selects truck animation_frame&3. Contact may change the same Truck speed that later slots read. Sprite tile uses predecrement animation/timer; response motion and exhaustion follow that update.",
+      "invariants": [
+        "Zero-X initializer clears kind only and skips RNG/other writes.",
+        "Idle misses skip sprite/timer/lifetime updates; contact is eligible only at animation0 or18.",
+        "Initial uses0 still permits a response before exhaustion.",
+        "Kind1 contact starts44 ticks, zeroes full speed and requests sound only under the established human gate.",
+        "Depleted\u2192struck and moving-truck reactions retain different speed effects and collision geometry.",
+        "Palette threshold3/4, predecrement tile selection, signed Y deltas, animation29 underflow exception and descending-slot interaction remain exact."
+      ],
+      "proposed_tests": [
+        "Existing world::objects::tests::dynamic_initialization_is_descending_consumes_rng_only_nonzero_x_and_preserves_inactive_fields",
+        "Existing world::objects::tests::dynamic_contact_is_only_tested_at_zero_or_eighteen_animation",
+        "Existing world::objects::tests::type_one_contact_arms_then_decrements_timer_moves_y_and_zeroes_full_speed_word",
+        "Existing world::objects::tests::type_one_underflow_retains_use_count_when_animation_is_twenty_nine_after_tick",
+        "Existing world::objects::tests::dynamic_missed_idle_contact_skips_shadow_timer_and_animation_updates",
+        "Add lifecycle transition and historical snapshot mapping contracts before the conversion."
+      ],
+      "coverage_gaps": [
+        "Need a persistent natural-input setup and original/faithful observation of hazard contact, response and depletion; current startup evidence does not establish those scenarios.",
+        "Review relevant reaction frames and contact audio as well as structured state.",
+        "Accepted nonstandard timer/animation/uses combinations require characterization before choosing the compatibility mapping."
+      ],
+      "dependencies": [],
+      "overlaps": "Independent of M1 and R1; all touch race integration tests, but hazard state does not depend on route conversion.",
+      "bounded_scope": "The six dynamic objects only; pickup, composite count/tail aliases, terrain and placed-object models remain unchanged."
+    },
+    {
+      "id": "R1",
+      "category": "refactoring",
+      "title": "One shared bearing-table definition and resource owner",
+      "files": [
+        "port/src/trucks/ai.rs",
+        "port/src/trucks/contact.rs",
+        "port/src/race/assets.rs",
+        "port/src/game/resources.rs",
+        "port/src/trucks/motion.rs",
+        "port/src/race.rs"
+      ],
+      "current_design": "AiTables.bearings and ContactTables.directions both load256 bytes at physical ROM1CC7 through separate constants/loaders. Contact tables are loaded into each selected RaceAssets even though the table is not track-specific; contact already calls the AI-owned quantizer.",
+      "code_smell": "Duplicated authoritative definition/loading and misleading track ownership for identical immutable direction data. A change to bearing-resource handling must currently be coordinated across AI, collision and race loading.",
+      "before_after": "Before: separate AiTables/ContactTables arrays and ROM constants/loaders. After: one decoded BearingTable owned by immutable Resources and passed to both consumers; domain-specific AI/contact rules remain in their existing modules.",
+      "proposed_model": "Consolidate the identical table definition/load and give the shared quantized-heading lookup a clear resource interface. Preserve independent fixture injection where tests need custom table contents.",
+      "benefit": "One place to update or validate bearing assets; no track-specific reload or duplicate representation can silently drift from the other consumer.",
+      "impact": "medium",
+      "impact_reason": "Clarifies a shared AI/collision dependency and removes duplicate asset ownership across race preparation.",
+      "impact_rank": 1,
+      "difficulty": "low",
+      "difficulty_reason": "Both definitions visibly read the same offset and all256 bytes, and the quantizer is already shared; most work is bounded resource plumbing and fixture adaptation.",
+      "difficulty_rank": 1,
+      "behavioral_risk": "low: immutable data consolidation; all256 cells, including naturally unreachable quantizer cells, must be retained.",
+      "source_references": [
+        "port/src/trucks/ai.rs:load_tables/quantize_vector/desired_heading",
+        "port/src/trucks/contact.rs:load_contact_tables/contact_angles",
+        "port/src/race/assets.rs:RaceAssets::contacts and loader",
+        "port/src/game/resources.rs:Resources",
+        "reference/source/game.asm:545-596,2305 (shared quantizer and bearing lookup)"
+      ],
+      "owners_order": "Resources owns immutable decoded source data; movement/contact and late-frame AI read the same table. Keep current axis reductions, sign handling, table index and quarter-turn correction in their domain callers.",
+      "invariants": [
+        "Same ROM/file overlay provenance and exact256 cells.",
+        "No change to quantization, current/committed coordinate ownership, collision response, AI steering, update order or snapshots.",
+        "Avoid claiming a new game model; this is refactoring."
+      ],
+      "proposed_tests": [
+        "Retain existing AI ROM-table and signed quantizer contracts.",
+        "Retain contact angle/quadrant tests and source table loader bounds tests.",
+        "Add one asset-boundary regression proving shared loading preserves every cell and explicit resource overrides.",
+        "Run affected motion/contact/AI contracts and a fresh short driving comparison."
+      ],
+      "coverage_gaps": [
+        "Shared fixture construction and raw asset replacement handling must be verified after ownership changes; no new original-game rule is assumed."
+      ],
+      "dependencies": [],
+      "overlaps": "M1 touches AI/resource signatures; implementation can be coordinated if both selected. R1 does not require route or hazard conversion.",
+      "bounded_scope": "Shared bearing resource definition, loading and direct readers only; no vector-math redesign or generic lookup framework."
+    }
+  ],
+  "rankings": {
+    "modernization_impact_highest_first": [
+      "M1",
+      "M2"
+    ],
+    "modernization_difficulty_lowest_first": [
+      "M2",
+      "M1"
+    ],
+    "refactoring_impact_highest_first": [
+      "R1"
+    ],
+    "refactoring_difficulty_lowest_first": [
+      "R1"
+    ]
+  },
+  "selection": {
+    "ids": [
+      "M1",
+      "M2",
+      "R1"
+    ],
+    "authorization": "User: all three please"
+  },
+  "menu_presented": true,
+  "investigation": {
+    "strongest_plausible_conversion": "M1 removes route interpretation machinery across human progress, AI steering and ranking rather than moving masks into another helper. Geometry and traversal policy must be separate because control records can still be consumed as geometry.",
+    "wallet_followup": "Inspected normalize_digits and actual results/attract/shop callers again. Raw award/debit writes are deliberately deferred until normalization; byte-wrap/sign threshold8A and highest borrow into previous wallet/selected index remain part of conditional contracts. A native-balance plus pending-operation model must prove exact deferred state/alias behavior, not just normalized totals. This broader unresolved representation is not substituted with a wallet helper extraction. Next probe: enumerate pending-operation states at normalization boundaries and validate a natural capped-conversion setup before specifying a complete replacement.",
+    "other_probe": "Packed screen coordinates considered, but removing their word storage requires preserving visible X-carry into Y and OAM boundaries; route and hazard models have greater game-level reach. No cosmetic coordinate-helper target was added.",
+    "no_implementation_changes": true,
+    "validation": "Current source identity matches the completed tested iteration1; fresh toolkit readiness/frozen-source/ledger audit passes. No full-game QA or duplicate build run."
+  },
+  "outcomes": {
+    "M1": "retained",
+    "M2": "retained",
+    "R1": "retained"
+  },
+  "evidence": "modernize/changes.json"
+}

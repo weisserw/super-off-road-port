@@ -123,7 +123,7 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
     // at DYNAMIC_RESPONSE_TICKS=44, decrement before indexing the44-byte
     // dynamic_y_deltas table, and retain negative completion sentinels.
     ensure!(
-        state.race.world.pickup.state <= 11
+        state.race.world.pickup.phase.supported()
             && state.race.world.placements.len() <= 255
             && state
                 .race
