@@ -1070,6 +1070,7 @@
   },
   "outcomes": {
     "M1": "retained",
-    "R2": "retained"
+    "R2": "retained",
+    "M5": "retained"
   }
 }

@@ -48,3 +48,13 @@ model, fixed-width arithmetic and sequential collision visibility; no new physic
 or source representation conversion is claimed. The collision transaction clones
 remain responsible for atomic failure and are separate from the removed whole-
 Truck powertrain clone.
+
+Iteration3 M5 replaces source pose selectors and per-NMI strip command construction
+with decoded body-frame definitions and immutable pose images. The existing
+renderer still receives the same two tile rows at the same NMI and retains all
+interstrip bytes. Version2 words, including all65536 historical selectors, keep
+the faithful native contiguous-ROM span policy for unaligned/crossing words;
+this does not establish original DMA behavior for malformed states. The flat/
+nonzero-tilt heading rule decodes at the asset boundary, including file overrides.
+Original flat/turning and tilted images were independently observed in natural
+original VRAM, separate from starting-build differential tests.

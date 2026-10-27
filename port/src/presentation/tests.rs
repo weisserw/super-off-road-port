@@ -466,77 +466,60 @@ fn animation_invalid_cursors_reject_atomically_and_clear_visits_all16() {
 }
 #[test]
 fn pose_upload_plan_selects_bank_once_and_keeps_two_strips_per_truck() {
-    let p = pose_strips([0, 0x7fc0, 0x8000, 0xc1c0]);
-    assert_eq!(
-        p,
-        [
-            PoseStrip {
-                source_cpu: 0x018000,
-                destination_byte: 0xc000,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x018200,
-                destination_byte: 0xc200,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x01ffc0,
-                destination_byte: 0xc040,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x0181c0,
-                destination_byte: 0xc240,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x028000,
-                destination_byte: 0xc080,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x028200,
-                destination_byte: 0xc280,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x02c1c0,
-                destination_byte: 0xc0c0,
-                bytes: 64
-            },
-            PoseStrip {
-                source_cpu: 0x02c3c0,
-                destination_byte: 0xc2c0,
-                bytes: 64
-            }
-        ]
-    );
+    let b = rom();
+    let mut m = memory();
+    present_legacy_poses(&mut m, &b, [0, 0x7fc0, 0x8000, 0xc1c0]).unwrap();
+    for (destination, physical) in [
+        (0xc000, 0x8000),
+        (0xc200, 0x8200),
+        (0xc040, 0xffc0),
+        (0xc240, 0x81c0),
+        (0xc080, 0x10000),
+        (0xc280, 0x10200),
+        (0xc0c0, 0x141c0),
+        (0xc2c0, 0x143c0),
+    ] {
+        assert_eq!(
+            &m.vram[destination..destination + 64],
+            &b[physical..physical + 64]
+        );
+    }
 }
 #[test]
 fn pose_upload_copies_real_rom_strips_and_leaves_interstrip_space() {
     let b = rom();
     let mut m = memory();
-    upload_poses(&mut m, &b, [0, 0, 0x8000, 0xc1c0]).unwrap();
+    present_legacy_poses(&mut m, &b, [0, 0, 0x8000, 0xc1c0]).unwrap();
     assert_eq!(&m.vram[0xc000..0xc040], &b[0x8000..0x8040]);
     assert_eq!(&m.vram[0xc200..0xc240], &b[0x8200..0x8240]);
     assert_eq!(&m.vram[0xc080..0xc0c0], &b[0x10000..0x10040]);
     assert_eq!(&m.vram[0xc2c0..0xc300], &b[0x143c0..0x14400]);
     assert_eq!(m.vram[0xc100], 0x5a);
 }
+
 #[test]
-fn nmi_presents_prior_staging_and_pose_state_without_mutating_staged_oam() {
+fn iteration_three_pose_every_legacy_selector_preserves_both_graphics_spans() {
     let b = rom();
     let mut m = memory();
-    let staged = m.staged_oam;
-    present_boundary(&mut m, &b, [0; 4], 0).unwrap();
-    assert_eq!(m.visible_oam, staged);
-    assert_eq!(m.staged_oam, staged);
-    m.staged_oam[0] = 7;
-    assert_eq!(m.visible_oam[0], 0x69);
-    let old = m.clone();
-    present_boundary(&mut m, &b, [0x8000; 4], 1).unwrap();
-    assert_eq!(m, old);
+    // All16-bit selectors were accepted by legacy saves. Source selects bank
+    // once; source+0200 wraps the word before setting bit15 for the second row.
+    // These are source-layout byte expectations, not rendered-port observations.
+    let atlas = poses::PoseAtlas::load(&b, &poses::PoseRules::load(&b).unwrap()).unwrap();
+    for selector in 0..=u16::MAX {
+        let mut selection = std::array::from_fn(|_| poses::PoseSelection::from_encoded(selector));
+        atlas.resolve(&mut selection).unwrap();
+        atlas.present(&mut m, &selection).unwrap();
+        let bank_base = if selector & 0x8000 == 0 {
+            0x8000
+        } else {
+            0x10000
+        };
+        let upper = bank_base + usize::from(selector & 0x7fff);
+        let lower = bank_base + usize::from(selector.wrapping_add(0x200) & 0x7fff);
+        assert_eq!(&m.vram[0xc000..0xc040], &b[upper..upper + 64]);
+        assert_eq!(&m.vram[0xc200..0xc240], &b[lower..lower + 64]);
+        assert_eq!(m.vram[0xc100], 0x5a);
+    }
 }
 #[test]
 fn truck_projection_wraps_coordinates_and_track8_band_priority_thresholds() {
@@ -1055,4 +1038,45 @@ fn framebuffer_hdma_first_pair_applies_to_first_visible_row() {
     assert_eq!(&render(&memory, &display).unwrap()[..4], &[0, 0, 0, 255]);
     display.window_edges[0] = [1, 0];
     assert_eq!(&render(&memory, &display).unwrap()[..4], &[255, 0, 0, 255]);
+}
+
+// Source-format fixture adapter only. Live Game resolves at load/import and
+// presents decoded frame selections, without rebuilding an atlas at each NMI.
+fn present_legacy_poses(
+    memory: &mut VideoMemory,
+    rom: &[u8],
+    selectors: [u16; 4],
+) -> anyhow::Result<()> {
+    let atlas = poses::PoseAtlas::load(rom, &poses::PoseRules::load(rom)?)?;
+    let mut selection = selectors.map(poses::PoseSelection::from_encoded);
+    atlas.resolve(&mut selection)?;
+    atlas.present(memory, &selection)
+}
+
+#[test]
+fn native_pose_assets_apply_overridden_tilt_resolution_and_graphics_together() {
+    let mut b = rom();
+    // Center tilt becomes source pose100: heading31 resolves to15, encoded85C0,
+    // hence physical bank2 rows105C0/107C0. Expectations follow source layout.
+    b[0xcba..0xcbc].copy_from_slice(&0x100u16.to_le_bytes());
+    b[0x105c0..0x10600].fill(0xde);
+    b[0x107c0..0x10800].fill(0xad);
+    let rules = poses::PoseRules::load(&b).unwrap();
+    let frame = rules.frame(2, 2, 31);
+    assert_eq!((frame.working_heading(), frame.encoded()), (15, 0x85c0));
+    let atlas = poses::PoseAtlas::load(&b, &rules).unwrap();
+    let selected = std::array::from_fn(|_| poses::PoseSelection::frame(frame));
+    let mut m = memory();
+    atlas.present(&mut m, &selected).unwrap();
+    assert_eq!(m.vram[0xc000..0xc040], [0xde; 64]);
+    assert_eq!(m.vram[0xc200..0xc240], [0xad; 64]);
+    assert_eq!(m.vram[0xc100], 0x5a);
+    let mut incomplete = selected;
+    incomplete[3] = poses::PoseSelection::from_encoded(0);
+    let old = m.clone();
+    assert!(atlas.present(&mut m, &incomplete).is_err());
+    assert_eq!(
+        m, old,
+        "a later unresolved selection must not partially present earlier trucks"
+    );
 }

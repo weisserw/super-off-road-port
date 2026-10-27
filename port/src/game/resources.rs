@@ -31,6 +31,7 @@ pub struct Resources {
     pub transitions: transitions::TransitionAssets,
     pub shared: memory::SharedGraphics,
     pub motion: motion::MotionTables,
+    pub poses: crate::presentation::poses::PoseAtlas,
     pub sampling: terrain::SamplingTables,
     pub ai: ai::AiTables,
     pub directions: DirectionTables,
@@ -149,6 +150,7 @@ impl Resources {
         let transitions = transitions::load_assets(&bytes)?;
         let shared = memory::load_shared(&bytes)?;
         let motion = motion::load_motion_tables(&bytes)?;
+        let poses = crate::presentation::poses::PoseAtlas::load(&bytes, &motion.body_poses)?;
         let sampling = terrain::load_sampling_tables(&bytes)?;
         let ai = ai::load_tables(&bytes)?;
         let directions = DirectionTables::from_table_bytes(
@@ -172,6 +174,7 @@ impl Resources {
             transitions,
             shared,
             motion,
+            poses,
             sampling,
             ai,
             directions,

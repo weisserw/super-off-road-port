@@ -41,6 +41,25 @@ fn iteration_three_pickup_wire_states_and_retained_fields_roundtrip() {
 }
 
 #[test]
+fn iteration_three_pose_legacy_selectors_roundtrip_without_alignment_or_domain_clamping() {
+    let mut game = port();
+    let original: serde_json::Value = serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();
+    // Source bank/word wrap is established by the graphics-loader contracts.
+    // Version2 accepted any word, not only naturally selected aligned poses.
+    for selectors in [[0, 1, 0x7fff, 0xffff], [0x7fc1, 0x81ff, 0xffc0, 0x140]] {
+        let mut saved = original.clone();
+        saved["state"]["race"]["video"]["poses"] = json!(selectors);
+        game.restore_snapshot_json(&saved.to_string()).unwrap();
+        let exported: serde_json::Value =
+            serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();
+        assert_eq!(
+            exported["state"]["race"]["video"]["poses"],
+            json!(selectors)
+        );
+    }
+}
+
+#[test]
 fn modernization_legacy_snapshot_preserves_every_nitro_byte_and_unusual_timer() {
     let mut game = port();
     let original: serde_json::Value = serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();
@@ -148,4 +167,50 @@ fn modernization_conditional_nitro_consumption_preserves_legacy_vectors() {
             json!(expected)
         );
     }
+}
+
+#[test]
+fn iteration_three_pose_nmi_presents_prior_images_and_oam_and_inhibits_both() {
+    let mut game = port();
+    let bytes = std::fs::read("../input/game.rom").unwrap();
+    game.state.nmi_enabled = true;
+    game.state.scene = Scene::MusicWait;
+    game.state.session.active_humans = 0;
+    game.state.race.progress.active_humans = 0;
+    game.state.session.inhibit_video = 0;
+    game.state.race.video_inhibit = 0;
+    game.state.race.video.memory.vram.fill(0x5a);
+    game.state.race.video.memory.staged_oam.fill(0x69);
+    game.state.race.video.memory.visible_oam.fill(0x96);
+    let staged = game.state.race.video.memory.staged_oam;
+    game.tick(&InputState::default());
+    assert!(game.state.fault.is_none());
+    assert_eq!(game.state.race.video.memory.visible_oam, staged);
+    assert_eq!(game.state.race.video.memory.staged_oam, staged);
+    assert_eq!(
+        &game.state.race.video.memory.vram[0xc000..0xc040],
+        &bytes[0x8000..0x8040]
+    );
+    game.state.scene = Scene::MusicWait;
+    game.state.session.inhibit_video = 1;
+    game.state.race.video_inhibit = 1;
+    game.state.race.video.memory.staged_oam[0] = 7;
+    let mut saved: serde_json::Value =
+        serde_json::from_str(&game.snapshot_json().unwrap()).unwrap();
+    saved["state"]["race"]["video"]["poses"] = serde_json::to_value([0x8000u16; 4]).unwrap();
+    game.restore_snapshot_json(&saved.to_string()).unwrap();
+    let before = game.state.race.video.memory.clone();
+    game.tick(&InputState::default());
+    assert!(game.state.fault.is_none());
+    assert_eq!(game.state.race.video.memory, before);
+    game.state.scene = Scene::MusicWait;
+    game.state.session.inhibit_video = 0;
+    game.state.race.video_inhibit = 0;
+    game.tick(&InputState::default());
+    assert!(game.state.fault.is_none());
+    assert_eq!(game.state.race.video.memory.visible_oam[0], 7);
+    assert_eq!(
+        &game.state.race.video.memory.vram[0xc000..0xc040],
+        &bytes[0x10000..0x10040]
+    );
 }

@@ -5350,9 +5350,11 @@
         "game.asm:3353"
       ],
       "disposition": "replaced",
-      "summary": "Five rows of five little-endian pose words. Index = 2*(5*longitudinal_tilt+lateral_tilt), with both tilt selectors clamped to 0..4. Heading bits are added later; this grid and the heading domain produce pose words 0..415. Native equivalent: motion lookup data supplies wheel/suspension/powertrain/pose consumers; OAM bit-mask stride is replaced by equivalent typed bit packing, including unused interleaved storage.",
+      "summary": "Original tilt word grid decodes into native PoseRules orientation/heading frame definitions. Nonzero-tilt heading halving and packed source image reference interpretation occur only at the asset boundary; body_pose selects the decoded frame. The faithful-port mapping is preserved in modernization_history.",
       "equivalents": [
-        "port/src/trucks/motion.rs::load_motion_tables",
+        "port/src/presentation/poses.rs::PoseRules::load",
+        "port/src/presentation/poses.rs::PoseRules::decode",
+        "port/src/trucks/motion.rs::body_pose",
         "port/src/game/resources.rs",
         "port/src/trucks/motion.trace.md"
       ],
@@ -5367,8 +5369,34 @@
             "game.asm:3353"
           ],
           "disposition": "replaced",
-          "summary": "Five rows of five little-endian pose words. Index = 2*(5*longitudinal_tilt+lateral_tilt), with both tilt selectors clamped to 0..4. Heading bits are added later; this grid and the heading domain produce pose words 0..415. Native equivalent: motion lookup data supplies wheel/suspension/powertrain/pose consumers; OAM bit-mask stride is replaced by equivalent typed bit packing, including unused interleaved storage.",
+          "summary": "Original tilt word grid decodes into native PoseRules orientation/heading frame definitions. Nonzero-tilt heading halving and packed source image reference interpretation occur only at the asset boundary; body_pose selects the decoded frame. The faithful-port mapping is preserved in modernization_history.",
           "equivalents": [
+            "port/src/presentation/poses.rs::PoseRules::load",
+            "port/src/presentation/poses.rs::PoseRules::decode",
+            "port/src/trucks/motion.rs::body_pose",
+            "port/src/game/resources.rs",
+            "port/src/trucks/motion.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M5",
+              "previous_summary": "Five rows of five little-endian pose words. Index = 2*(5*longitudinal_tilt+lateral_tilt), with both tilt selectors clamped to 0..4. Heading bits are added later; this grid and the heading domain produce pose words 0..415. Native equivalent: motion lookup data supplies wheel/suspension/powertrain/pose consumers; OAM bit-mask stride is replaced by equivalent typed bit packing, including unused interleaved storage.",
+              "previous_equivalents": [
+                "port/src/trucks/motion.rs::load_motion_tables",
+                "port/src/game/resources.rs",
+                "port/src/trucks/motion.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M5",
+          "previous_summary": "Five rows of five little-endian pose words. Index = 2*(5*longitudinal_tilt+lateral_tilt), with both tilt selectors clamped to 0..4. Heading bits are added later; this grid and the heading domain produce pose words 0..415. Native equivalent: motion lookup data supplies wheel/suspension/powertrain/pose consumers; OAM bit-mask stride is replaced by equivalent typed bit packing, including unused interleaved storage.",
+          "previous_equivalents": [
             "port/src/trucks/motion.rs::load_motion_tables",
             "port/src/game/resources.rs",
             "port/src/trucks/motion.trace.md"
@@ -6286,9 +6314,11 @@
         "game.asm:4058"
       ],
       "disposition": "merged",
-      "summary": "Source fragment upload_four_truck_pose_tiles is expressed by upload_poses using owned native state and source-width arithmetic. For each truck, choose source bank one or two from the packed pose high bit. DMA two $40-byte strips, separated by $0200 in source and $0100 VRAM words in destination.\nVRAM destinations begin at $6000 and advance $20 words per truck. Channel one uses mode 1 to the VRAM data ports.\nThis establishes the pose transfer mechanism; the complete source-selector domain remains a redirect question. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Original pose-row transfer is replaced by immutable decoded native body images. PoseAtlas binds source bank/word-wrapped rows at loading/save import and presents the same two backend rows per truck at the existing uninhibited NMI; staged OAM order and destination gaps remain unchanged. The faithful-port mapping is preserved in modernization_history.",
       "equivalents": [
-        "port/src/presentation/sprites.rs::upload_poses",
+        "port/src/presentation/poses.rs::PoseAtlas::load",
+        "port/src/presentation/poses.rs::PoseAtlas::decode_legacy",
+        "port/src/presentation/poses.rs::PoseAtlas::present",
         "port/src/presentation/rendering.trace.md",
         "port/src/game/scheduler.rs"
       ],
@@ -6303,8 +6333,34 @@
             "game.asm:4058"
           ],
           "disposition": "merged",
-          "summary": "Source fragment upload_four_truck_pose_tiles is expressed by upload_poses using owned native state and source-width arithmetic. For each truck, choose source bank one or two from the packed pose high bit. DMA two $40-byte strips, separated by $0200 in source and $0100 VRAM words in destination.\nVRAM destinations begin at $6000 and advance $20 words per truck. Channel one uses mode 1 to the VRAM data ports.\nThis establishes the pose transfer mechanism; the complete source-selector domain remains a redirect question. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Original pose-row transfer is replaced by immutable decoded native body images. PoseAtlas binds source bank/word-wrapped rows at loading/save import and presents the same two backend rows per truck at the existing uninhibited NMI; staged OAM order and destination gaps remain unchanged. The faithful-port mapping is preserved in modernization_history.",
           "equivalents": [
+            "port/src/presentation/poses.rs::PoseAtlas::load",
+            "port/src/presentation/poses.rs::PoseAtlas::decode_legacy",
+            "port/src/presentation/poses.rs::PoseAtlas::present",
+            "port/src/presentation/rendering.trace.md",
+            "port/src/game/scheduler.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M5",
+              "previous_summary": "Source fragment upload_four_truck_pose_tiles is expressed by upload_poses using owned native state and source-width arithmetic. For each truck, choose source bank one or two from the packed pose high bit. DMA two $40-byte strips, separated by $0200 in source and $0100 VRAM words in destination.\nVRAM destinations begin at $6000 and advance $20 words per truck. Channel one uses mode 1 to the VRAM data ports.\nThis establishes the pose transfer mechanism; the complete source-selector domain remains a redirect question. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/presentation/sprites.rs::upload_poses",
+                "port/src/presentation/rendering.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M5",
+          "previous_summary": "Source fragment upload_four_truck_pose_tiles is expressed by upload_poses using owned native state and source-width arithmetic. For each truck, choose source bank one or two from the packed pose high bit. DMA two $40-byte strips, separated by $0200 in source and $0100 VRAM words in destination.\nVRAM destinations begin at $6000 and advance $20 words per truck. Channel one uses mode 1 to the VRAM data ports.\nThis establishes the pose transfer mechanism; the complete source-selector domain remains a redirect question. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/presentation/sprites.rs::upload_poses",
             "port/src/presentation/rendering.trace.md",
             "port/src/game/scheduler.rs"

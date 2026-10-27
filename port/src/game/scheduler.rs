@@ -29,6 +29,9 @@ enum SceneStep {
 
 impl Port {
     pub(super) fn boot(&mut self) -> Result<()> {
+        self.resources
+            .poses
+            .resolve(&mut self.state.race.video.poses)?;
         let mut boot = runtime::BootState {
             steering_upgrades: self
                 .state
@@ -708,10 +711,9 @@ impl Port {
                     self.state.race.video.memory.visible_oam =
                         self.state.race.video.memory.staged_oam
                 }
-                runtime::FrameEffect::UploadStagedTruckPoses => sprites::upload_poses(
+                runtime::FrameEffect::UploadStagedTruckPoses => self.resources.poses.present(
                     &mut self.state.race.video.memory,
-                    &self.resources.rom,
-                    self.state.race.video.poses,
+                    &self.state.race.video.poses,
                 )?,
                 runtime::FrameEffect::CountersAdvanced(counters) => {
                     self.state.nmi = counters.nmi;

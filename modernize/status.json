@@ -5,7 +5,7 @@
   "iteration": 3,
   "selection_status": "selected",
   "pilot_started": true,
-  "active_candidate": "M5",
+  "active_candidate": "R1",
   "baseline": "modernize/baseline.json",
   "starting_checkpoint": "modernize/iteration-003-preparation.json",
   "previous_iteration": "modernize/iterations/002/status.json",
@@ -22,9 +22,9 @@
     "M4"
   ],
   "changes": "modernize/changes.json",
-  "changes_note": "Preserved historical outcomes; no iteration3 implementation until selection.",
-  "next_action": "Commit validated R2, then establish M5 native-pose asset/save/presentation contracts against retained R2 checkpoint.",
-  "validation_status": "M1 and R2 retained. R2 passes639 library/optimized tests and all desktop/web gates, fresh original inventory/contact and exact driving/contact/hazard state/frame/PCM comparisons.",
+  "changes_note": "Prior iterations preserved. All9 iteration3 targets selected; M1/R2 completed with individual commits; other targets remain pending.",
+  "next_action": "Commit validated M5, then establish R1 postrace/loss same-NMI and upload/release contracts before extracting scheduler handlers.",
+  "validation_status": "M1/R2/M5 retained. M5 passes642 library/optimized tests, desktop/web gates, independent original pose VRAM observations, exact R2 route state/frame/PCM and preserved-ledger identity audit.",
   "menu_revision": 3,
   "investigation": "Complete bounded major-subsystem survey recorded:16 inspected areas,7 modernization and2 refactoring candidates; specific deferrals explain the1 modernization shortfall.",
   "execution_order": [
@@ -41,7 +41,7 @@
   "outcomes": {
     "M1": "retained",
     "R2": "retained",
-    "M5": "pending",
+    "M5": "retained",
     "R1": "pending",
     "M6": "pending",
     "M7": "pending",
@@ -50,7 +50,8 @@
     "M4": "pending"
   },
   "implementation_commits": {
-    "M1": "8f837ee"
+    "M1": "8f837ee",
+    "R2": "1d2f964"
   },
   "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged."
 }

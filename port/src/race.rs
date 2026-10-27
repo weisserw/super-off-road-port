@@ -375,7 +375,7 @@ pub struct RaceVideo {
     pub display: crate::presentation::Display,
     pub sprites: crate::presentation::sprites::SpriteArrays,
     #[serde(with = "crate::snapshot::array")]
-    pub poses: [u16; TRUCKS],
+    pub poses: [crate::presentation::poses::PoseSelection; TRUCKS],
     #[serde(with = "crate::snapshot::array")]
     pub middle_cursors: [u8; TRUCKS],
 }
@@ -451,16 +451,10 @@ pub fn update_frame_services(
     phases.push(ServicePhase::Poses);
     for slot in (0..TRUCKS).rev() {
         let pose = motion::body_pose(&race.trucks[slot], environment.motion.tables);
-        race.video.poses[slot] = pose.source;
-        race.working_pose = (race.trucks[slot].heading as u8) >> 3;
-        if environment.motion.tables.tilt_poses
-            [usize::from(pose.longitudinal) * 5 + usize::from(pose.lateral)]
-            != 0
-        {
-            race.working_pose >>= 1;
-        }
-        // Only the strip source changes here; truck tile words are per-truck
-        // tile/palette/priority assignments, not the pose-strip selector.
+        race.working_pose = pose.frame.working_heading();
+        race.video.poses[slot] = crate::presentation::poses::PoseSelection::frame(pose.frame);
+        // Body frame selection changes the staged image only. Truck tile words
+        // retain their per-truck tile/palette/priority assignments.
     }
     phases.push(ServicePhase::SpriteSort);
     sprites::sort_by_y(&mut race.video.sprites);
@@ -1648,7 +1642,7 @@ mod tests {
             steering_rates: [0; 7],
             x_vectors: [0; 32],
             y_vectors: [0; 32],
-            tilt_poses: [0; 25],
+            body_poses: crate::presentation::poses::PoseRules::decode([0; 25]),
             shadow_masks: [0; 8],
             blocked_coordinate_by_quadrant: [0; 4],
         };

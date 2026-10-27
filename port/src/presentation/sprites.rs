@@ -1,4 +1,4 @@
-//! Four pose uploads and sixteen sorted/animated native sprite records.
+//! Sixteen sorted/animated native sprite records; body images live in poses.
 use super::{CONTACT_FRAMES, OAM_BYTES, SORTED_SPRITES, VideoMemory};
 use anyhow::{Context, Result, ensure};
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -132,71 +132,6 @@ pub fn animate(
             }
         }
     }
-    Ok(())
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PoseStrip {
-    pub source_cpu: u32,
-    pub destination_byte: u16,
-    pub bytes: usize,
-}
-pub fn pose_strips(selectors: [u16; 4]) -> [PoseStrip; 8] {
-    const SOURCE_HIGH_BIT: u16 = 0x8000;
-    const SECOND_SOURCE_STEP: u16 = 0x200;
-    const FIRST_DESTINATION: u16 = 0xc000;
-    const SECOND_DESTINATION_STEP: u16 = 0x200;
-    const DESTINATION_SLOT_STEP: u16 = 0x40;
-    const STRIP_BYTES: usize = 0x40;
-    std::array::from_fn(|index| {
-        let slot = index / 2;
-        let second = index % 2 != 0;
-        let selector = selectors[slot];
-        let bank = if selector & SOURCE_HIGH_BIT == 0 {
-            1u32
-        } else {
-            2
-        };
-        PoseStrip {
-            source_cpu: (bank << 16)
-                | u32::from(
-                    selector.wrapping_add(if second { SECOND_SOURCE_STEP } else { 0 })
-                        | SOURCE_HIGH_BIT,
-                ),
-            destination_byte: FIRST_DESTINATION
-                + slot as u16 * DESTINATION_SLOT_STEP
-                + if second { SECOND_DESTINATION_STEP } else { 0 },
-            bytes: STRIP_BYTES,
-        }
-    })
-}
-pub fn upload_poses(memory: &mut VideoMemory, rom: &[u8], selectors: [u16; 4]) -> Result<()> {
-    let strips = pose_strips(selectors);
-    let spans = strips
-        .iter()
-        .map(|strip| {
-            let physical =
-                crate::world::tracks::physical(crate::world::tracks::CpuSource(strip.source_cpu))?;
-            rom.get(physical..physical + strip.bytes)
-                .context("truncated truck pose strip")
-        })
-        .collect::<Result<Vec<_>>>()?;
-    for (strip, bytes) in strips.iter().zip(spans) {
-        let at = usize::from(strip.destination_byte);
-        memory.vram[at..at + strip.bytes].copy_from_slice(bytes);
-    }
-    Ok(())
-}
-pub fn present_boundary(
-    memory: &mut VideoMemory,
-    rom: &[u8],
-    selectors: [u16; 4],
-    inhibit: u8,
-) -> Result<()> {
-    if inhibit != 0 {
-        return Ok(());
-    }
-    upload_poses(memory, rom, selectors)?;
-    memory.visible_oam = memory.staged_oam;
     Ok(())
 }
 /// Domain projection view shared by motion (before pair separation) and sprite

@@ -1,0 +1,48 @@
+{
+  "id": "M5",
+  "category": "modernization",
+  "status": "retained",
+  "starting_implementation_commit": "1d2f964",
+  "starting_binary_sha256": "21620bc95257329f60dc7ca571631c6b284a8ccbd503b09721bfe7ed322eeec9",
+  "source_with_contract_sha256": "13cc3963a1a69429dd214390946949344e73dc90e4a08cc9ad39d36a92e7789e",
+  "snapshot": "modernize/evidence/iteration-003/M5-preimplementation/source-with-contract.tar.gz",
+  "before": "Body pose repacked into CPU bank/address selector; NMI reconstructs8 strip commands and reads ROM spans.",
+  "planned_after": "Native body orientation/frame keys select immutable decoded pose images. Normal presentation consumes those images at the existing NMI and writes backend tile rows; legacy selector encoding only lives in asset/save adapters.",
+  "asset_design": "Decode tilt-table heading resolution and per-orientation frame selection at loading. Shared immutable pose images own upper/lower tile rows. A resource-bound native selection carries its source encoding only as serialization provenance; normal playback never interprets it. Old word selectors deserialize into compatibility entries resolved at import/asset boundary, including unaligned/all16-bit words. Avoid preallocating65536 full images per Game; use decoded normal images and a bounded legacy graphics view.",
+  "constraints": [
+    "All65536 legacy words preserve exact first/second row spans, including unaligned/crossing words and bank selected before second addition.",
+    "Validate all4 selections before graphics writes; retain interstrip destination holes.",
+    "Keep one-NMI presentation delay and inhibition shared with OAM.",
+    "Preserve default/old saves and working_pose inherited grid-query semantics.",
+    "Raw ROM/graphics overrides retain asset identity and exact bytes.",
+    "Remove old pack_pose/pose_strips execution from normal gameplay rather than rename source selectors."
+  ],
+  "preimplementation_tests": [
+    "iteration_three_pose_every_legacy_selector_preserves_both_graphics_spans",
+    "iteration_three_pose_legacy_selectors_roundtrip_without_alignment_or_domain_clamping"
+  ],
+  "integration_plan": "Use retained R2 natural driving/contact/hazard routes for fresh exact states/frames/PCM; independently source-checked original pose strips and existing fresh original captures establish visible source presentation. Add representative natural tilted/turning pose observations if existing paths do not cover both. Full optimized validation before M5 commit.",
+  "preimplementation_result": {
+    "command": "python3 run.py check-fast --test-filter iteration_three_pose",
+    "result": "PASS;2 tests on retained R2 implementation, including every65536 legacy selector and representative old save words",
+    "evidence": "modernize/evidence/iteration-003/M5-preimplementation/check-fast.log"
+  },
+  "implemented_model": "PoseRules decodes800 native orientation/heading frame definitions (416 shared original image references); motion returns BodyFrame, RaceVideo stages PoseSelection, PoseAtlas presents decoded images. Legacy words resolve atomically at boot/import; source-address machinery is absent from normal motion/NMI.",
+  "contract_updates": [
+    "Old eight-command PoseStrip assertions now verify the same eight fixed source byte spans in native tile rows.",
+    "Original source pose-word expectations now assert their boundary selector and working heading, retaining fixed source outcomes.",
+    "Removed isolated old present_boundary unit entry; its staging/inhibit coverage now invokes actual Game.tick and version2 save import.",
+    "Additional source-derived override example100 OR15\u2192selector85C0 establishes graphics and heading-resolution replacement together; later unresolved input cannot partially present."
+  ],
+  "checks_so_far": {
+    "pose_fast": "PASS;see modernize/evidence/iteration-003/M5-pose-fast.log",
+    "all_fast": "PASS;642 tests;see modernize/evidence/iteration-003/M5-all-fast.log",
+    "original_pose_observations": "PASS;flat14/15/16/17 and tilted58/71 source images observed in original VRAM, persistent branch validated; modernize/evidence/iteration-003/M5-original-poses-003/result.json"
+  },
+  "preserved_setup_and_compile_failures": [
+    "M5-first-compile.log: explicit shared lifetime needed for atlas-owned/restored images; corrected before passing checks.",
+    "M5-game-contract-compile.log: json macro repeat-array syntax rejected; replaced by typed serde_json::to_value; expected values unchanged.",
+    "M5-original-poses: imported emulator snapshot had no rendered framebuffer; source recipe now advances1 natural frame before observation/capture. M5-original-poses-002 retained; -003 additionally validates persistent branch replay."
+  ],
+  "identity": "modernize/evidence/iteration-003/M5-retained-identity.json"
+}

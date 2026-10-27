@@ -81,7 +81,7 @@ pub struct MotionTables {
     pub steering_rates: [u8; UPGRADE_LEVELS],
     pub x_vectors: [i16; HEADING_DIRECTIONS],
     pub y_vectors: [i16; HEADING_DIRECTIONS],
-    pub tilt_poses: [u16; TILT_POSES],
+    pub body_poses: crate::presentation::poses::PoseRules,
     /// Full eight bytes retained; natural truck selectors consume only even cells.
     pub shadow_masks: [u8; TRUCKS * 2],
     pub blocked_coordinate_by_quadrant: [u8; 4],
@@ -92,7 +92,6 @@ pub fn load_motion_tables(rom: &[u8]) -> Result<MotionTables> {
     const STEERING_ROM: usize = 0x165c;
     const X_VECTOR_ROM: usize = 0x15dc;
     const Y_VECTOR_ROM: usize = 0x161c;
-    const TILT_ROM: usize = 0xca2;
     const SHADOW_MASK_ROM: usize = 0xaeb;
     const BLOCK_AXIS_ROM: usize = 0xe7d;
     fn bytes<const N: usize>(rom: &[u8], at: usize) -> Result<[u8; N]> {
@@ -113,7 +112,7 @@ pub fn load_motion_tables(rom: &[u8]) -> Result<MotionTables> {
         steering_rates: bytes(rom, STEERING_ROM)?,
         x_vectors: words::<HEADING_DIRECTIONS>(rom, X_VECTOR_ROM)?.map(|v| v as i16),
         y_vectors: words::<HEADING_DIRECTIONS>(rom, Y_VECTOR_ROM)?.map(|v| v as i16),
-        tilt_poses: words(rom, TILT_ROM)?,
+        body_poses: crate::presentation::poses::PoseRules::load(rom)?,
         shadow_masks: bytes(rom, SHADOW_MASK_ROM)?,
         blocked_coordinate_by_quadrant: bytes(rom, BLOCK_AXIS_ROM)?,
     })
@@ -238,8 +237,7 @@ pub fn correct_suspension_speed(truck: &mut Truck) {
 pub struct BodyPose {
     pub lateral: u8,
     pub longitudinal: u8,
-    pub pose_word: u16,
-    pub source: u16,
+    pub frame: crate::presentation::poses::BodyFrame,
 }
 pub fn body_pose(truck: &Truck, tables: &MotionTables) -> BodyPose {
     const TILT_BIAS: u8 = 0x28;
@@ -257,23 +255,15 @@ pub fn body_pose(truck: &Truck, tables: &MotionTables) -> BodyPose {
     };
     let lateral = selector(h[0].wrapping_add(h[2]), h[1].wrapping_add(h[3]));
     let longitudinal = selector(h[0].wrapping_add(h[1]), h[2].wrapping_add(h[3]));
-    let tilt = tables.tilt_poses[usize::from(longitudinal) * TILT_SELECTORS + usize::from(lateral)];
-    let mut heading = u16::from(truck.heading as u8 >> HEADING_QUANTIZATION);
-    if tilt != 0 {
-        heading >>= 1;
-    }
-    let pose_word = tilt | heading;
     BodyPose {
         lateral,
         longitudinal,
-        pose_word,
-        source: pack_pose(pose_word),
+        frame: tables.body_poses.frame(
+            lateral,
+            longitudinal,
+            truck.heading as u8 >> HEADING_QUANTIZATION,
+        ),
     }
-}
-pub fn pack_pose(pose: u16) -> u16 {
-    const STRIP_LOW_MASK: u16 = 7;
-    const STRIP_LOW_SHIFT: u32 = 6;
-    ((pose & STRIP_LOW_MASK) << STRIP_LOW_SHIFT) | ((pose & !STRIP_LOW_MASK) >> 1).swap_bytes()
 }
 /// Despite its old name, original BIT/BPL reverses the sign of halved magnitude.
 pub fn reverse_halved_speed(speed: u16) -> u16 {
@@ -654,7 +644,9 @@ mod tests {
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
-            tilt_poses: words(0xca2, TILT_POSES).try_into().unwrap(),
+            body_poses: crate::presentation::poses::PoseRules::decode(
+                words(0xca2, TILT_POSES).try_into().unwrap(),
+            ),
             shadow_masks: rom[0xaeb..0xaf3].try_into().unwrap(),
             blocked_coordinate_by_quadrant: rom[0xe7d..0xe81].try_into().unwrap(),
         }
@@ -1200,35 +1192,37 @@ mod tests {
     fn pose_flat_body_uses_full_heading_and_nonzero_tilt_halves_heading() {
         let mut t = truck();
         t.heading = 255;
+        let flat = body_pose(&t, &tables());
         assert_eq!(
-            body_pose(&t, &tables()),
-            BodyPose {
-                lateral: 2,
-                longitudinal: 2,
-                pose_word: 31,
-                source: 0x0dc0
-            }
+            (
+                flat.lateral,
+                flat.longitudinal,
+                flat.frame.working_heading(),
+                flat.frame.encoded()
+            ),
+            (2, 2, 31, 0x0dc0)
         );
         for (w, h) in t.wheels.iter_mut().zip([60, 40, 60, 40]) {
             w.height = h;
         }
+        let tilted = body_pose(&t, &tables());
         assert_eq!(
-            body_pose(&t, &tables()),
-            BodyPose {
-                lateral: 4,
-                longitudinal: 2,
-                pose_word: 0x5f,
-                source: 0x2dc0
-            }
+            (
+                tilted.lateral,
+                tilted.longitudinal,
+                tilted.frame.working_heading(),
+                tilted.frame.encoded()
+            ),
+            (4, 2, 15, 0x2dc0)
         );
     }
     #[test]
     fn pose_each_tilt_axis_clamps_signed_byte_before_five_by_five_index() {
         for (heights, lateral, longitudinal, pose) in [
-            ([100, 0, 100, 0], 0, 2, 0x20),
-            ([0, 40, 0, 40], 0, 2, 0x20),
-            ([0, 0, 40, 40], 2, 0, 0xb0),
-            ([40, 40, 0, 0], 2, 4, 0x100),
+            ([100, 0, 100, 0], 0, 2, 0x1000),
+            ([0, 40, 0, 40], 0, 2, 0x1000),
+            ([0, 0, 40, 40], 2, 0, 0x5800),
+            ([40, 40, 0, 0], 2, 4, 0x8000),
         ] {
             let mut t = truck();
             for (w, h) in t.wheels.iter_mut().zip(heights) {
@@ -1236,7 +1230,7 @@ mod tests {
             }
             let p = body_pose(&t, &tables());
             assert_eq!(
-                (p.lateral, p.longitudinal, p.pose_word),
+                (p.lateral, p.longitudinal, p.frame.encoded()),
                 (lateral, longitudinal, pose)
             );
         }
@@ -1251,7 +1245,7 @@ mod tests {
             (256, 0x8000),
             (415, 0xcdc0),
         ] {
-            assert_eq!(pack_pose(pose), packed);
+            assert_eq!(crate::presentation::poses::encode_source_pose(pose), packed);
         }
     }
     #[test]

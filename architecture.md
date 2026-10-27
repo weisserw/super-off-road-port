@@ -60,6 +60,15 @@ no longer clones a whole truck and reconciles selected fields by hand. Isolated
 steering/nitro/acceleration entry points use the same rules through adapters;
 Truck remains the retained actor owner and snapshots are unchanged.
 
+M5: `presentation::poses::PoseRules` decodes the body table into native
+orientation/heading frame definitions. Motion selects a frame directly;
+`PoseAtlas` owns shared immutable upper/lower tile-row images and presents them
+at the existing NMI. Race state stages `PoseSelection` values rather than CPU
+strip sources. Source selector metadata is retained solely for version2 wire
+compatibility; loading/import resolves arbitrary old words before live adoption.
+Normal NMI presentation reads native images, without ROM addressing or upload
+commands. The sixteen generic effect animations remain separate for M4.
+
 Iteration progress, checks and individual commits are tracked in
 `modernize/status.json` and `modernize/changes.json`. Other selected targets remain tracked individually as work proceeds.
 

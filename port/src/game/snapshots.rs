@@ -27,7 +27,7 @@ impl Port {
     }
     pub(super) fn import_snapshot(&mut self, json: &str) -> Result<()> {
         ensure!(json.len() <= 16 * 1024 * 1024, "game snapshot too large");
-        let saved: Snapshot = serde_json::from_str(json)?;
+        let mut saved: Snapshot = serde_json::from_str(json)?;
         ensure!(
             saved.version == 2
                 && saved.rom_sha256 == crate::config::ROM_SHA256
@@ -35,6 +35,9 @@ impl Port {
             "game snapshot identity/version mismatch"
         );
         validate(&saved.state, &self.resources)?;
+        self.resources
+            .poses
+            .resolve(&mut saved.state.race.video.poses)?;
         let selected = Arc::new(
             self.resources
                 .race(saved.state.sequence_index, saved.state.session.order_slot)?,

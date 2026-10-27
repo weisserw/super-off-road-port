@@ -653,6 +653,92 @@
       "gameplay_changes": "none intended or observed in required comparisons",
       "commit_subject": "refactor: make powertrain proposal and retained outputs explicit",
       "qa_tooling_commit": "8f0bbfe"
+    },
+    {
+      "id": "M5",
+      "iteration": 3,
+      "category": "modernization",
+      "title": "Native truck body frames and images",
+      "baseline": "modernize/baseline.json",
+      "starting_implementation_commit": "1d2f964",
+      "starting_checkpoint": "modernize/evidence/iteration-003/M5-preimplementation/source-with-contract.tar.gz",
+      "starting_binary_sha256": "21620bc95257329f60dc7ca571631c6b284a8ccbd503b09721bfe7ed322eeec9",
+      "retained_source_sha256": "0bdac848d676d652c8f9921568617f5a27637ad17d8f5d103a7abafc1a2640cc",
+      "retained_binary_sha256": "49d6573aea3032d1edd5abeb985f01afdba75bdfdc80864375db70538d239426",
+      "design": "modernize/design-iteration-003-M5.json",
+      "before": "Physics packs source pose/bank selectors; RaceVideo retains4 words; NMI constructs8 PoseStrip upload commands and reads ROM addresses.",
+      "after": "PoseRules decodes native orientation/heading frames. Motion stages BodyFrame selections; PoseAtlas presents shared immutable upper/lower tile-row images at the same NMI. Legacy words resolve atomically at boot/save import.",
+      "removed_machinery": [
+        "Pose word OR/halving and bank-selector packing during gameplay",
+        "Four source-selector words as the normal staged pose model",
+        "PoseStrip records and8-command per-NMI reconstruction",
+        "CPU address translation and direct ROM span lookup at normal presentation"
+      ],
+      "remaining_boundary_encodings": [
+        "Immutable source-selector provenance for version2 save/debug compatibility",
+        "Original/override25-word tilt table, graphics bank/word layout decoded only at assets/save import",
+        "All65536 accepted old selectors use prior faithful native contiguous-span policy, including unaligned/crossing words",
+        "Existing native renderer tile-row destinations/interstrip gaps and staged NMI timing"
+      ],
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter iteration_three_pose",
+          "result": "PASS before conversion on R2; all65536 legacy graphics selectors and old-save word roundtrips",
+          "evidence": "modernize/evidence/iteration-003/M5-preimplementation/check-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter pose",
+          "result": "PASS;pose/source-byte/override contracts plus actual Game NMI/restore/inhibition regression",
+          "evidence": "modernize/evidence/iteration-003/M5-pose-fast.log"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS;642 library tests",
+          "evidence": "modernize/evidence/iteration-003/M5-all-fast.log"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check (attached PTY)",
+          "result": "PASS;642 optimized tests, fmt, locked desktop/web Clippy and builds, Rust1.90.0",
+          "evidence": "modernize/evidence/iteration-003/M5-optimized-latest.json"
+        },
+        {
+          "command": "iteration3_pose_original.py --output modernize/evidence/iteration-003/M5-original-poses-003",
+          "result": "PASS;fresh original natural flat/turning/tilted VRAM images match source ROM, guarded natural cache, persistent branch replay",
+          "evidence": "modernize/evidence/iteration-003/M5-original-poses-003/result.json"
+        },
+        {
+          "command": "lifecycle.py + compare_lifecycle.py",
+          "result": "PASS;fresh natural shop/purchase/driving/nitro/timer,4 exact state/frame landmarks and route PCM match R2",
+          "evidence": "modernize/evidence/iteration-003/M5-retained-driving/baseline-comparison.json"
+        },
+        {
+          "command": "iteration3_contacts.py native --baseline ... --original ...",
+          "result": "PASS;fresh natural contact, exact R2 states/frame/PCM, original source cooldown contract retained",
+          "evidence": "modernize/evidence/iteration-003/M5-retained-contact/comparison.json"
+        },
+        {
+          "command": "qa_harness native-hazard-route + compare_iteration2.py",
+          "result": "PASS;fresh track6 completion\u2192track2 response/depletion/lap, exact R2 states/frames/PCM; reviewed presentation",
+          "evidence": "modernize/evidence/iteration-003/M5-retained-hazard/native-hazard-route/baseline-comparison.json"
+        },
+        {
+          "command": "port.workspace + port.validate_ledger (read-only accounting functions)",
+          "result": "PASS;1527 original regions/1408 units/22 uncertainties and frozen source identities preserved",
+          "evidence": "modernize/evidence/iteration-003/M5-accounting-audit.json"
+        }
+      ],
+      "presentation_review": "modernize/evidence/iteration-003/M5-presentation-review.json",
+      "source_grounded_contract_corrections": "Original PoseStrip plan assertions now check the same fixed eight source byte spans in native rows. Former helper NMI test replaced by actual Game tick/restore/inhibition; original pose-word fixtures now assert their source-backed boundary encoding/working heading. Existing numeric behavioral expectations unchanged.",
+      "accounting_updates": "region-27 and region-395 native equivalent links now point to PoseAtlas/PoseRules. Prior faithful-port summaries/equivalents preserved per region/unit in modernization_history; original IDs/ranges/classification/source identities unchanged.",
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Natural original observations establish representative flat/turning and tilted frames, not natural reachability of every416 pose. Exhaustive native asset/legacy contracts cover all encoded selectors.",
+        "Unaligned legacy span behavior preserves the faithful native policy, not an original malformed-state DMA claim."
+      ],
+      "outcome": "retained",
+      "gameplay_changes": "none intended or observed in required comparisons",
+      "commit_subject": "modernize: select native truck body frames and images",
+      "qa_tooling_commit": "1fed15d"
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

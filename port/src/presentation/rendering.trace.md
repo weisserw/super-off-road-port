@@ -442,3 +442,26 @@ fixes the convention independently. Initial grid's remaining71pixels were solely
 pickup state caused by prior nonzero cold RNG policy; config now globally matches
 the original reference's zero WRAM, preserving the source's unseeded ambiguity
 and superseded assumption, not applying a scenario-specific state edit.
+
+## Iteration3 M5 — native body frames/images
+
+The source rules and original span expectations above are preserved. Source pose
+word packing, bank choice and second-row word wrapping now execute only in
+presentation/poses.rs while decoding assets or binding an old save word. Motion
+uses a decoded native orientation/heading BodyFrame and race stages that frame;
+NMI reads its already decoded immutable image. No runtime PoseStrip command list,
+CPU address translation or direct ROM span lookup remains for ordinary body
+presentation. Version2 serialization still emits the original selector metadata.
+Cold loading and atomic save import resolve legacy selections against the bound
+resources before live adoption. All65536 words retain the prior native span
+policy; no malformed-state original DMA claim is added.
+
+The old transfer-plan test now checks the same eight fixed source byte spans in
+the resulting native backend rows instead of asserting obsolete command records.
+The former isolated present_boundary wrapper test is replaced by an actual Game
+NMI/inhibition regression. Fixed byte expectations and the old staging/order rules
+are unchanged. New override coverage ties a nonzero tilt's heading resolution to
+its replaced graphics; a later unresolved selection must not partially present
+other trucks. Full legacy-selector and save-roundtrip contracts were passed on
+R2 before conversion. Natural original VRAM observations and fresh native route
+comparisons remain local in modernize/evidence/iteration-003.

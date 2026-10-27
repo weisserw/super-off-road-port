@@ -324,3 +324,14 @@ current-committed-versus-working contact and sequential fleet contracts remain
 unchanged. This is refactoring of the same game model, not modernization of the
 physics. Per-target checks and natural comparison evidence are recorded in
 modernize/changes.json under iteration3/R2.
+
+## Iteration3 M5 — body-frame selection
+
+Body tilt clamping and wrapping wheel sums remain as derived above. The25-word
+source grid now decodes into PoseRules at loading, including heading halving and
+source image reference interpretation. body_pose returns native BodyFrame data;
+it no longer ORs source pose words or packs a bank/address selector. The original
+working_pose heading remains explicit for inherited grid-probe state. Unit tests
+that formerly asserted raw pose words now assert their independently source-
+backed boundary encoding and working heading (31/0DC0 flat,15/2DC0 tilted).
+The encoded-pose packing vectors remain tested at the asset boundary.
