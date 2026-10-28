@@ -70,7 +70,7 @@
       "overlaps": "M6 consumes terrain during separation but changes only response representation. R2 changes powertrain proposal plumbing. Shared motion/contact files; coordinate patches if jointly selected.",
       "bounded_scope": "Terrain representation, direct sampling and blocked-wheel consumers only; preserve motion equations and collision response rules.",
       "impact_rank": 1,
-      "difficulty_rank": 5,
+      "difficulty_rank": 6,
       "strongest_alternative_considered": "A regular terrain grid is simpler but loses nonaligned byte-column aliases and lazy unavailable-neighbor behavior. A decoded patch atlas removes the raw format while preserving those policies."
     },
     {
@@ -136,7 +136,7 @@
       "overlaps": "Independent of gameplay candidates; M4 effects are visual sprite effects, not this audio sequencer.",
       "bounded_scope": "Main song/effect score execution only. Retain auxiliary stream interpreter, envelopes, modulation arithmetic, host cadence and native mixer.",
       "impact_rank": 2,
-      "difficulty_rank": 6,
+      "difficulty_rank": 7,
       "strongest_alternative_considered": "A prerecorded audio timeline would remove all score execution but cannot preserve dynamic effects, host commands or snapshot voice state. A typed score graph removes format execution while retaining musical control flow; merely moving decode_command would not."
     },
     {
@@ -448,7 +448,7 @@
       "overlaps": "R2 touches powertrain nitro output; coordinate signatures if selected together. M1 shares objects/snapshot files only. M5 uses poses rather than animation cursors.",
       "bounded_scope": "Only16 generic effect players and direct readiness/gate consumers; no hazard animation, world rules or renderer rewrite.",
       "impact_rank": 7,
-      "difficulty_rank": 7,
+      "difficulty_rank": 8,
       "strongest_alternative_considered": "Only decoding tile bytes into actions leaves raw cursor aliases and cooldown gates in gameplay. The proposed player ownership includes those consumers, rather than a loader-only cleanup."
     },
     {
@@ -545,6 +545,67 @@
       "dependencies": [],
       "overlaps": "Independent of all modernization targets. M1 changes pickup production but preserves pending-award bytes consumed here.",
       "bounded_scope": "Only postrace/loss scheduler orchestration; no new phase model, wallet rules, transitions or audio algorithms."
+    },
+    {
+      "id": "M8",
+      "category": "modernization",
+      "title": "Native composite prop batch and startup echo lifecycle",
+      "files": [
+        "port/src/world/objects.rs",
+        "port/src/race.rs",
+        "port/src/game/snapshots.rs"
+      ],
+      "current_design": "Composites.count is simultaneously an inclusive loop bound and the fifth derived record animation. composite_tail builds a synthetic record from the first prop Y/height/reaction fields; servicing that record writes its animation back into count.",
+      "proposed_model": "Own a batch of one to four active props and an optional startup echo attached to the first prop. Echo lifecycle is Pending until the first animation-modulo-four service, then Retired. Draw the echo before retiring it; derive its attachment from the updated first prop in the existing service order. Ordinary prop reactions remain owned by their props. Serialize the legacy count only at the snapshot boundary.",
+      "removed_machinery": [
+        "Inclusive count-plus-one traversal",
+        "Treating the traversal bound as a mutable animation timer",
+        "Synthetic PlacedObject assembled from adjacent-field meanings"
+      ],
+      "remaining_boundaries": [
+        "Legacy count4 maps to four props plus Pending echo; count0..3 maps to active prefix1..4 without echo. Keep snapshot sprite staging independently, including5 retained triplets after retirement.",
+        "Preserve original integer projection, tile frame4 for the echo, byte X wrapping and live first-prop attachment.",
+        "Keep unsupported direct count>4 errors; no invented traversal into unowned fields."
+      ],
+      "benefit": "Makes active prop membership, reaction ownership and temporary extra drawing explicit; editing prop reactions no longer requires understanding a loop-bound alias.",
+      "impact": "low",
+      "difficulty": "medium",
+      "impact_reason": "Removes a concrete mixed-owner model, but only affects composite-enabled tracks and their staging/snapshot boundary.",
+      "difficulty_reason": "Small finite state mapping, but two initialization services, first-prop mutation and retained OAM require targeted fidelity scenarios.",
+      "behavioral_risk": "medium: startup extra drawing and retained OAM can differ even when active membership agrees.",
+      "source_references": [
+        "reference/source/game.asm:16715-16920 (physical4F09..502E)",
+        "port/src/world/objects.rs:initialize_world/composite_tail/service_composites",
+        "port/src/race.rs:stage_world composite triplet loop",
+        "port/src/game/snapshots.rs:147-157",
+        "port/src/world/objects.trace.md:Track-zero composites"
+      ],
+      "owners_order": "WorldObjects owns batch/reactions/staged triplets. initialize_world services composites, then calls service_world which services them again before pickup/dynamic/placements. Index0 reaction mutates before echo attachment reads it; staging writes only current triplets and leaves prior OAM beyond them retained.",
+      "invariants": [
+        "All accepted snapshot counts0..4 have a total mapping; raw count4 is the only case which visits the derived fifth record.",
+        "For count4 the echo animation is4 before drawing and either4 or3 after service, so it never reaches zero or triggers reaction47. Retiring on animation&3==0 exactly captures the write4->3.",
+        "A retirement call still stages5 triplets; only the next service stages4. Do not hide the old fifth OAM triplet.",
+        "First prop can decrement or retrigger before echo height is read; do not cache the attachment at initialization.",
+        "Restored count0..2 keeps inactive records and stages a prefix of1..3 without updating the others."
+      ],
+      "proposed_tests": [
+        "inclusive_composite_loop_derives_extra_record_from_adjacent_first_fields",
+        "composite_count_four_visits_five_then_fourth_frame_decrements_count_alias_to_three",
+        "composite_triplets_draw_before_timer_tick_and_byte_x_positions_wrap",
+        "world_service_performs_composite_pickup_dynamic_then_placements_on_actual_state",
+        "Before implementation: all5 accepted count mappings x4 service residues, legacy snapshot roundtrips, first-prop retrigger/decrement attachment and retained OAM across retirement."
+      ],
+      "coverage_gaps": [
+        "Need original natural track0 startup observation of count4->3 and retained fifth OAM.",
+        "Need starting-build/fresh-build persistent recipes for startup, prop contacts and restored prefixes; this investigation does not certify equivalence."
+      ],
+      "dependencies": [],
+      "overlaps": "Shares objects.rs with retained M1 and future M4 consumers. M4 owns global effect cursors; this target owns composite batch membership and startup echo, not those cursors.",
+      "bounded_scope": "Composite batch representation, direct consumers and snapshot adapter only. No generic prop framework, terrain change, collision-rule change or broader animation rewrite.",
+      "strongest_alternative_considered": "General composite animation framework would duplicate existing animation work. Explicit batch plus one startup attachment is the smallest complete removal of the count/reaction alias.",
+      "impact_rank": 8,
+      "difficulty_rank": 5,
+      "selection_status": "awaiting_user_selection"
     }
   ],
   "rankings": {
@@ -555,13 +616,15 @@
       "M5",
       "M6",
       "M7",
-      "M4"
+      "M4",
+      "M8"
     ],
     "modernization_difficulty_lowest_first": [
       "M1",
       "M5",
       "M6",
       "M7",
+      "M8",
       "M2",
       "M3",
       "M4"
@@ -638,8 +701,8 @@
     ],
     "validation": "Starting implementation identity and pinned source snapshot unchanged from iteration3 preparation. Previous-turn fresh full check and audit passed. Only metadata and local investigation evidence changed; no additional compilation or gameplay QA run was needed for menu expansion."
   },
-  "menu_revision": 3,
-  "supersedes": "modernize/iterations/003/menu-revisions/broadened-provisional-candidates.json",
+  "menu_revision": 4,
+  "supersedes": "modernize/iterations/003/menu-revisions/pre-supplement-revision-003.json",
   "subsystem_survey": {
     "status": "complete_for_bounded_menu_investigation",
     "scope_note": "Inspected means implementation, representative callers/owners/order and source-backed contracts reviewed. It is not completed gameplay QA or proof of candidate equivalence. No major subsystem remains only preliminary/uninvestigated for menu eligibility; some specifically identified alternatives retain unresolved design questions.",
@@ -860,8 +923,10 @@
         "source_grounded_findings": [
           "Hazards already use native stages after iteration2. Placement reaction is already a bounded animation cursor. Composites count also drives inclusive traversal and tail animation derived from first record fields; tail mutation can alter later traversal/display extent."
         ],
-        "candidate_ids": [],
-        "disposition": "Do not redo hazard work or split trivial placement timers into another modernization target. Composite batch conversion deferred until native active-prefix/tail state can preserve source alias behavior without duplicate mutable authorities.",
+        "candidate_ids": [
+          "M8"
+        ],
+        "disposition": "Prior composite deferral resolved by supplemental revision4; see M8 finite lifecycle mapping.",
         "remaining_useful_probes": [
           "Trace natural track0 count/tail transitions and retained sprite extents across initialization and every-four-frame service; specify a native batch lifecycle before offering conversion."
         ]
@@ -1056,9 +1121,9 @@
     ],
     "shortfall": {
       "modernization": {
-        "presented": 7,
+        "presented": 8,
         "maximum": 8,
-        "reason": "Seven coherent conversions survived. Strongest additional leads are native wallets, unified staged window/announcement state and composite batch/tail lifecycle. Each has a concrete unresolved state mapping, documented above with next probe. Adding a wrapper around raw digits/cursors, renaming buffers or splitting loader-only animation decoding would pad the menu without a complete conversion. Existing route/nitro/timer/hazard modernizations and already-native frontend phases are not counted again."
+        "reason": "M8 resolves prior composite alias/lifecycle question. Eight substantive conversions now offered; no padding or duplicate animation target."
       },
       "refactoring": {
         "presented": 2,
@@ -1072,5 +1137,21 @@
     "M1": "retained",
     "R2": "retained",
     "M5": "retained"
+  },
+  "supplemental_investigation": {
+    "request": "Broaden the investigation; no new implementation selection implied.",
+    "result": "M8 resolves the prior composite lifecycle deferral. Existing selected targets and work remain intact.",
+    "inspected": [
+      "world/objects.rs loader, initializer, service and tests",
+      "race.rs staging consumer",
+      "game/snapshots.rs accepted count/staging constraints",
+      "reference/source/game.asm physical4F09..502E",
+      "presentation/transitions.rs builder, frontend/race setup, abort/show paths",
+      "frontend/shop.rs wallet awards, normalization and capped conversion"
+    ],
+    "window_followup": "Confirmed both buffers remain semantically observable: two prime builds; expanding builds before abort whereas others abort first; show selects prior buffer; only first256 rows reset and four-row overlap retains tails. A native staged aperture needs two histories, so merely removing selector is insufficient. Keep deferred rather than duplicate M5 presentation work.",
+    "wallet_followup": "Confirmed normal capped conversion decrements a raw digit before cap check and can leave FF without normalization; normalization may mutate prior wallet or selector. No canonical balance replacement claimed without a complete pending-operation mapping.",
+    "refactoring_followup": "Existing R1/R2 fill both slots. Shared immutable resource consolidation remains the strongest additional alternative, already documented in survey; do not add a third against the menu limit.",
+    "evidence_limits": "Source investigation only; no gameplay equivalence or completed tests claimed for M8."
   }
 }
