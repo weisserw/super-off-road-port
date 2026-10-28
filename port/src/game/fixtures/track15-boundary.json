@@ -1,0 +1,303 @@
+{
+  "arcade": {
+    "accepted": true,
+    "random": true,
+    "previous": 4096,
+    "order": [
+      22,
+      33,
+      4,
+      7,
+      0,
+      3,
+      1,
+      28,
+      13,
+      15,
+      10,
+      8,
+      2,
+      25,
+      20,
+      19
+    ],
+    "cursor": 1,
+    "reversed": false,
+    "seed": 12939
+  },
+  "sequence_index": 33,
+  "random": [
+    174,
+    126,
+    189,
+    27,
+    42
+  ],
+  "trucks": [
+    {
+      "world": [
+        9512,
+        5285
+      ],
+      "speed": 61,
+      "heading": 192,
+      "controller": 32768,
+      "upgrades": {
+        "steering": 0,
+        "speed": 1,
+        "acceleration": 0,
+        "suspension": 0
+      },
+      "acceleration_fraction": 128,
+      "steering_fraction": 56,
+      "nitro_stock_bcd": 5,
+      "nitro_button_history": 0,
+      "wheels": [
+        {
+          "sampled": 64,
+          "height": 68,
+          "velocity": 0,
+          "fraction": 47
+        },
+        {
+          "sampled": 64,
+          "height": 66,
+          "velocity": 2,
+          "fraction": 111
+        },
+        {
+          "sampled": 64,
+          "height": 64,
+          "velocity": 0,
+          "fraction": 111
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 223
+        }
+      ],
+      "surface_summary": 65,
+      "contact_marker": 0,
+      "contact_transition": 1,
+      "contact_cooldown": 0,
+      "effect_cooldown": 26,
+      "blocked_frames": 0,
+      "steering_lock": 2,
+      "ai_route_bias": 0,
+      "screen_x": 219,
+      "screen_y": 104,
+      "tile_attributes": 8192,
+      "nitro_animation": 0
+    },
+    {
+      "world": [
+        5648,
+        10754
+      ],
+      "speed": 75,
+      "heading": 20,
+      "controller": 32768,
+      "upgrades": {
+        "steering": 0,
+        "speed": 0,
+        "acceleration": 6,
+        "suspension": 6
+      },
+      "acceleration_fraction": 128,
+      "steering_fraction": 56,
+      "nitro_stock_bcd": 35,
+      "nitro_button_history": 0,
+      "wheels": [
+        {
+          "sampled": 64,
+          "height": 67,
+          "velocity": 1,
+          "fraction": 223
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 64,
+          "velocity": 0,
+          "fraction": 111
+        }
+      ],
+      "surface_summary": 64,
+      "contact_marker": 255,
+      "contact_transition": 0,
+      "contact_cooldown": 0,
+      "effect_cooldown": 27,
+      "blocked_frames": 0,
+      "steering_lock": 0,
+      "ai_route_bias": 2,
+      "screen_x": 167,
+      "screen_y": 15,
+      "tile_attributes": 8706,
+      "nitro_animation": 0
+    },
+    {
+      "world": [
+        868,
+        6342
+      ],
+      "speed": 46,
+      "heading": 60,
+      "controller": 32768,
+      "upgrades": {
+        "steering": 0,
+        "speed": 0,
+        "acceleration": 6,
+        "suspension": 6
+      },
+      "acceleration_fraction": 128,
+      "steering_fraction": 0,
+      "nitro_stock_bcd": 23,
+      "nitro_button_history": 0,
+      "wheels": [
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        }
+      ],
+      "surface_summary": 63,
+      "contact_marker": 255,
+      "contact_transition": 0,
+      "contact_cooldown": 0,
+      "effect_cooldown": 0,
+      "blocked_frames": 0,
+      "steering_lock": 0,
+      "ai_route_bias": 2,
+      "screen_x": 10,
+      "screen_y": 88,
+      "tile_attributes": 9220,
+      "nitro_animation": 0
+    },
+    {
+      "world": [
+        5265,
+        10348
+      ],
+      "speed": 71,
+      "heading": 8,
+      "controller": 32768,
+      "upgrades": {
+        "steering": 0,
+        "speed": 3,
+        "acceleration": 6,
+        "suspension": 6
+      },
+      "acceleration_fraction": 128,
+      "steering_fraction": 0,
+      "nitro_stock_bcd": 50,
+      "nitro_button_history": 0,
+      "wheels": [
+        {
+          "sampled": 64,
+          "height": 64,
+          "velocity": 0,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        },
+        {
+          "sampled": 64,
+          "height": 63,
+          "velocity": 255,
+          "fraction": 255
+        }
+      ],
+      "surface_summary": 63,
+      "contact_marker": 255,
+      "contact_transition": 0,
+      "contact_cooldown": 0,
+      "effect_cooldown": 0,
+      "blocked_frames": 0,
+      "steering_lock": 0,
+      "ai_route_bias": 255,
+      "screen_x": 154,
+      "screen_y": 21,
+      "tile_attributes": 9734,
+      "nitro_animation": 0
+    }
+  ],
+  "progress": {
+    "drivers": [
+      {
+        "checkpoint": 7,
+        "lap": 2,
+        "timeout": 200,
+        "bias_delay": 0,
+        "parameter": 0
+      },
+      {
+        "checkpoint": 5,
+        "lap": 2,
+        "timeout": 230,
+        "bias_delay": 50,
+        "parameter": 0
+      },
+      {
+        "checkpoint": 3,
+        "lap": 2,
+        "timeout": 239,
+        "bias_delay": 69,
+        "parameter": 0
+      },
+      {
+        "checkpoint": 5,
+        "lap": 2,
+        "timeout": 179,
+        "bias_delay": 59,
+        "parameter": 3
+      }
+    ],
+    "active_humans": 1,
+    "animation_frame": 144,
+    "winner_plus_one": 0,
+    "banner_state": 18
+  },
+  "terrain_history": 0
+}

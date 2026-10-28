@@ -58,3 +58,11 @@ this does not establish original DMA behavior for malformed states. The flat/
 nonzero-tilt heading rule decodes at the asset boundary, including file overrides.
 Original flat/turning and tilted images were independently observed in natural
 original VRAM, separate from starting-build differential tests.
+
+Follow-up track 15 boundary repair (2026-10-28): blocked cells in the final
+copied terrain row now retain their original controls even when lower height
+corners lie outside the copy. Blocked responses do not interpolate those
+heights. Open cells still reject missing geometry. The explicit zero policy for
+untouched neighbor controls now covers both ends of the copy. This supersedes
+the earlier blanket rejection of incomplete boundary cells; physical-console
+untouched WRAM values remain unestablished.

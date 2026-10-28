@@ -386,6 +386,8 @@ fn pending_join_snapshot_replays_sampled_input_active_audio_frame_and_owner_stat
     game.state.session.signature = game.resources.frontend.signature;
     game.state.session.records = game.resources.results.defaults.clone();
     crate::frontend::shop::initialize_wallets(&mut game.state.session);
+    game.state.arcade.accepted = true;
+    game.state.arcade.random = false;
     game.begin_names();
     let Menu::Names(selection) = &mut game.state.menu else {
         panic!("names owner")
@@ -624,4 +626,195 @@ fn losing_human_penalty_upload_and_prompt_release_resume_on_distinct_nmi_boundar
     game.audio(83, 44100, &mut actual);
     assert_eq!(actual, expected);
     assert_eq!(game.observe(), branch.observe());
+}
+
+#[test]
+fn arcade_menu_renders_and_enters_names_without_consuming_start() {
+    let mut game = port();
+    game.tick(&InputState::default());
+    game.state.automatic[0] = crate::controls::ControllerWord(crate::controls::BUTTON_START);
+    game.begin_names();
+    assert_eq!(game.state.scene, Scene::ArcadeMenu);
+    let mut held = InputState::default();
+    held.held.insert("start".into());
+    game.tick(&held);
+    assert_eq!(game.state.scene, Scene::ArcadeMenu);
+    let mut frame = Frame::new(256, 224).unwrap();
+    game.render(&mut frame);
+    assert!(
+        frame
+            .pixels
+            .chunks_exact(4)
+            .any(|pixel| pixel[..3] != [0, 0, 0])
+    );
+    assert!(
+        frame.pixels[..256 * 4 * 40]
+            .chunks_exact(4)
+            .all(|pixel| pixel[..3] == [0, 0, 0])
+    );
+    let saved = game.snapshot_json().unwrap();
+    let mut receiver = port();
+    receiver.restore_snapshot_json(&saved).unwrap();
+    game.tick(&InputState::default());
+    game.tick(&held);
+    assert_eq!(game.state.scene, Scene::Names);
+    assert!(game.state.arcade.accepted);
+    assert_eq!(game.state.arcade.order.len(), 16);
+    for _ in 0..120 {
+        game.tick(&InputState::default());
+    }
+    assert!(game.state.fault.is_none(), "{:?}", game.state.fault);
+}
+
+#[test]
+fn arcade_random_assets_restore_direction_and_valid_bales_while_classic_is_unchanged() {
+    let mut game = port();
+    game.state.random = crate::runtime::RandomState([18, 52, 86, 120, 155]);
+    game.state.arcade.accepted = true;
+    game.state
+        .arcade
+        .start(&game.resources.sequence, &mut game.state.random);
+    let mut saw_forward = false;
+    let mut saw_reverse = false;
+    let mut saw_changed_bales = false;
+    for cursor in 0..16 {
+        game.state.arcade.cursor = cursor;
+        game.state.sequence_index = game.state.arcade.order[cursor];
+        game.state.arcade.roll(&mut game.state.random);
+        let selected = game.resources.arcade_race(&game.state).unwrap();
+        saw_reverse |= selected.reversed;
+        saw_forward |= !selected.reversed;
+        let original = game.resources.sequence[game.state.sequence_index]
+            .original
+            .unwrap();
+        let slots = crate::world::tracks::decode_order(
+            &game.resources.rom
+                [crate::world::tracks::ORDER_ROM..crate::world::tracks::ORDER_ROM + 64],
+        )
+        .unwrap();
+        let valid: Vec<_> = slots
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.original_track == original)
+            .flat_map(|(i, _)| {
+                crate::world::objects::load_original_content(&game.resources.rom, original, i as u8)
+                    .unwrap()
+                    .dynamic
+            })
+            .collect();
+        for bale in selected.objects.dynamic {
+            assert!(bale.world[0] == 0 || valid.contains(&bale));
+        }
+        saw_changed_bales |= selected.objects.dynamic
+            != game
+                .resources
+                .race(game.state.sequence_index, 0)
+                .unwrap()
+                .objects
+                .dynamic;
+        let saved = game.snapshot_json().unwrap();
+        let mut receiver = port();
+        receiver.restore_snapshot_json(&saved).unwrap();
+        assert_eq!(receiver.selected.reversed, selected.reversed);
+        assert_eq!(receiver.selected.objects, selected.objects);
+    }
+    assert!(saw_forward && saw_reverse && saw_changed_bales);
+    game.state.arcade.random = false;
+    let before = game.state.random;
+    game.state.arcade.roll(&mut game.state.random);
+    let classic = game.resources.arcade_race(&game.state).unwrap();
+    let source = game
+        .resources
+        .race(game.state.sequence_index, game.state.session.order_slot)
+        .unwrap();
+    assert_eq!(classic.reversed, source.reversed);
+    assert_eq!(classic.objects, source.objects);
+    assert_eq!(game.state.random, before);
+}
+
+#[test]
+fn arcade_random_race_runs_and_snapshot_replays_frames() {
+    let mut game = port();
+    game.tick(&InputState::default());
+    game.state.session.signature = game.resources.frontend.signature;
+    game.state.session.records = game.resources.results.defaults.clone();
+    crate::frontend::shop::initialize_wallets(&mut game.state.session);
+    game.state.session.active_humans = 1;
+    game.state.session.joined_pages = [1, 0];
+    game.state.random = crate::runtime::RandomState([18, 52, 86, 120, 155]);
+    game.state.arcade.accepted = true;
+    game.state
+        .arcade
+        .start(&game.resources.sequence, &mut game.state.random);
+    game.state.arcade.roll(&mut game.state.random);
+    game.state.sequence_index = game.state.arcade.order[0];
+    game.state.scene = Scene::RacePrepare;
+    for _ in 0..600 {
+        game.tick(&InputState::default());
+        if game.state.scene == Scene::Racing {
+            break;
+        }
+    }
+    assert_eq!(game.state.scene, Scene::Racing, "{:?}", game.state.fault);
+    let mut receiver = port();
+    receiver
+        .restore_snapshot_json(&game.snapshot_json().unwrap())
+        .unwrap();
+    for _ in 0..60 {
+        game.tick(&InputState::default());
+        receiver.tick(&InputState::default());
+    }
+    assert!(game.state.fault.is_none());
+    assert_eq!(game.observe(), receiver.observe());
+}
+
+#[test]
+fn track15_bottom_boundary_crash_regression_finishes_race() {
+    // Minimal racing owners extracted from the user's tick-8469 crash. Video,
+    // audio, and terrain are rebuilt normally from the original assets.
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/track15-boundary.json")).unwrap();
+    let mut game = port();
+    game.tick(&InputState::default());
+    game.state.session.signature = game.resources.frontend.signature;
+    game.state.session.records = game.resources.results.defaults.clone();
+    crate::frontend::shop::initialize_wallets(&mut game.state.session);
+    game.state.session.active_humans = 1;
+    game.state.session.joined_pages = [1, 0];
+    game.state.session.order_slot = 1;
+    game.state.arcade = serde_json::from_value(fixture["arcade"].clone()).unwrap();
+    game.state.sequence_index = fixture["sequence_index"].as_u64().unwrap() as usize;
+    game.state.random = serde_json::from_value(fixture["random"].clone()).unwrap();
+    game.state.scene = Scene::RacePrepare;
+    for _ in 0..600 {
+        game.tick(&InputState::default());
+        if game.state.scene == Scene::Racing {
+            break;
+        }
+    }
+    assert_eq!(game.state.scene, Scene::Racing);
+    game.state.race.trucks = serde_json::from_value(fixture["trucks"].clone()).unwrap();
+    game.state.race.progress = serde_json::from_value(fixture["progress"].clone()).unwrap();
+    game.state.race.terrain_history =
+        serde_json::from_value(fixture["terrain_history"].clone()).unwrap();
+    game.state.random = serde_json::from_value(fixture["random"].clone()).unwrap();
+    let mut input = InputState::default();
+    input.held.insert("b".into());
+    let mut clock = romatlas_port::audio::SampleClock::new(crate::config::RATE, 48000).unwrap();
+    let mut finished = false;
+    for tick in 0..12000 {
+        game.tick(&input);
+        let mut audio = Vec::new();
+        game.audio(clock.next_tick(), 48000, &mut audio);
+        assert!(
+            game.state.fault.is_none(),
+            "tick {tick}: {:?}",
+            game.state.fault
+        );
+        if game.state.scene == Scene::Postrace {
+            finished = true;
+            break;
+        }
+    }
+    assert!(finished, "did not finish race: {:?}", game.state.scene);
 }

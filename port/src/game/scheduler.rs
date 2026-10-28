@@ -143,6 +143,7 @@ impl Port {
         self.state.race.enabled_layers = self.state.session.enabled_layers;
     }
     fn enter_frontend(&mut self) -> Result<()> {
+        self.state.arcade = Default::default();
         self.state.session.active_humans = 1;
         self.state.session.order_slot = 0;
         self.state.session.inhibit_video = VIDEO_UPLOAD_INHIBITED;
@@ -205,6 +206,12 @@ impl Port {
         Ok(())
     }
     pub(super) fn begin_names(&mut self) {
+        if !self.state.arcade.accepted {
+            self.reclaim_window();
+            self.state.arcade.previous = self.state.automatic[0].0;
+            self.state.scene(Scene::ArcadeMenu);
+            return;
+        }
         self.reclaim_window();
         let selection = self.take_selection();
         self.state.menu = Menu::Names(selection);
@@ -363,10 +370,7 @@ impl Port {
     }
     fn prepare_race(&mut self) -> Result<()> {
         self.reclaim_window();
-        self.selected = Arc::new(
-            self.resources
-                .race(self.state.sequence_index, self.state.session.order_slot)?,
-        );
+        self.selected = Arc::new(self.resources.arcade_race(&self.state)?);
         self.terrain = Arc::new(terrain::decode_terrain(&self.selected.track.terrain)?);
         if let results::RecordKey::Added(id) = self.record_key() {
             self.state
@@ -680,7 +684,8 @@ impl Port {
                 self.state.race.video.display.force_blank = true;
                 self.state.race.video.display.masked_layers = 0;
                 presentation::reset_display(&mut self.state.race.video.display);
-                self.state.sequence_index = 0;
+                self.state.sequence_index = self.state.arcade.order.first().copied().unwrap_or(0);
+                self.state.arcade.roll(&mut self.state.random);
                 self.state.scene(Scene::RacePrepare);
                 return Ok(SceneStep::Continue);
             }
@@ -876,6 +881,23 @@ impl Port {
                             self.state.splash_cold = false;
                             self.state.scene(Scene::Splashes);
                         }
+                    }
+                    break;
+                }
+                Scene::ArcadeMenu => {
+                    let accepted = self.state.arcade.input(self.state.automatic[0].0);
+                    crate::frontend::arcade::draw(
+                        &mut self.state.race.video.memory,
+                        &mut self.state.race.video.display,
+                        &resources.shared,
+                        self.state.arcade.random,
+                    )?;
+                    self.state.session.inhibit_video = VIDEO_UPLOAD_INHIBITED;
+                    if accepted {
+                        self.state
+                            .arcade
+                            .start(&resources.sequence, &mut self.state.random);
+                        self.begin_names();
                     }
                     break;
                 }
@@ -1262,7 +1284,15 @@ impl Port {
                 .is_some_and(|postrace| postrace.phase == results::PostracePhase::Complete),
             "postrace returned before owners completed"
         );
-        self.state.sequence_index = (self.state.sequence_index + 1) % self.resources.sequence.len();
+        if self.state.arcade.random && self.state.arcade.accepted {
+            self.state.arcade.cursor =
+                (self.state.arcade.cursor + 1) % self.state.arcade.order.len();
+            self.state.sequence_index = self.state.arcade.order[self.state.arcade.cursor];
+            self.state.arcade.roll(&mut self.state.random);
+        } else {
+            self.state.sequence_index =
+                (self.state.sequence_index + 1) % self.resources.sequence.len();
+        }
         self.state.session.order_slot =
             self.state.session.order_slot.wrapping_add(1) & race::ORIGINAL_ORDER_MASK;
         self.state.postrace = None;

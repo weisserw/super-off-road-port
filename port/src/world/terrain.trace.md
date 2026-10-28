@@ -232,3 +232,23 @@ also supplies96 natural sampler inputs/outputs across900 further race frames:
 observations contain no blocked wheel; blocking/edge policies remain established
 by independent source contracts and the full-view census, not claimed as naturally
 observed in that original run.
+
+## Track 15 bottom-boundary crash follow-up (2026-10-28)
+
+The user-provided `crash.data` reaches the original track 15 bottom boundary
+while racing in Random mode (tick 8469, second race, forward). The saved native
+fault is `probe beyond loaded terrain`. Row 43 contains copied AA blocking
+controls but its lower height corners extend beyond the $16B1-byte copy. The
+previous eager decoder discarded those controls together with the missing
+geometry. This is a native rejection, not a source error branch.
+
+Source `sample_terrain_height_or_block` ($174F..$1807) consumes control and
+neighbor controls when blocked and returns SEC without calling interpolation;
+the corner bytes loaded by $18EB are unused in that branch. Native patches now
+retain every copied control and optional complete geometry. Blocked samples
+follow the existing response without requiring unused heights. Open samples
+still reject incomplete geometry; no height padding, terrain clamping, or ROM
+window extension is introduced. Neighbor controls outside either end of the copy
+use the explicit zero power-on policy already used for preceding controls.
+Physical-console untouched WRAM contents remain unestablished. This supersedes
+the blanket last-row rejection above, while preserving its historical rationale.

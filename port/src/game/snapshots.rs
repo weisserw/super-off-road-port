@@ -38,10 +38,7 @@ impl Port {
         self.resources
             .poses
             .resolve(&mut saved.state.race.video.poses)?;
-        let selected = Arc::new(
-            self.resources
-                .race(saved.state.sequence_index, saved.state.session.order_slot)?,
-        );
+        let selected = Arc::new(self.resources.arcade_race(&saved.state)?);
         let terrain = Arc::new(crate::world::terrain::decode_terrain(
             &selected.track.terrain,
         )?);
@@ -73,6 +70,7 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
         state.session.joined_pages.iter().all(|&mask| mask <= 3),
         "invalid frontend joined mask"
     );
+    state.arcade.validate(resources.sequence.len())?;
     let video = &state.race.video;
     let mut sprite_order = video.sprites.order;
     sprite_order.sort_unstable();
@@ -336,10 +334,15 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
             .find(|track| track.id == choice.id)
             .context("snapshot track missing")?
             .content;
+        let reversed = if state.arcade.accepted && state.arcade.random {
+            state.arcade.reversed
+        } else {
+            choice.reversed
+        };
+        let route = &content.routes[usize::from(reversed)];
         ensure!(
-            postrace.route.as_ref() == Some(&content.routes[usize::from(choice.reversed)])
-                && postrace.route_count
-                    == content.routes[usize::from(choice.reversed)].checkpoint_count,
+            postrace.route.as_ref() == Some(route)
+                && postrace.route_count == route.checkpoint_count,
             "postrace route resource mismatch"
         );
         ensure!(

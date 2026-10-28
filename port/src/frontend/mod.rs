@@ -4,3 +4,5 @@ pub mod leaderboard;
 pub mod names;
 pub mod results;
 pub mod shop;
+
+pub mod arcade;

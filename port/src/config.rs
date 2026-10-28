@@ -4,8 +4,8 @@ pub const ROM_BYTES: usize = 524288;
 pub const DISPLAY_ASPECT: (u32, u32) = (4, 3);
 pub const SIZE: (u32, u32) = (256, 224);
 pub const RATE: romatlas_port::timing::TickRate = romatlas_port::timing::TickRate::SNES_NTSC;
-/// Native power-on policy for untouched WRAM controls immediately before the
-/// terrain copy. Source can probe these at the top/left edge; no source write
+/// Native power-on policy for untouched WRAM controls outside the terrain
+/// copy. Source can probe these at the course edges; no source write
 /// establishes their physical-console power-on value.
 pub const UNCOPIED_TERRAIN_CONTROL: u8 = 0;
 pub fn settings() -> romatlas_port::settings::Settings {

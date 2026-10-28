@@ -172,6 +172,8 @@ fn modernization_conditional_timer_carry_keeps_existing_byte_semantics() {
 fn modernization_frontend_handoffs_preserve_nmi_yield_and_window_owner() {
     let mut game = port();
     game.state.session.page_limit = 0;
+    game.state.arcade.accepted = true;
+    game.state.arcade.random = false;
     game.begin_names();
     game.state.session.joined_pages = [1, 0];
     let state::Menu::Names(selection) = &mut game.state.menu else {

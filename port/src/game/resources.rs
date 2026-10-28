@@ -182,6 +182,13 @@ impl Resources {
             sound,
         })
     }
+    pub fn arcade_race(&self, state: &super::state::State) -> Result<RaceAssets> {
+        let mut race = self.race(state.sequence_index, state.session.order_slot)?;
+        if state.arcade.accepted && state.arcade.random {
+            crate::frontend::arcade::randomize(&mut race, &state.arcade, &self.sequence)?;
+        }
+        Ok(race)
+    }
     pub fn race(&self, index: usize, source_order: u8) -> Result<RaceAssets> {
         let choice = self
             .sequence

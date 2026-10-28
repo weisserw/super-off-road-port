@@ -1,5 +1,5 @@
 //! Shared native game. Desktop, browser and headless drivers consume these APIs.
-mod resources;
+pub(crate) mod resources;
 mod scheduler;
 mod snapshots;
 mod state;
@@ -93,7 +93,7 @@ impl Port {
         let choice = &self.resources.sequence[state.sequence_index];
         serde_json::json!({"version":1,"implementation":"native","scene":format!("{:?}",state.scene),"simulation_ticks":state.ticks,
             "runtime":{"nmi_frames":state.nmi,"nmi_enabled":state.nmi_enabled,"animation_frame":race.progress.animation_frame,"audio_heartbeat":state.heartbeat,"random_history":state.random.0,"initial_random_history":self.initial_random_history.0},
-            "progression":{"sequence_index":state.sequence_index,"sequence_count":self.resources.sequence.len(),"track":choice.id,"original_track":choice.original,"reversed":choice.reversed,"source_order":state.session.order_slot,"active_humans":state.session.active_humans,"winner_plus_one":race.progress.winner_plus_one,"records":state.session.records,"added_records":state.added_records,"wallets":state.session.wallets},
+            "progression":{"sequence_index":state.sequence_index,"sequence_count":self.resources.sequence.len(),"track":choice.id,"original_track":choice.original,"reversed":if state.arcade.accepted && state.arcade.random {state.arcade.reversed} else {choice.reversed},"arcade":state.arcade,"source_order":state.session.order_slot,"active_humans":state.session.active_humans,"winner_plus_one":race.progress.winner_plus_one,"records":state.session.records,"added_records":state.added_records,"wallets":state.session.wallets},
             "actors":race.trucks.iter().enumerate().map(|(slot,truck)|serde_json::json!({"slot":slot,"world":truck.world,"speed":truck.speed,"heading":truck.heading,"controller":truck.controller.0,"nitro":truck.nitro.encoded(),"upgrades":truck.upgrades,"wheels":truck.wheels,"progress":race.progress.drivers[slot],"contact_cooldown":truck.contact_cooldown,"effect_cursor":truck.contact_effect_player.encoded(),"nitro_cursor":truck.nitro_effect.encoded(),"surface_cursor":race.world.contacts[slot].player.encoded()})).collect::<Vec<_>>(),
             "timers":{"race":race.timer,"awards":state.postrace.as_ref().map(|value|&value.awards),"game_over":state.game_over_timer},
             "flags":{"inhibit_video":state.session.inhibit_video,"prepared":race.prepared,"fault":state.fault},

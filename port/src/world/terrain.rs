@@ -96,27 +96,28 @@ impl TriangleRegion {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct SurfacePatch {
-    geometry: HeightPatch,
+    geometry: Option<HeightPatch>,
     regions: [TriangleRegion; 4],
     blocked_exit: BlockDirection,
 }
 impl SurfacePatch {
-    fn sample(self, fractions: [u8; 2], original_track: u8, history: u8) -> Sample {
+    fn sample(self, fractions: [u8; 2], original_track: u8, history: u8) -> Result<Sample> {
         let [x, y] = fractions;
         let triangle = 2 * usize::from(y >= x) + usize::from(u16::from(x) + u16::from(y) > 255);
         let region = self.regions[triangle];
-        Sample {
+        Ok(Sample {
             surface: if region.blocked {
                 Surface::Blocked(self.blocked_exit)
             } else {
                 Surface::Height(interpolate_geometry(
-                    self.geometry,
+                    self.geometry
+                        .context("probe beyond loaded terrain heights")?,
                     fractions,
                     original_track,
                 ))
             },
             control_history: (history >> 1) | (u8::from(region.marked) << 7),
-        }
+        })
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -127,19 +128,21 @@ pub struct Terrain {
 }
 impl Terrain {
     fn decode_views(bytes: &[u8]) -> Self {
-        // All byte-aligned views are meaningful, including non-cell-aligned
-        // column aliases. Incomplete geometry stays unavailable at query time.
-        let patches = (0..bytes.len().saturating_sub(ROW_BYTES + CELL_BYTES))
+        // A blocked cell needs its control, not interpolated heights. The last
+        // copied row has valid blocking controls but incomplete lower corners.
+        // Keep those views without inventing missing geometry.
+        let patches = (0..bytes.len().saturating_sub(2))
             .map(|index| {
-                let geometry = HeightPatch {
-                    corners: [
-                        bytes[index],
-                        bytes[index + CELL_BYTES],
-                        bytes[index + ROW_BYTES],
-                        bytes[index + ROW_BYTES + CELL_BYTES],
-                    ],
-                    center: bytes[index + 1],
-                };
+                let geometry =
+                    (index + ROW_BYTES + CELL_BYTES < bytes.len()).then(|| HeightPatch {
+                        corners: [
+                            bytes[index],
+                            bytes[index + CELL_BYTES],
+                            bytes[index + ROW_BYTES],
+                            bytes[index + ROW_BYTES + CELL_BYTES],
+                        ],
+                        center: bytes[index + 1],
+                    });
                 let control = bytes[index + 2];
                 let blocked_exit = decode_escape(control, |slot| {
                     let delta = [
@@ -149,13 +152,14 @@ impl Terrain {
                         (CELL_BYTES + 2) as isize,
                     ][slot];
                     let at = index as isize + delta;
-                    // Complete geometry includes index+135. Positive neighbor reads
-                    // are at most index+134; all negative reads are in -130..-1.
-                    if at < 0 {
-                        crate::config::UNCOPIED_TERRAIN_CONTROL
-                    } else {
-                        bytes[at as usize]
-                    }
+                    // Source can consult untouched WRAM on either side of
+                    // the copied window. Apply the explicit native control
+                    // policy; heights outside the copy remain unavailable.
+                    usize::try_from(at)
+                        .ok()
+                        .and_then(|at| bytes.get(at))
+                        .copied()
+                        .unwrap_or(crate::config::UNCOPIED_TERRAIN_CONTROL)
                 });
                 SurfacePatch {
                     geometry,
@@ -329,9 +333,12 @@ pub fn neighborhood(
     position: [u16; 2],
 ) -> Result<Neighborhood> {
     let patch = terrain.patch_at(tables, position)?;
+    let geometry = patch
+        .geometry
+        .context("probe beyond loaded terrain heights")?;
     Ok(Neighborhood {
-        corners: patch.geometry.corners,
-        center: patch.geometry.center,
+        corners: geometry.corners,
+        center: geometry.center,
         control: patch
             .regions
             .iter()
@@ -368,14 +375,15 @@ pub fn classify(
         adjacent.right,
     ];
     SurfacePatch {
-        geometry: HeightPatch {
+        geometry: Some(HeightPatch {
             corners: patch.corners,
             center: patch.center,
-        },
+        }),
         regions: TriangleRegion::decode(patch.control),
         blocked_exit: decode_escape(patch.control, |slot| controls[slot]),
     }
     .sample(fractions, original_track, history)
+    .unwrap()
 }
 pub fn wheel_probe(
     tables: &SamplingTables,
@@ -487,11 +495,11 @@ pub fn sample_at(
     original_track: u8,
     history: u8,
 ) -> Result<Sample> {
-    Ok(terrain.patch_at(tables, position)?.sample(
+    terrain.patch_at(tables, position)?.sample(
         position.map(|coordinate| coordinate as u8),
         original_track,
         history,
-    ))
+    )
 }
 
 #[cfg(test)]
@@ -673,6 +681,33 @@ mod tests {
             assert_eq!(
                 neighborhood(&flat(0), &sampling, [0x0100, y]).unwrap(),
                 patch([0; 4], FLAT_HEIGHT, FLAT_HEIGHT)
+            );
+        }
+    }
+
+    #[test]
+    fn bottom_boundary_uses_copied_blocks_without_missing_heights() {
+        let terrain = flat(ALL_BLOCK_PAIRS | ALL_SURFACE_MARKERS);
+        let position = [0x1640, 0x2b40];
+        assert!(neighborhood(&terrain, &tables(), position).is_err());
+        let sample = sample_at(&terrain, &tables(), position, ORDINARY_TRACK, 0x12).unwrap();
+        assert_eq!(sample.surface, Surface::Blocked(BlockDirection(0xc0)));
+        assert_eq!(sample.control_history, 0x89);
+        // Removing the block must still fail: no missing heights are invented.
+        assert!(sample_at(&flat(0), &tables(), position, ORDINARY_TRACK, 0).is_err());
+    }
+
+    #[test]
+    fn original_track15_bottom_boundary_is_blocked_for_every_triangle() {
+        let bytes = rom();
+        let terrain = decode_terrain(&bytes[0x5c410..0x5c410 + TERRAIN_BYTES]).unwrap();
+        for fractions in [[0x20, 0x10], [0xe0, 0x90], [0x10, 0x20], [0x90, 0xe0]] {
+            let position = [0x1600 | fractions[0], 0x2b00 | fractions[1]];
+            assert_eq!(
+                sample_at(&terrain, &tables(), position, 15, 0)
+                    .unwrap()
+                    .surface,
+                Surface::Blocked(BlockDirection(0xc0))
             );
         }
     }

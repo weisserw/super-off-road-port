@@ -184,7 +184,7 @@
       "id": "terrain-window-boundary-state",
       "impact": "behavior",
       "status": "resolved",
-      "summary": "Reachable preceding terrain controls use explicit native zero power-on policy (config::UNCOPIED_TERRAIN_CONTROL); source neighbor reads short-circuit at the first opening. Physical-console untouched WRAM values remain unknown. Missing copied neighborhoods still reject.",
+      "summary": "Reachable preceding terrain controls use explicit native zero power-on policy (config::UNCOPIED_TERRAIN_CONTROL); source neighbor reads short-circuit at the first opening. Physical-console untouched WRAM values remain unknown. Track 15 crash follow-up: copied boundary blocking controls remain usable without missing lower heights; open samples still reject missing geometry. The same explicit zero policy covers untouched neighbor controls after the copy.",
       "consumers": [
         "port/src/world/terrain.rs"
       ],
