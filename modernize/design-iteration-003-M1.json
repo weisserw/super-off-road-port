@@ -31,5 +31,9 @@
     "first_nitro": "modernize/evidence/iteration-003/M1-original-pickups",
     "money_with_reward_delta": "modernize/evidence/iteration-003/M1-original-money-verified",
     "natural_setup": "Reset-only original recipes, persistent20-frame branching followed by single-frame refinement; no state writes."
-  }
+  },
+  "prior_status_label": "not_recorded",
+  "status": "retained",
+  "implementation_commit": "8f837ee",
+  "retained_validation_record": "modernize/changes.json#M1"
 }

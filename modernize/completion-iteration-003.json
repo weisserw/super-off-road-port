@@ -1,0 +1,98 @@
+{
+  "iteration": 3,
+  "status": "complete",
+  "selected_targets": [
+    "M1",
+    "R2",
+    "M5",
+    "R1",
+    "M6",
+    "M7",
+    "M2",
+    "M3",
+    "M4"
+  ],
+  "implementation_commits": [
+    {
+      "id": "M1",
+      "category": "modernization",
+      "difficulty": "medium",
+      "commit": "8f837ee",
+      "subject": "modernize: model pickup lifecycle and rewards natively"
+    },
+    {
+      "id": "R2",
+      "category": "refactoring",
+      "difficulty": "medium",
+      "commit": "1d2f964",
+      "subject": "refactor: make powertrain proposal and retained outputs explicit"
+    },
+    {
+      "id": "M5",
+      "category": "modernization",
+      "difficulty": "medium",
+      "commit": "f3ebcb8",
+      "subject": "modernize: select native truck body frames and images"
+    },
+    {
+      "id": "R1",
+      "category": "refactoring",
+      "difficulty": "medium",
+      "commit": "b9c60df",
+      "subject": "refactor: isolate postrace and loss scene orchestration"
+    },
+    {
+      "id": "M6",
+      "category": "modernization",
+      "difficulty": "medium",
+      "commit": "a134cf9",
+      "subject": "modernize: express pair contacts as native response actions"
+    },
+    {
+      "id": "M7",
+      "category": "modernization",
+      "difficulty": "medium",
+      "commit": "8bc4086",
+      "subject": "modernize: own leaderboard entries and native score quantities"
+    },
+    {
+      "id": "M2",
+      "category": "modernization",
+      "difficulty": "high",
+      "commit": "cf24cc4",
+      "subject": "modernize: decode terrain into native surface patches"
+    },
+    {
+      "id": "M3",
+      "category": "modernization",
+      "difficulty": "high",
+      "commit": "3f4cf66",
+      "subject": "modernize: compile main audio scores into native events"
+    },
+    {
+      "id": "M4",
+      "category": "modernization",
+      "difficulty": "high",
+      "commit": "6889531",
+      "subject": "modernize: own native effect animation players"
+    }
+  ],
+  "requirements": {
+    "scope": "All9 selected targets retained; supplementary M8 unselected.",
+    "order": "Six medium targets, then high M2/M3/M4, following recorded tie order.",
+    "per_target_commits": "Every selected target has its own implementation commit and retained validation; QA tooling commits separate.",
+    "contracts": "Each change records preimplementation source/original expectations, faithful starting checkpoint/identity, source-backed unit coverage, fresh changed-build relevant integration, presentation review and uncertainty limits.",
+    "final_validation": "656 fast and optimized tests; all6 fmt/desktop/web gates pass. Five fresh M4 routes compare full selected state/frame/PCM to preserved starting build.",
+    "preservation": "Original ROM/frozen source hashes,1527 ledger regions/1408 units/22 uncertainties and original metadata preserved. No publication/deployment or unselected implementation.",
+    "records": "Architecture, source traces, per-target designs, changes/candidates/status records reconcile retained outcomes. Stale M1/R2 design labels corrected."
+  },
+  "evidence_audit": "modernize/evidence/iteration-003/completion-evidence-audit.json",
+  "final_source_sha256": "10e418b5577e3171738d3dea46da0ed881a0485da08523375e5c5f1b7aa6a433",
+  "final_binary_sha256": "da2ed8993245ef7214b81d679e612f742c6c9f267cad203ffcb9e85e90219cee",
+  "limits": [
+    "No whole-game QA or desktop/browser runtime claim; headless server.",
+    "No physical audio playback or exact original PCM claim.",
+    "Existing source timing/unowned-data uncertainties remain documented."
+  ],
+  "preserved_unrelated_work": "modernize/goal.md remains uncommitted and untouched by target commits."
+}

@@ -1,7 +1,7 @@
 {
   "id": "R2",
   "category": "refactoring",
-  "status": "planned_next",
+  "status": "retained",
   "scope": "Explicit powertrain inputs/outcome at update_trucks; same game model.",
   "state_boundary": {
     "immediate_retained": [
@@ -56,5 +56,8 @@
   "second_interruption": {
     "result": "First nonincremental run also received exit143 during compilation; no compiler diagnostic, no OOM kernel report. Preserved log; reran same full check attached to PTY with incremental disabled. This attached run now passes639 optimized tests and is building frontends.",
     "evidence": "modernize/evidence/iteration-003/R2-nonincremental-interrupted.log"
-  }
+  },
+  "prior_status_label": "planned_next",
+  "implementation_commit": "1d2f964",
+  "retained_validation_record": "modernize/changes.json#R2"
 }

@@ -23,7 +23,7 @@
   ],
   "changes": "modernize/changes.json",
   "changes_note": "All nine selected targets retained in recorded difficulty order with individual implementation commits. Supplementary M8 remains unselected.",
-  "next_action": "Commit M4, then verify final per-target commits, records and scope audit. No further implementation is selected.",
+  "next_action": "Selected iteration complete. A further iteration or supplementary M8 implementation requires a new user selection.",
   "validation_status": "M4 passes656 fast/optimized tests and six desktop/web gates; original nitro visuals/replay, five fresh source-backed native routes and exact state/frame/PCM comparisons pass; original accounting preserved.",
   "menu_revision": 4,
   "investigation": "Revision4 completes16-area source survey with8 modernization and2 refactoring options; supplementary M8 resolves the prior composite shortfall but remains unselected.",
@@ -57,8 +57,10 @@
     "M6": "a134cf9",
     "M7": "8bc4086",
     "M2": "cf24cc4",
-    "M3": "3f4cf66"
+    "M3": "3f4cf66",
+    "M4": "6889531"
   },
   "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged.",
-  "supplemental_menu": "M8 remains a revision4 proposal awaiting selection; the original9-target execution scope is unchanged."
+  "supplemental_menu": "M8 remains a revision4 proposal awaiting selection; the original9-target execution scope is unchanged.",
+  "completion_audit": "modernize/completion-iteration-003.json"
 }
