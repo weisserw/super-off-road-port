@@ -1036,222 +1036,224 @@ impl Port {
                     }
                     break;
                 }
-                Scene::Postrace => {
-                    let phase = self
-                        .state
-                        .postrace
-                        .as_ref()
-                        .context("missing postrace")?
-                        .phase;
-                    match phase {
-                        results::PostracePhase::HudWait => {
-                            if let Some(window) = &mut self.state.window {
-                                window.hdma_enabled = false;
-                            }
-                            self.postrace_owner(false)?;
-                            self.state.transition = None;
-                        }
-                        results::PostracePhase::Window => {
-                            if self.state.transition.is_none() {
-                                self.begin_race_window(t::RaceTransitionKind::Postrace)?;
-                            }
-                            if self.race_window_frame()? {
-                                self.state.transition = None;
-                                self.postrace_owner(true)?;
-                                self.start_fade(
-                                    t::FadeDirection::Out,
-                                    self.state.session.enabled_layers,
-                                );
-                            }
-                        }
-                        results::PostracePhase::FadeOut => {
-                            if self.fade_frame()? {
-                                self.postrace_owner(true)?;
-                                continue;
-                            }
-                        }
-                        results::PostracePhase::PodiumSetup => {
-                            if let Some(window) = &mut self.state.window {
-                                window.hdma_enabled = false;
-                            }
-                            memory::upload_fonts(
-                                &mut self.state.race.video.memory,
-                                &resources.shared,
-                                false,
-                            )?;
-                            self.postrace_owner(false)?;
-                            self.start_fade(t::FadeDirection::In, 5);
-                        }
-                        results::PostracePhase::FadeIn => {
-                            if self.fade_frame()? {
-                                self.postrace_owner(true)?;
-                            }
-                        }
-                        results::PostracePhase::Awards | results::PostracePhase::RecordWait => {
-                            let key = self.record_key();
-                            let postrace = self.state.postrace.as_mut().unwrap();
-                            if phase == results::PostracePhase::Awards {
-                                results::advance_awards(
-                                    &mut postrace.awards,
-                                    &mut self.state.session,
-                                    &mut self.state.added_records,
-                                    &key,
-                                    self.state.race.timer,
-                                    postrace.rank,
-                                    self.state.race.progress.animation_frame,
-                                    self.state.automatic,
-                                    &mut self.state.race.video.memory,
-                                )?;
-                            } else {
-                                results::finish_record_wait(
-                                    &mut postrace.awards,
-                                    &self.state.session,
-                                    &self.state.added_records,
-                                    &key,
-                                    self.state.race.timer,
-                                    postrace.rank,
-                                    self.state.automatic,
-                                    &mut self.state.race.video.memory,
-                                )?;
-                            }
-                            self.postrace_owner(false)?;
-                            if self.state.postrace.as_ref().unwrap().phase
-                                == results::PostracePhase::Contract
-                            {
-                                self.start_frontend_window(t::FrontendKind::Contracting)?;
-                            }
-                        }
-                        results::PostracePhase::Contract => {
-                            if self.frontend_window_frame()? {
-                                self.state.frontend_motion = None;
-                                self.postrace_owner(true)?;
-                                continue;
-                            }
-                        }
-                        results::PostracePhase::LossPrelude => {
-                            self.postrace_owner(false)?;
-                            if let Some(window) = &mut self.state.window {
-                                window.hdma_enabled = false;
-                            }
-                            self.state.scene(Scene::LossSetup);
-                        }
-                        results::PostracePhase::Shop => {
-                            self.begin_shop(ShopNext::Postrace)?;
-                        }
-                        results::PostracePhase::ConvertInactive => {
-                            self.postrace_owner(false)?;
-                            self.finish_postrace()?;
-                            continue;
-                        }
-                        results::PostracePhase::Restart => {
-                            self.enter_frontend()?;
-                        }
-                        results::PostracePhase::Complete => {
-                            self.finish_postrace()?;
-                            continue;
-                        }
-                        results::PostracePhase::LossPrompt
-                        | results::PostracePhase::LossUploadWait => {
-                            self.state.scene(Scene::LossSetup)
-                        }
-                    }
-                    break;
-                }
-                Scene::LossSetup => {
-                    self.postrace_owner(false)?;
-                    self.state.loss_restart = self.state.postrace.as_ref().unwrap().phase
-                        == results::PostracePhase::Restart;
-                    self.begin_loss_display()?;
-                    break;
-                }
-                Scene::LossShowWait => {
-                    if let Some(prompt) = &mut self.state.prompt {
-                        results::release_continue(
-                            prompt,
-                            &mut self.state.session,
-                            &mut self.state.race.video.memory,
-                            &mut self.state.race.video.display,
-                        );
-                    } else {
-                        self.state.session.inhibit_video = 0;
-                        self.state.session.enabled_layers = LOSS_VISIBLE_LAYERS;
-                    }
-                    self.start_fade(t::FadeDirection::In, LOSS_VISIBLE_LAYERS);
-                    self.state.scene(Scene::LossFade);
-                    break;
-                }
-                Scene::LossFade => {
-                    if self.fade_frame()? {
-                        self.state.game_over_timer = results::GAME_OVER_TIMEOUT;
-                        self.state.scene(Scene::LossPrompt);
-                    }
-                    break;
-                }
-                Scene::LossPrompt => {
-                    let done = if self.state.session.active_humans != 0 {
-                        let prompt = self
-                            .state
-                            .prompt
-                            .as_mut()
-                            .context("missing continuation prompt")?;
-                        results::poll_continue(
-                            prompt,
-                            self.state.automatic,
-                            &mut self.state.race.video.memory,
-                        )?;
-                        prompt.dismissed
-                    } else {
-                        results::poll_game_over(
-                            &mut self.state.game_over_timer,
-                            self.state.automatic,
-                        )
-                    };
-                    if done {
-                        sprites::hide_frontend(
-                            &mut self.state.race.video.sprites,
-                            &mut self.state.race.video.memory,
-                        )?;
-                        self.start_frontend_window(t::FrontendKind::Contracting)?;
-                        self.state.scene(Scene::LossClose);
-                    }
-                    break;
-                }
-                Scene::LossClose => {
-                    if self.frontend_window_frame()? {
-                        if self.state.loss_restart {
-                            self.enter_frontend()?;
-                        } else {
-                            let prompt = self
-                                .state
-                                .prompt
-                                .as_ref()
-                                .context("missing accepted continuation")?;
-                            match results::resolve_choice(
-                                &mut self.state.session,
-                                prompt.loser,
-                                prompt.choice,
-                            )? {
-                                results::LossRoute::RestartFrontend => self.enter_frontend()?,
-                                _ => {
-                                    self.state.postrace.as_mut().unwrap().phase =
-                                        results::PostracePhase::Shop;
-                                    self.begin_shop(ShopNext::Postrace)?;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                }
-                Scene::LossRestart => {
-                    self.enter_frontend()?;
-                    break;
-                }
+                Scene::Postrace => match self.advance_postrace_scene(&resources)? {
+                    SceneStep::Yield => break,
+                    SceneStep::Continue => continue,
+                },
+                Scene::LossSetup
+                | Scene::LossShowWait
+                | Scene::LossFade
+                | Scene::LossPrompt
+                | Scene::LossClose
+                | Scene::LossRestart => match self.advance_loss_scene()? {
+                    SceneStep::Yield => break,
+                    SceneStep::Continue => continue,
+                },
             }
         }
         self.sync_race_views();
         self.flush_sounds()?;
         Ok(())
     }
+    fn advance_postrace_scene(&mut self, resources: &Resources) -> Result<SceneStep> {
+        let phase = self
+            .state
+            .postrace
+            .as_ref()
+            .context("missing postrace")?
+            .phase;
+        match phase {
+            results::PostracePhase::HudWait => {
+                if let Some(window) = &mut self.state.window {
+                    window.hdma_enabled = false;
+                }
+                self.postrace_owner(false)?;
+                self.state.transition = None;
+            }
+            results::PostracePhase::Window => {
+                if self.state.transition.is_none() {
+                    self.begin_race_window(t::RaceTransitionKind::Postrace)?;
+                }
+                if self.race_window_frame()? {
+                    self.state.transition = None;
+                    self.postrace_owner(true)?;
+                    self.start_fade(t::FadeDirection::Out, self.state.session.enabled_layers);
+                }
+            }
+            results::PostracePhase::FadeOut => {
+                if self.fade_frame()? {
+                    self.postrace_owner(true)?;
+                    return Ok(SceneStep::Continue);
+                }
+            }
+            results::PostracePhase::PodiumSetup => {
+                if let Some(window) = &mut self.state.window {
+                    window.hdma_enabled = false;
+                }
+                memory::upload_fonts(&mut self.state.race.video.memory, &resources.shared, false)?;
+                self.postrace_owner(false)?;
+                self.start_fade(t::FadeDirection::In, 5);
+            }
+            results::PostracePhase::FadeIn => {
+                if self.fade_frame()? {
+                    self.postrace_owner(true)?;
+                }
+            }
+            results::PostracePhase::Awards | results::PostracePhase::RecordWait => {
+                let key = self.record_key();
+                let postrace = self.state.postrace.as_mut().unwrap();
+                if phase == results::PostracePhase::Awards {
+                    results::advance_awards(
+                        &mut postrace.awards,
+                        &mut self.state.session,
+                        &mut self.state.added_records,
+                        &key,
+                        self.state.race.timer,
+                        postrace.rank,
+                        self.state.race.progress.animation_frame,
+                        self.state.automatic,
+                        &mut self.state.race.video.memory,
+                    )?;
+                } else {
+                    results::finish_record_wait(
+                        &mut postrace.awards,
+                        &self.state.session,
+                        &self.state.added_records,
+                        &key,
+                        self.state.race.timer,
+                        postrace.rank,
+                        self.state.automatic,
+                        &mut self.state.race.video.memory,
+                    )?;
+                }
+                self.postrace_owner(false)?;
+                if self.state.postrace.as_ref().unwrap().phase == results::PostracePhase::Contract {
+                    self.start_frontend_window(t::FrontendKind::Contracting)?;
+                }
+            }
+            results::PostracePhase::Contract => {
+                if self.frontend_window_frame()? {
+                    self.state.frontend_motion = None;
+                    self.postrace_owner(true)?;
+                    return Ok(SceneStep::Continue);
+                }
+            }
+            results::PostracePhase::LossPrelude => {
+                self.postrace_owner(false)?;
+                if let Some(window) = &mut self.state.window {
+                    window.hdma_enabled = false;
+                }
+                self.state.scene(Scene::LossSetup);
+            }
+            results::PostracePhase::Shop => {
+                self.begin_shop(ShopNext::Postrace)?;
+            }
+            results::PostracePhase::ConvertInactive => {
+                self.postrace_owner(false)?;
+                self.finish_postrace()?;
+                return Ok(SceneStep::Continue);
+            }
+            results::PostracePhase::Restart => {
+                self.enter_frontend()?;
+            }
+            results::PostracePhase::Complete => {
+                self.finish_postrace()?;
+                return Ok(SceneStep::Continue);
+            }
+            results::PostracePhase::LossPrompt | results::PostracePhase::LossUploadWait => {
+                self.state.scene(Scene::LossSetup)
+            }
+        }
+        Ok(SceneStep::Yield)
+    }
+
+    fn advance_loss_scene(&mut self) -> Result<SceneStep> {
+        match self.state.scene {
+            Scene::LossSetup => {
+                self.postrace_owner(false)?;
+                self.state.loss_restart =
+                    self.state.postrace.as_ref().unwrap().phase == results::PostracePhase::Restart;
+                self.begin_loss_display()?;
+            }
+            Scene::LossShowWait => {
+                if let Some(prompt) = &mut self.state.prompt {
+                    results::release_continue(
+                        prompt,
+                        &mut self.state.session,
+                        &mut self.state.race.video.memory,
+                        &mut self.state.race.video.display,
+                    );
+                } else {
+                    self.state.session.inhibit_video = 0;
+                    self.state.session.enabled_layers = LOSS_VISIBLE_LAYERS;
+                }
+                self.start_fade(t::FadeDirection::In, LOSS_VISIBLE_LAYERS);
+                self.state.scene(Scene::LossFade);
+            }
+            Scene::LossFade => {
+                if self.fade_frame()? {
+                    self.state.game_over_timer = results::GAME_OVER_TIMEOUT;
+                    self.state.scene(Scene::LossPrompt);
+                }
+            }
+            Scene::LossPrompt => {
+                let done = if self.state.session.active_humans != 0 {
+                    let prompt = self
+                        .state
+                        .prompt
+                        .as_mut()
+                        .context("missing continuation prompt")?;
+                    results::poll_continue(
+                        prompt,
+                        self.state.automatic,
+                        &mut self.state.race.video.memory,
+                    )?;
+                    prompt.dismissed
+                } else {
+                    results::poll_game_over(&mut self.state.game_over_timer, self.state.automatic)
+                };
+                if done {
+                    sprites::hide_frontend(
+                        &mut self.state.race.video.sprites,
+                        &mut self.state.race.video.memory,
+                    )?;
+                    self.start_frontend_window(t::FrontendKind::Contracting)?;
+                    self.state.scene(Scene::LossClose);
+                }
+            }
+            Scene::LossClose => {
+                if self.frontend_window_frame()? {
+                    if self.state.loss_restart {
+                        self.enter_frontend()?;
+                    } else {
+                        let prompt = self
+                            .state
+                            .prompt
+                            .as_ref()
+                            .context("missing accepted continuation")?;
+                        match results::resolve_choice(
+                            &mut self.state.session,
+                            prompt.loser,
+                            prompt.choice,
+                        )? {
+                            results::LossRoute::RestartFrontend => self.enter_frontend()?,
+                            _ => {
+                                self.state.postrace.as_mut().unwrap().phase =
+                                    results::PostracePhase::Shop;
+                                self.begin_shop(ShopNext::Postrace)?;
+                            }
+                        }
+                    }
+                }
+            }
+            Scene::LossRestart => {
+                self.enter_frontend()?;
+            }
+            _ => unreachable!("loss handler dispatched outside loss scenes"),
+        }
+        Ok(SceneStep::Yield)
+    }
+
     fn finish_postrace(&mut self) -> Result<()> {
         ensure!(
             self.state

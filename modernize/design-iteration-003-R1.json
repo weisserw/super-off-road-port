@@ -1,0 +1,77 @@
+{
+  "id": "R1",
+  "category": "refactoring",
+  "status": "retained",
+  "starting_implementation_commit": "f3ebcb8",
+  "starting_binary_sha256": "49d6573aea3032d1edd5abeb985f01afdba75bdfdc80864375db70538d239426",
+  "source_with_contract_sha256": "75be15eca231f98d0822789e8e8eeceaaf832e70802d3d66f3b53486c6c701a2",
+  "snapshot": "modernize/evidence/iteration-003/R1-preimplementation/source-with-contract.tar.gz",
+  "before": "Global advance contains nested PostracePhase orchestration and seven loss scene branches, mixing outer loop continue/break with owner/presentation calls.",
+  "after_plan": "advance_postrace_scene(resources) and advance_loss_scene return existing SceneStep::Continue/Yield. Preserve domain methods, frame prefix and sync/flush suffix.",
+  "before_edit_contracts": [
+    "iteration_three_postrace_completion_prepares_next_race_in_the_same_nmi",
+    "iteration_three_postrace_fade_completion_sets_up_podium_without_priming_new_fade",
+    "Existing losing_human_penalty_upload_and_prompt_release_resume_on_distinct_nmi_boundaries"
+  ],
+  "invariants": [
+    "FadeOut\u2192PodiumSetup, Contract completion, ConvertInactive and Complete preserve same-NMI continuation.",
+    "HudWait, podium setup and loss upload/release remain distinct waits.",
+    "Awards, record commit, settlement, penalty and score insertion stay ordered and once-only.",
+    "No new phase model, source arithmetic, source input gating or sound flush timing changes."
+  ],
+  "next_integration_probe": "Extend existing natural player lifecycle endpoint into AI-finished human loss\u2192postrace\u2192continue/shop or restart, with persistent branches and source-backed original path. Preserve initial setup failures as tooling gaps, never invent phase reachability.",
+  "preimplementation_result": {
+    "command": "python3 run.py check-fast --test-filter iteration_three_postrace",
+    "result": "PASS;2 integrated source-backed same-NMI tests on retained M5, before any dispatcher edit",
+    "evidence": "modernize/evidence/iteration-003/R1-preimplementation/check-fast.log"
+  },
+  "natural_discovery": {
+    "status": "native_setup_found",
+    "evidence": "modernize/evidence/iteration-003/R1-native-discovery",
+    "postrace_tick": 5658,
+    "loss_prompt_tick": 6572,
+    "observed": "Normal shop/purchase/ready/driving recipe, then no-input human loss. AI winner2 leads to Postrace, then LossPrompt with active human0 and starter wallet reset. No state writes; persistent session and durable reset recipe retained.",
+    "next_probe": "Branch from the validated loss prompt to accept/decline and record next shop/frontend; independently establish original losing-human route from existing guarded natural shop cache."
+  },
+  "implementation": "advance_postrace_scene(&Resources) and advance_loss_scene return existing SceneStep. Global NMI prefix and synchronization/sound suffix remain in advance. Token audit confirms unchanged branch operations after control-result conversion.",
+  "natural_original": {
+    "evidence": "modernize/evidence/iteration-003/R1-original-formal",
+    "setup": "Guarded natural shop snapshot plus input-only no-input race/loss discovery; prompt observed at discovery frame9. Persistent yes/no branches independently captured.",
+    "observed": "Left/default choice0 B returns shop; Right choice1 B returns title/frontend. Prompt and endpoints visually reviewed.",
+    "limits": "Physical frame clocks are not aligned to native; no exact whole-race original/native match claimed."
+  },
+  "qa_commit": "d9218c1",
+  "validation": [
+    {
+      "command": "python3 run.py check-fast --test-filter iteration_three_postrace",
+      "result": "PASS; two same-NMI tests on starting implementation and extracted handlers"
+    },
+    {
+      "command": "Token audit of extracted postrace/loss branch bodies",
+      "result": "PASS; tokens equal after continue/break result conversion, ignoring whitespace/trailing commas",
+      "evidence": "modernize/evidence/iteration-003/R1-handler-audit.json"
+    },
+    {
+      "command": "Original natural loss discovery and persistent continue yes/no branches",
+      "result": "PASS; choice0/default B returns shop, Right then B returns title/frontend; captures reviewed",
+      "evidence": "modernize/evidence/iteration-003/R1-original-formal"
+    },
+    {
+      "command": "Original ledger identity/accounting audit",
+      "result": "PASS;1527 regions/1408 units/22 uncertainties",
+      "evidence": "modernize/evidence/iteration-003/R1-accounting-audit.json"
+    },
+    {
+      "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+      "result": "PASS;644 optimized library tests, fmt, desktop/web Clippy and builds, Rust1.90.0/Cargo.lock; no graphics window launched",
+      "evidence": "modernize/evidence/iteration-003/R1-full-check.json"
+    },
+    {
+      "command": "iteration3_postrace.py fresh build against starting natural reset/input plan",
+      "result": "PASS;7 complete semantic landmarks, byte-identical frames and all checkpoint fields except build identity including route PCM hashes",
+      "evidence": "modernize/evidence/iteration-003/R1-retained-postrace/comparison.json"
+    }
+  ],
+  "retained_source_sha256": "26aba2d5d9f72dea3e2de50b1bcac09193f750d7331668235227b786473bf5fd",
+  "retained_binary_sha256": "6c37556b1dbc426b3f00ae92a1a618645d9912acbe010b5885c1028badd99b20"
+}

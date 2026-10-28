@@ -27,7 +27,7 @@ Truck now owns `trucks::nitro::NitroStock`, measured in charges. Movement consum
 
 Both value owners isolate noncanonical byte states accepted by old saves in a compatibility variant. Normal gameplay uses native quantities. Legacy conditional arithmetic remains solely to preserve those accepted states, including their display/record effects; it is not a new invalid-BCD hardware claim. Serialization and public semantic observations retain their existing fields and values.
 
-The scheduler delegates name and shop scene steps to cohesive methods. An explicit yield/continue result preserves whether a scene handoff consumes the current NMI. Window ownership, retained button history, view synchronization and sound flushing retain their positions. Evidence, remaining limits and per-target outcomes are in [modernize/changes.json](modernize/changes.json); original trace contracts and historical architecture below are preserved.
+The scheduler delegates name, shop, postrace and loss scene steps to cohesive methods. Postrace orchestration retains its domain phases; loss orchestration owns the display setup, upload/release waits, continue input and return route. An explicit yield/continue result preserves whether a scene handoff consumes the current NMI. Window ownership, retained button history, view synchronization and sound flushing retain their positions. Evidence, remaining limits and per-target outcomes are in [modernize/changes.json](modernize/changes.json); original trace contracts and historical architecture below are preserved.
 
 ## Modernization iteration 2
 

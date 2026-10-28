@@ -11,6 +11,77 @@ fn port() -> Port {
     Port::load_assets_seeded(&rom, &MemoryAssets::default(), [0; 5]).unwrap()
 }
 
+fn postrace_port(phase: crate::frontend::results::PostracePhase) -> Port {
+    use crate::frontend::results;
+    let mut game = port();
+    game.state.session.records = game.resources.results.defaults.clone();
+    game.state.session.inhibit_video = 1;
+    game.state.session.active_humans = 1;
+    game.state.session.joined_pages = [1, 0];
+    let route = game.selected.track.routes[usize::from(game.selected.reversed)].clone();
+    game.state.postrace = Some(results::Postrace {
+        route_count: route.checkpoint_count,
+        route: Some(route),
+        loss_route: None,
+        phase,
+        rank: [0, 1, 2, 3],
+        awards: results::Awards {
+            timer: 0,
+            new_record_pending: 0,
+            phase: results::AwardsFrame::Waiting,
+        },
+    });
+    game.state.scene = Scene::Postrace;
+    game.state.nmi_enabled = true;
+    game.sync_race_views();
+    game
+}
+
+#[test]
+fn iteration_three_postrace_completion_prepares_next_race_in_the_same_nmi() {
+    use crate::frontend::results::PostracePhase;
+    for phase in [PostracePhase::Complete, PostracePhase::ConvertInactive] {
+        let mut game = postrace_port(phase);
+        let nmi = game.state.nmi;
+        let order = game.state.session.order_slot;
+        game.tick(&InputState::default());
+        assert!(game.state.fault.is_none(), "{:?}", game.state.fault);
+        assert_eq!(game.state.nmi, nmi.wrapping_add(1));
+        assert_eq!(game.state.scene, Scene::RaceFade);
+        assert!(game.state.postrace.is_none());
+        assert_eq!(game.state.session.order_slot, order + 1);
+        assert_eq!(game.state.race.timer.encoded()[0], 0x16);
+    }
+}
+
+#[test]
+fn iteration_three_postrace_fade_completion_sets_up_podium_without_priming_new_fade() {
+    use crate::{
+        frontend::results::PostracePhase,
+        presentation::transitions::{Fade, FadeDirection},
+    };
+    let mut game = postrace_port(PostracePhase::FadeOut);
+    game.state.fade = Some(Fade {
+        direction: FadeDirection::Out,
+        primed: true,
+        complete: false,
+        animation_counter: 15,
+        enabled_layers: 5,
+    });
+    let nmi = game.state.nmi;
+    game.tick(&InputState::default());
+    assert!(game.state.fault.is_none(), "{:?}", game.state.fault);
+    assert_eq!(game.state.nmi, nmi.wrapping_add(1));
+    assert_eq!(
+        game.state.postrace.as_ref().unwrap().phase,
+        PostracePhase::FadeIn
+    );
+    let fade = game.state.fade.as_ref().unwrap();
+    assert_eq!(fade.direction, FadeDirection::In);
+    assert!(!fade.primed);
+    assert_eq!(game.state.race.progress.animation_frame, 0);
+}
+
 #[test]
 fn iteration_three_pickup_wire_states_and_retained_fields_roundtrip() {
     let mut game = port();

@@ -5,7 +5,7 @@
   "iteration": 3,
   "selection_status": "selected",
   "pilot_started": true,
-  "active_candidate": "R1",
+  "active_candidate": "M6",
   "baseline": "modernize/baseline.json",
   "starting_checkpoint": "modernize/iteration-003-preparation.json",
   "previous_iteration": "modernize/iterations/002/status.json",
@@ -22,10 +22,10 @@
     "M4"
   ],
   "changes": "modernize/changes.json",
-  "changes_note": "Prior iterations preserved. All9 iteration3 targets selected; M1/R2 completed with individual commits; other targets remain pending.",
-  "next_action": "Commit validated M5, then establish R1 postrace/loss same-NMI and upload/release contracts before extracting scheduler handlers.",
-  "validation_status": "M1/R2/M5 retained. M5 passes642 library/optimized tests, desktop/web gates, independent original pose VRAM observations, exact R2 route state/frame/PCM and preserved-ledger identity audit.",
-  "menu_revision": 3,
+  "changes_note": "M1/R2/M5/R1 retained with individual implementation commits. Five selected targets remain. M8 supplementary proposal remains unselected.",
+  "next_action": "Establish M6 preimplementation decision mapping and fresh original/starting-build contact contracts, preserve R1 checkpoint, then replace packed response dispatch with native pair decisions. Remaining order M6,M7,M2,M3,M4.",
+  "validation_status": "R1 passes644 optimized tests and desktop/web gates; independent original continue routes plus7 exact native state/frame/PCM landmarks. Prior M1/R2/M5 retained.",
+  "menu_revision": 4,
   "investigation": "Complete bounded major-subsystem survey recorded:16 inspected areas,7 modernization and2 refactoring candidates; specific deferrals explain the1 modernization shortfall.",
   "execution_order": [
     "M1",
@@ -42,7 +42,7 @@
     "M1": "retained",
     "R2": "retained",
     "M5": "retained",
-    "R1": "pending",
+    "R1": "retained",
     "M6": "pending",
     "M7": "pending",
     "M2": "pending",
@@ -51,7 +51,9 @@
   },
   "implementation_commits": {
     "M1": "8f837ee",
-    "R2": "1d2f964"
+    "R2": "1d2f964",
+    "M5": "f3ebcb8"
   },
-  "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged."
+  "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged.",
+  "supplemental_menu": "M8 proposed after broadened investigation; awaits selection. Prior selections/outcomes and active R1 work preserved."
 }

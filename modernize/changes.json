@@ -739,6 +739,67 @@
       "gameplay_changes": "none intended or observed in required comparisons",
       "commit_subject": "modernize: select native truck body frames and images",
       "qa_tooling_commit": "1fed15d"
+    },
+    {
+      "id": "R1",
+      "iteration": 3,
+      "category": "refactoring",
+      "status": "retained",
+      "starting_implementation_commit": "f3ebcb8",
+      "design": "modernize/design-iteration-003-R1.json",
+      "before": "Postrace and six loss branches nested in global NMI advance; continue/break mixed with phase owner calls.",
+      "after": "advance_postrace_scene(&Resources) and advance_loss_scene return existing SceneStep; unchanged game phases, owned state and rule bodies.",
+      "benefit": "Localizes result/loss orchestration and makes same-NMI handoff versus yield explicit at the global dispatcher.",
+      "model_change": false,
+      "preserved": [
+        "Global NMI prefix and synchronization/sound suffix",
+        "Same-NMI FadeOut, Contract, ConvertInactive and Complete handoffs",
+        "Separate loss penalty, display upload and prompt release waits",
+        "Awards/record settlement, input routing and frontend restart defaults"
+      ],
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter iteration_three_postrace",
+          "result": "PASS; two same-NMI tests on starting implementation and extracted handlers"
+        },
+        {
+          "command": "Token audit of extracted postrace/loss branch bodies",
+          "result": "PASS; tokens equal after continue/break result conversion, ignoring whitespace/trailing commas",
+          "evidence": "modernize/evidence/iteration-003/R1-handler-audit.json"
+        },
+        {
+          "command": "Original natural loss discovery and persistent continue yes/no branches",
+          "result": "PASS; choice0/default B returns shop, Right then B returns title/frontend; captures reviewed",
+          "evidence": "modernize/evidence/iteration-003/R1-original-formal"
+        },
+        {
+          "command": "Original ledger identity/accounting audit",
+          "result": "PASS;1527 regions/1408 units/22 uncertainties",
+          "evidence": "modernize/evidence/iteration-003/R1-accounting-audit.json"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+          "result": "PASS;644 optimized library tests, fmt, desktop/web Clippy and builds, Rust1.90.0/Cargo.lock; no graphics window launched",
+          "evidence": "modernize/evidence/iteration-003/R1-full-check.json"
+        },
+        {
+          "command": "iteration3_postrace.py fresh build against starting natural reset/input plan",
+          "result": "PASS;7 complete semantic landmarks, byte-identical frames and all checkpoint fields except build identity including route PCM hashes",
+          "evidence": "modernize/evidence/iteration-003/R1-retained-postrace/comparison.json"
+        }
+      ],
+      "remaining_uncertainty": [
+        "No whole-game QA or desktop/browser runtime claim.",
+        "Original/native physical race clocks are not asserted aligned; branch routes and visible endpoints are independently observed."
+      ],
+      "qa_commit": "d9218c1",
+      "implementation_commit_subject": "refactor: isolate postrace and loss scene orchestration",
+      "retained_source_sha256": "26aba2d5d9f72dea3e2de50b1bcac09193f750d7331668235227b786473bf5fd",
+      "retained_binary_sha256": "6c37556b1dbc426b3f00ae92a1a618645d9912acbe010b5885c1028badd99b20",
+      "reviews": [
+        "modernize/evidence/iteration-003/R1-original-formal/review.json",
+        "modernize/evidence/iteration-003/R1-retained-postrace/review.json"
+      ]
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",
