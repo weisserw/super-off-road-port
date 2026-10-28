@@ -198,3 +198,21 @@ probes, including blocked branches, before subsequent owners consume history.
 Full snapshot/debug state must include contact cooldown and pending working owner
 state as stage4 composes actual domains. No gameplay QA, source mutation, toolkit
 edit, commit or publication occurred.
+
+## Modernization iteration3 M6: native pair-response decisions
+
+`ContactAngles` now carries a `ContactResponse` chosen directly from two native
+relative-heading bands. The runtime no longer packs sector nibbles, compares
+encoded case bytes or extracts turn policy from their bits. Responses name the
+actual operations: reverse exchange, parallel exchange, paired oblique turns,
+current deflection, or current braking with peer deflection. The four angular
+bands keep the same byte-wrapped +20/quarter-turn quantization. Oblique signed
+heading deltas are selected once; applying them still wraps only the low byte.
+
+The source case table and all numeric expectations above remain authoritative.
+Encoded test cases use a test-only adapter to select the same relative headings;
+no packed compatibility dispatch remains in production. No snapshot format or
+public semantic observation changes. Transactional clones, descending peer
+visits, immediate accepted peer changes, cooldowns, normal bearing, separation,
+terrain-history order and sound request gating remain unchanged. The isolated
+conditional deflection entry remains independent of normal response selection.

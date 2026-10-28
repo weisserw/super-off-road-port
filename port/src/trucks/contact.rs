@@ -26,17 +26,58 @@ pub fn coarse_distance(current: [u16; 2], other: [u16; 2]) -> u16 {
     }
     sum
 }
-pub fn heading_sector(relative: u8) -> u8 {
-    const SECTOR_BIAS: u8 = 0x20;
-    const SECTOR_SHIFT: u32 = 6;
-    relative.wrapping_add(SECTOR_BIAS) >> SECTOR_SHIFT
+/// Relative heading around the pair normal, in the original four angular bands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RelativeHeading {
+    AlongNormal,
+    PositiveQuarter,
+    OppositeNormal,
+    NegativeQuarter,
+}
+impl RelativeHeading {
+    fn from_angle(relative: u8) -> Self {
+        match relative.wrapping_add(0x20) >> 6 {
+            0 => Self::AlongNormal,
+            1 => Self::PositiveQuarter,
+            2 => Self::OppositeNormal,
+            3 => Self::NegativeQuarter,
+            _ => unreachable!(),
+        }
+    }
+}
+/// Pair response is an action, independent of the source's nibble packing.
+/// The asymmetry is intentional: swapping the trucks need not swap the action.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ContactResponse {
+    ReverseExchange,
+    ParallelExchange,
+    ObliqueTurns { current_delta: i8, other_delta: i8 },
+    DeflectCurrent,
+    BrakeCurrentDeflectOther,
+}
+impl ContactResponse {
+    fn from_headings(current: RelativeHeading, other: RelativeHeading) -> Self {
+        use RelativeHeading::*;
+        match (current, other) {
+            (OppositeNormal, AlongNormal) => Self::ReverseExchange,
+            (AlongNormal, AlongNormal) | (OppositeNormal, OppositeNormal) => Self::ParallelExchange,
+            (PositiveQuarter | NegativeQuarter, PositiveQuarter | NegativeQuarter) => {
+                Self::ObliqueTurns {
+                    current_delta: if current == PositiveQuarter { -4 } else { 4 },
+                    other_delta: if other == NegativeQuarter { -4 } else { 4 },
+                }
+            }
+            (PositiveQuarter | NegativeQuarter, _) => Self::DeflectCurrent,
+            _ => Self::BrakeCurrentDeflectOther,
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ContactAngles {
     pub normal: u8,
     pub relative_current: u8,
     pub relative_other: u8,
-    pub packed_sectors: u8,
+    pub response: ContactResponse,
 }
 /// Position differences use committed records, while the current heading is the
 /// current working heading. AI's shared vector quantization must not be replaced
@@ -48,7 +89,6 @@ pub fn contact_angles(
     tables: &BearingTable,
 ) -> ContactAngles {
     const VECTOR_REDUCTION_SHIFT: u32 = 4;
-    const OTHER_SECTOR_SHIFT: u32 = 4;
     let x = (committed_current.world[0].wrapping_sub(other.world[0]) >> VECTOR_REDUCTION_SHIFT)
         as u8 as i8;
     let y = ((committed_current.world[1].wrapping_sub(other.world[1]) >> VECTOR_REDUCTION_SHIFT)
@@ -61,8 +101,10 @@ pub fn contact_angles(
         normal,
         relative_current,
         relative_other,
-        packed_sectors: heading_sector(relative_current)
-            | (heading_sector(relative_other) << OTHER_SECTOR_SHIFT),
+        response: ContactResponse::from_headings(
+            RelativeHeading::from_angle(relative_current),
+            RelativeHeading::from_angle(relative_other),
+        ),
     }
 }
 /// Mutate speed/heading only. Positional separation follows every case, including
@@ -70,65 +112,56 @@ pub fn contact_angles(
 pub fn respond_motion(
     working: &mut WorkingMotion,
     other: &mut Truck,
-    packed_sectors: u8,
+    response: ContactResponse,
     animation: u8,
     active_humans: u8,
 ) -> Option<u16> {
-    const REVERSE_CASE: u8 = 0x02;
-    const PARALLEL_CASES: [u8; 2] = [0, 0x22];
-    const OBLIQUE_CASES: [u8; 4] = [0x11, 0x13, 0x31, 0x33];
     const IMPACT_THRESHOLD: u8 = 0x20;
     const PARALLEL_TURN: u8 = 0x10;
-    const OBLIQUE_TURN: u8 = 4;
     const OTHER_ASYMMETRIC_TURN: u8 = 8;
     let current_speed = working.speed as u8;
     let other_speed = other.speed as u8;
-    let sound = if packed_sectors == REVERSE_CASE {
-        let current = other_speed.wrapping_neg();
-        let exchanged = current_speed.wrapping_neg();
-        set_low(&mut working.speed, current);
-        set_low(&mut other.speed, exchanged);
-        (current as i8).unsigned_abs() >= IMPACT_THRESHOLD
-            || (exchanged as i8).unsigned_abs() >= IMPACT_THRESHOLD
-    } else if PARALLEL_CASES.contains(&packed_sectors) {
-        set_low(&mut working.speed, other_speed);
-        set_low(&mut other.speed, current_speed);
-        turn(
-            &mut other.heading,
-            if animation & 1 == 0 {
-                PARALLEL_TURN
-            } else {
-                PARALLEL_TURN.wrapping_neg()
-            },
-        );
-        (other_speed.wrapping_sub(current_speed) as i8).unsigned_abs() >= IMPACT_THRESHOLD
-    } else if OBLIQUE_CASES.contains(&packed_sectors) {
-        turn(
-            &mut working.heading,
-            if packed_sectors & 3 == 1 {
-                OBLIQUE_TURN.wrapping_neg()
-            } else {
-                OBLIQUE_TURN
-            },
-        );
-        turn(
-            &mut other.heading,
-            if packed_sectors >> 4 == 3 {
-                OBLIQUE_TURN.wrapping_neg()
-            } else {
-                OBLIQUE_TURN
-            },
-        );
-        false
-    } else if packed_sectors & 1 != 0 {
-        turn(&mut working.heading, PARALLEL_TURN);
-        other_speed >= IMPACT_THRESHOLD
-    } else {
-        if (current_speed as i8) >= 0 {
-            set_low(&mut working.speed, current_speed >> 2);
+    let sound = match response {
+        ContactResponse::ReverseExchange => {
+            let current = other_speed.wrapping_neg();
+            let exchanged = current_speed.wrapping_neg();
+            set_low(&mut working.speed, current);
+            set_low(&mut other.speed, exchanged);
+            (current as i8).unsigned_abs() >= IMPACT_THRESHOLD
+                || (exchanged as i8).unsigned_abs() >= IMPACT_THRESHOLD
         }
-        turn(&mut other.heading, OTHER_ASYMMETRIC_TURN);
-        working.speed as u8 >= IMPACT_THRESHOLD
+        ContactResponse::ParallelExchange => {
+            set_low(&mut working.speed, other_speed);
+            set_low(&mut other.speed, current_speed);
+            turn(
+                &mut other.heading,
+                if animation & 1 == 0 {
+                    PARALLEL_TURN
+                } else {
+                    PARALLEL_TURN.wrapping_neg()
+                },
+            );
+            (other_speed.wrapping_sub(current_speed) as i8).unsigned_abs() >= IMPACT_THRESHOLD
+        }
+        ContactResponse::ObliqueTurns {
+            current_delta,
+            other_delta,
+        } => {
+            turn(&mut working.heading, current_delta as u8);
+            turn(&mut other.heading, other_delta as u8);
+            false
+        }
+        ContactResponse::DeflectCurrent => {
+            turn(&mut working.heading, PARALLEL_TURN);
+            other_speed >= IMPACT_THRESHOLD
+        }
+        ContactResponse::BrakeCurrentDeflectOther => {
+            if (current_speed as i8) >= 0 {
+                set_low(&mut working.speed, current_speed >> 2);
+            }
+            turn(&mut other.heading, OTHER_ASYMMETRIC_TURN);
+            working.speed as u8 >= IMPACT_THRESHOLD
+        }
     };
     (sound && active_humans != 0).then_some(IMPACT_SOUND_COMMAND)
 }
@@ -261,7 +294,7 @@ pub fn service_contacts(
         let sound = respond_motion(
             &mut proposal,
             &mut next[other_slot],
-            angles.packed_sectors,
+            angles.response,
             environment.animation,
             environment.active_humans,
         );
@@ -360,6 +393,25 @@ mod tests {
             active_humans: 1,
         }
     }
+    fn respond_legacy_case(
+        working: &mut WorkingMotion,
+        other: &mut Truck,
+        packed: u8,
+        animation: u8,
+        active_humans: u8,
+    ) -> Option<u16> {
+        assert!(packed & 0xcc == 0);
+        respond_motion(
+            working,
+            other,
+            ContactResponse::from_headings(
+                RelativeHeading::from_angle((packed & 3) * 0x40),
+                RelativeHeading::from_angle((packed >> 4) * 0x40),
+            ),
+            animation,
+            active_humans,
+        )
+    }
     #[test]
     fn bearing_loader_preserves_all_rom_cells_and_checks_bounds() {
         let b = rom();
@@ -399,7 +451,16 @@ mod tests {
             (0xe0, 0),
             (0xff, 0),
         ] {
-            assert_eq!(heading_sector(a), s, "angle{a:02x}");
+            assert_eq!(
+                RelativeHeading::from_angle(a),
+                [
+                    RelativeHeading::AlongNormal,
+                    RelativeHeading::PositiveQuarter,
+                    RelativeHeading::OppositeNormal,
+                    RelativeHeading::NegativeQuarter
+                ][s],
+                "angle{a:02x}"
+            );
         }
     }
     #[test]
@@ -419,7 +480,10 @@ mod tests {
                 normal: 0xe0,
                 relative_current: 0x30,
                 relative_other: 0x40,
-                packed_sectors: 0x11
+                response: ContactResponse::ObliqueTurns {
+                    current_delta: -4,
+                    other_delta: 4
+                }
             }
         );
     }
@@ -474,7 +538,7 @@ mod tests {
                 ..truck()
             };
             assert_eq!(
-                respond_motion(&mut w, &mut o, packed, 0, 1),
+                respond_legacy_case(&mut w, &mut o, packed, 0, 1),
                 sound.then_some(IMPACT_SOUND_COMMAND),
                 "case{packed:02x}"
             );
@@ -499,7 +563,7 @@ mod tests {
                 ..truck()
             };
             assert_eq!(
-                respond_motion(&mut w, &mut o, 0x02, 0, 1),
+                respond_legacy_case(&mut w, &mut o, 0x02, 0, 1),
                 sound.then_some(IMPACT_SOUND_COMMAND)
             );
             assert_eq!(
@@ -518,7 +582,10 @@ mod tests {
                 ..truck()
             };
             // $7F-$80 wraps$FF, absolute byte magnitude1: quiet, despite large signed difference.
-            assert_eq!(respond_motion(&mut w, &mut o, 0x22, animation, 1), None);
+            assert_eq!(
+                respond_legacy_case(&mut w, &mut o, 0x22, animation, 1),
+                None
+            );
             assert_eq!(
                 (w.speed, o.speed, o.heading),
                 (0xab7f, 0xef80, 0x5600 | expected)
@@ -534,7 +601,7 @@ mod tests {
                 ..truck()
             };
             assert_eq!(
-                respond_motion(&mut w, &mut other, 0, 0, 1),
+                respond_legacy_case(&mut w, &mut other, 0, 0, 1),
                 sound.then_some(IMPACT_SOUND_COMMAND)
             );
         }
@@ -553,7 +620,7 @@ mod tests {
                 heading: 0x5600,
                 ..truck()
             };
-            assert_eq!(respond_motion(&mut w, &mut o, case, 1, 1), None);
+            assert_eq!(respond_legacy_case(&mut w, &mut o, case, 1, 1), None);
             assert_eq!(
                 (w.heading, o.heading),
                 (HEADING_HIGH | current, 0x5600 | other)
@@ -574,7 +641,7 @@ mod tests {
                 ..truck()
             };
             assert_eq!(
-                respond_motion(&mut w, &mut o, 0x10, 0, 1),
+                respond_legacy_case(&mut w, &mut o, 0x10, 0, 1),
                 sound.then_some(IMPACT_SOUND_COMMAND)
             );
             assert_eq!((w.speed, o.heading), (SPEED_HIGH | expected, 0x5604));
@@ -589,7 +656,7 @@ mod tests {
                 ..truck()
             };
             assert_eq!(
-                respond_motion(&mut w, &mut o, 0x01, 1, 1),
+                respond_legacy_case(&mut w, &mut o, 0x01, 1, 1),
                 sound.then_some(IMPACT_SOUND_COMMAND)
             );
             assert_eq!(
@@ -610,7 +677,7 @@ mod tests {
                 speed: 0,
                 ..truck()
             };
-            assert_eq!(respond_motion(&mut w, &mut o, 0, 0, mask), expected);
+            assert_eq!(respond_legacy_case(&mut w, &mut o, 0, 0, mask), expected);
         }
     }
     #[test]

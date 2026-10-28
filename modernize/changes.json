@@ -800,6 +800,84 @@
         "modernize/evidence/iteration-003/R1-original-formal/review.json",
         "modernize/evidence/iteration-003/R1-retained-postrace/review.json"
       ]
+    },
+    {
+      "id": "M6",
+      "iteration": 3,
+      "category": "modernization",
+      "status": "retained",
+      "starting_implementation_commit": "b9c60df",
+      "design": "modernize/design-iteration-003-M6.json",
+      "before": "Runtime packed current/other heading sectors drive byte-case dispatch and turn decisions.",
+      "after": "Native RelativeHeading bands select ContactResponse actions directly; ContactAngles carries the action and pair normal. respond_motion applies the action without case-byte decoding.",
+      "removed_machinery": [
+        "Runtime nibble packing at contact classification",
+        "Encoded-case comparisons and bit extraction in motion response"
+      ],
+      "remaining_boundaries": [
+        "Byte-wrapped relative heading quantization and low-byte speed/heading stores preserve observable rules.",
+        "Encoded16-case source fixtures remain under cfg(test) only; no snapshot or semantic debug encoding changed."
+      ],
+      "owners_order": "Motion proposals, descending immediate peer updates, transactional error safety, cooldowns and ordered terrain separation are unchanged.",
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter contact before/after edits",
+          "result": "PASS32 source-derived contact-related tests in both implementations; expected numeric outcomes unchanged",
+          "evidence": "modernize/evidence/iteration-003/M6-fast.json"
+        },
+        {
+          "command": "iteration3_contacts.py original",
+          "result": "PASS fresh original natural first contact and cooldown0->6->5, persistent refine/restore",
+          "evidence": "modernize/evidence/iteration-003/M6-original-contact/result.json"
+        },
+        {
+          "command": "iteration3_contacts.py native starting R1 binary",
+          "result": "PASS fresh natural first contact and exact persistent/fresh replay",
+          "evidence": "modernize/evidence/iteration-003/M6-starting-contact/result.json"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+          "result": "PASS644 optimized tests, fmt, desktop/web Clippy/builds; Rust1.90.0, locked dependencies",
+          "evidence": "modernize/evidence/iteration-003/M6-full-latest.json"
+        },
+        {
+          "command": "iteration3_contacts.py native --baseline M6-starting-contact --original M6-original-contact",
+          "result": "PASS3 full state landmarks, contact frame, route PCM and every checkpoint field except identity",
+          "evidence": "modernize/evidence/iteration-003/M6-retained-contact/comparison.json"
+        },
+        {
+          "command": "iteration3_postrace.py fresh build versus R1 retained starting build",
+          "result": "PASS7 player postrace/continue/restart landmarks, frames and PCM/checkpoint fields",
+          "evidence": "modernize/evidence/iteration-003/M6-retained-postrace/comparison.json"
+        },
+        {
+          "command": "qa_harness.py native-hazard-route plus compare_iteration2.py",
+          "result": "PASS hazard response/depletion/AI lap, all state landmarks,2 full frames and route PCM/checkpoint fields",
+          "evidence": "modernize/evidence/iteration-003/M6-retained-hazard/native-hazard-route/baseline-comparison.json"
+        },
+        {
+          "command": "Runtime representation and original ledger audits",
+          "result": "PASS no production packed dispatch;1527 regions/1408 units/22 uncertainties",
+          "evidence": [
+            "modernize/evidence/iteration-003/M6-production-boundary-audit.json",
+            "modernize/evidence/iteration-003/M6-accounting-audit.json"
+          ]
+        }
+      ],
+      "test_migration": "Existing packed fixtures select relative bands through a cfg(test) adapter. All16 fixed response tuples, boundary vectors, signed speed thresholds, heading wraps, high bytes, sound gate, scan ordering and separation expectations remain unchanged.",
+      "remaining_uncertainty": [
+        "No original exhaustive natural16-case runtime matrix; fixed source-derived tests establish those cases.",
+        "No whole-game QA, desktop/browser runtime or instruction-cycle claim."
+      ],
+      "implementation_commit_subject": "modernize: express pair contacts as native response actions",
+      "retained_source_sha256": "5b0ac7ffc4facd506263de98b2c69b0115bf4aec00a510112912bd7608f0998f",
+      "retained_binary_sha256": "ee3e96ca2fcd1a4f42ad8d6c813bf332c6b90f028d47d536429595a17443f3c1",
+      "reviews": [
+        "modernize/evidence/iteration-003/M6-original-contact/review.json",
+        "modernize/evidence/iteration-003/M6-retained-contact/review.json",
+        "modernize/evidence/iteration-003/M6-retained-postrace/review.json",
+        "modernize/evidence/iteration-003/M6-retained-hazard/native-hazard-route/review.json"
+      ]
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

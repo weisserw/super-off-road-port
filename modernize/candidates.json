@@ -1137,7 +1137,8 @@
     "M1": "retained",
     "R2": "retained",
     "M5": "retained",
-    "R1": "retained"
+    "R1": "retained",
+    "M6": "retained"
   },
   "supplemental_investigation": {
     "request": "Broaden the investigation; no new implementation selection implied.",

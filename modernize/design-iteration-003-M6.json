@@ -1,0 +1,92 @@
+{
+  "id": "M6",
+  "category": "modernization",
+  "status": "retained",
+  "starting_commit": "b9c60df",
+  "starting_binary_sha256": "6c37556b1dbc426b3f00ae92a1a618645d9912acbe010b5885c1028badd99b20",
+  "snapshot": "modernize/evidence/iteration-003/M6-preimplementation/source.tar.gz",
+  "snapshot_sha256": "8d1e422827b049877ed752a5393b231564d997dcb1d3434c698f9d52d8e30081",
+  "before": "Runtime ContactAngles packs two heading sectors into nibbles; respond_motion branches on packed values and reinterprets bits for turn/sound policy.",
+  "after_plan": "ContactResponse expresses reverse speed exchange, parallel exchange, oblique paired turns, current deflection or current braking with peer deflection. Classify the two relative headings directly into a decision; normal service consumes the decision, without packed sectors.",
+  "scope": "Only contact response representation and consumers. Preserve quantization, byte arithmetic, exact16-case asymmetry, immediate peer mutations, transactional error safety and terrain separation ordering.",
+  "contracts": [
+    "All16 source-case fixture in contact::tests",
+    "Byte speed/heading preservation and signed/wrapping audio thresholds",
+    "Cooldown skip and descending multi-peer scan",
+    "Terrain history current/other and per-pair ordering"
+  ],
+  "integration": [
+    "M6-starting-contact",
+    "M6-original-contact"
+  ],
+  "boundaries": "No ContactAngles serialization/API users; raw packed source fixtures migrate through a test-only adapter. No runtime legacy packed dispatch needed.",
+  "preimplementation": "PASS32 contact-related source contracts before edits; fresh original and native cooldown integration pass.",
+  "implementation": "RelativeHeading classifies angular bands; ContactResponse::from_headings creates direct actions. ContactAngles carries response and normal; respond_motion consumes native actions. Legacy nibble fixture adapter exists only under cfg(test).",
+  "targeted_result": "PASS32 contact-related contracts after edits, unchanged numeric outcomes.",
+  "source_response_matrix": {
+    "00": "parallel exchange",
+    "01": "current +16, other speed sound test",
+    "02": "negated cross exchange",
+    "03": "current +16, other speed sound test",
+    "10": "quarter nonnegative current, other +8",
+    "11": "current -4 / other +4, quiet",
+    "12": "quarter nonnegative current, other +8",
+    "13": "current +4 / other +4, quiet",
+    "20": "quarter nonnegative current, other +8",
+    "21": "current +16, other speed sound test",
+    "22": "parallel exchange",
+    "23": "current +16, other speed sound test",
+    "30": "quarter nonnegative current, other +8",
+    "31": "current -4 / other -4, quiet",
+    "32": "quarter nonnegative current, other +8",
+    "33": "current +4 / other -4, quiet"
+  },
+  "source_response_matrix_reference": "contact.trace.md Response cases and width-sensitive sound; existing all_sixteen_sector_pairs fixed numeric fixture",
+  "retained_source_sha256": "5b0ac7ffc4facd506263de98b2c69b0115bf4aec00a510112912bd7608f0998f",
+  "retained_binary_sha256": "ee3e96ca2fcd1a4f42ad8d6c813bf332c6b90f028d47d536429595a17443f3c1",
+  "validation": [
+    {
+      "command": "python3 run.py check-fast --test-filter contact before/after edits",
+      "result": "PASS32 source-derived contact-related tests in both implementations; expected numeric outcomes unchanged",
+      "evidence": "modernize/evidence/iteration-003/M6-fast.json"
+    },
+    {
+      "command": "iteration3_contacts.py original",
+      "result": "PASS fresh original natural first contact and cooldown0->6->5, persistent refine/restore",
+      "evidence": "modernize/evidence/iteration-003/M6-original-contact/result.json"
+    },
+    {
+      "command": "iteration3_contacts.py native starting R1 binary",
+      "result": "PASS fresh natural first contact and exact persistent/fresh replay",
+      "evidence": "modernize/evidence/iteration-003/M6-starting-contact/result.json"
+    },
+    {
+      "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+      "result": "PASS644 optimized tests, fmt, desktop/web Clippy/builds; Rust1.90.0, locked dependencies",
+      "evidence": "modernize/evidence/iteration-003/M6-full-latest.json"
+    },
+    {
+      "command": "iteration3_contacts.py native --baseline M6-starting-contact --original M6-original-contact",
+      "result": "PASS3 full state landmarks, contact frame, route PCM and every checkpoint field except identity",
+      "evidence": "modernize/evidence/iteration-003/M6-retained-contact/comparison.json"
+    },
+    {
+      "command": "iteration3_postrace.py fresh build versus R1 retained starting build",
+      "result": "PASS7 player postrace/continue/restart landmarks, frames and PCM/checkpoint fields",
+      "evidence": "modernize/evidence/iteration-003/M6-retained-postrace/comparison.json"
+    },
+    {
+      "command": "qa_harness.py native-hazard-route plus compare_iteration2.py",
+      "result": "PASS hazard response/depletion/AI lap, all state landmarks,2 full frames and route PCM/checkpoint fields",
+      "evidence": "modernize/evidence/iteration-003/M6-retained-hazard/native-hazard-route/baseline-comparison.json"
+    },
+    {
+      "command": "Runtime representation and original ledger audits",
+      "result": "PASS no production packed dispatch;1527 regions/1408 units/22 uncertainties",
+      "evidence": [
+        "modernize/evidence/iteration-003/M6-production-boundary-audit.json",
+        "modernize/evidence/iteration-003/M6-accounting-audit.json"
+      ]
+    }
+  ]
+}
