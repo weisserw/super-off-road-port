@@ -1,5 +1,7 @@
 # super-off-road native Rust port
 
+**[Play the game in your browser](https://weisserw.github.io/super-off-road-port/)**
+
 The shared native game implements the original frontend, four-truck races, terrain/contact/AI, track objects, results/records/shop, Mode1 presentation and native audio. It uses the matching ROM as data; no emulator runs the game rules. Defaults are 256×224 at SNES NTSC cadence, displayed at 4:3.
 
 Build instructions and platform limits are in [BUILDING.md](BUILDING.md). `python3 run.py desktop` starts desktop on a machine with SDL2; `python3 run.py web` builds and serves the browser frontend. F1 resumes, F2 pauses the frontend runner, F3 resets, F4 saves a full state, F5 restores it and F6 opens player settings. Gameplay controls use the shared SNES mappings in settings: left/right steer (L/R give the source smaller steering step), B accelerates, Y uses nitro and Start joins/pauses according to the current scene. Name entry uses directions, Select and B. Each player's mapping is configurable in F6.
