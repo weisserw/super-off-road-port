@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "native": true,
+  "identity": "04ba202fb47cb052cc52631d6687f9e4432c004fc3daea4cbc316a957232748b:rng=0000000000",
+  "platform": null,
+  "steps": [
+    {
+      "kind": "reset"
+    },
+    {
+      "kind": "advance",
+      "count": 351,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "start"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 15,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 100,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "select"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 1,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 50,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "up"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 8,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 4,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "b"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 8,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 4,
+      "unit": "tick"
+    },
+    {
+      "kind": "advance",
+      "count": 347,
+      "unit": "tick"
+    },
+    {
+      "kind": "advance",
+      "count": 100,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "down"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 25,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 4,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "right"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 4,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 4,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "b"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 8,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 4,
+      "unit": "tick"
+    },
+    {
+      "kind": "advance",
+      "count": 5535,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "right"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 1,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": [
+        "b"
+      ]
+    },
+    {
+      "kind": "advance",
+      "count": 1,
+      "unit": "tick"
+    },
+    {
+      "kind": "input",
+      "actions": []
+    },
+    {
+      "kind": "advance",
+      "count": 320,
+      "unit": "tick"
+    },
+    {
+      "kind": "advance",
+      "count": 200,
+      "unit": "tick"
+    }
+  ]
+}
