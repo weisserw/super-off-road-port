@@ -1,5 +1,6 @@
 //! Source display staging and pure native Mode1 composition. Derivations and
 //! cross-owner boundaries are in rendering.trace.md. Native owners implement source rules; source derivations and conditional limits remain in the trace.
+pub mod effects;
 pub mod memory;
 pub mod poses;
 pub mod sprites;

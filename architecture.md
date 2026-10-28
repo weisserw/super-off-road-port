@@ -492,3 +492,13 @@ compose actual sound synthesis/state, not preserve raw bytes or return event lis
 Runtime source RNG/boot writes/NMI counter effects/header facts, controller direction/sampling/held-action translation and track order/parallel descriptors/routes/start-grid/resource/catalogue loaders are now native implementations. Terrain sampling implements byte-width addressing, marker/block classification, reflected triangle interpolation, wheel probes and exact signed/truncated projection. The single-point sample_at interface shares these algorithms with motion/contact. Typed tracks.json decoding validates original/file resources through MemoryAssets::collection; explicit added object/presentation/countdown schemas have no global16-slot cap. Shared Game orchestration, other domain modules, full snapshots and ledger completion remain pending. Focused actual results: checks/implementation/domain-results.json.
 
 QA source ownership correction: source countdown_state $077D is a 16-bit word shared by ready/countdown drawing and banner animation. Progress.banner_state owns that word; RaceTransition.countdown.state is its continuation view, synchronized at source call boundaries, including banner mutations. Snapshot validation requires equality. Countdown delay remains the independent word $077F. This supersedes the earlier duplicated live owners found by the exact ready13/4 frame comparison (21 differing banner pixels).
+
+Iteration3 M4 effect playback: `presentation::effects` decodes the paired source
+streams into native Hold/Finish/Draw actions and typed clip continuations. Trucks
+own nitro/contact players, world contacts own surface players, and RaceVideo
+owns the four historical middle players. Race and transition visual service
+validate every player before borrowing the actual owners in reverse presentation
+order; there is no runtime gather/scatter cursor array. Gameplay starts named
+clips and asks idle/surface-resume lifecycle questions. The legacy numeric entry
+and old field names survive only at save/debug/asset/test boundaries. Exact
+staged OAM coordinates, draw-before-advance cadence and NMI visibility remain.

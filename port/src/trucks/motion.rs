@@ -15,7 +15,8 @@ pub const HEADING_DIRECTIONS: usize = 32;
 pub const TILT_SELECTORS: usize = 5;
 pub const TILT_POSES: usize = TILT_SELECTORS * TILT_SELECTORS;
 pub const NITRO_SPEED: u8 = 0x7c;
-pub const CONTACT_EFFECT_TICKS: u8 = 0x18;
+#[cfg(test)]
+const CONTACT_EFFECT_ENTRY: u8 = 0x18;
 pub const BLOCKED_RECOVERY_TICKS: u8 = 0x10;
 pub const AI_RECOVERY_SPEED: u8 = 0x81;
 pub const AI_RECOVERY_LOCK: u8 = 0x0f;
@@ -65,14 +66,16 @@ pub struct Truck {
     pub contact_marker: u8,
     pub contact_transition: u8,
     pub contact_cooldown: u8,
-    pub effect_cooldown: u8,
+    #[serde(rename = "effect_cooldown")]
+    pub contact_effect_player: crate::presentation::effects::AnimationPlayer,
     pub blocked_frames: u8,
     pub steering_lock: u8,
     pub ai_route_bias: u8,
     pub screen_x: u16,
     pub screen_y: u8,
     pub tile_attributes: u16,
-    pub nitro_animation: u8,
+    #[serde(rename = "nitro_animation")]
+    pub nitro_effect: crate::presentation::effects::AnimationPlayer,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MotionTables {
@@ -294,14 +297,14 @@ pub fn count_blocked(truck: &mut Truck, working: &mut WorkingMotion, human: bool
 pub fn contact_effect(truck: &mut Truck) -> Option<EffectSprite> {
     const CONTACT_X_OFFSET: u8 = 4;
     const CONTACT_Y_OFFSET: u8 = 6;
-    if truck.effect_cooldown != 0 || truck.screen_x > u16::from(u8::MAX) {
+    if !truck.contact_effect_player.is_idle() || truck.screen_x > u16::from(u8::MAX) {
         return None;
     }
     let (x, carry) = (truck.screen_x as u8).overflowing_add(CONTACT_X_OFFSET);
     if carry {
         return None;
     }
-    truck.effect_cooldown = CONTACT_EFFECT_TICKS;
+    truck.contact_effect_player.start_contact();
     Some(EffectSprite {
         x,
         y: truck.screen_y.wrapping_add(CONTACT_Y_OFFSET),
@@ -514,7 +517,7 @@ pub fn update_trucks(
             trucks[slot].wheels[wheel].sampled = sampled.heights[slot * WHEELS_PER_TRUCK + wheel];
         }
         frame.phases.push(MotionPhase::SpecialSurface(slot));
-        let previous_cursor = contact_animations[slot].cursor;
+        let previous_cursor = contact_animations[slot].player;
         frame.effects.extend(
             crate::world::objects::special_surface(
                 &trucks[slot],
@@ -526,7 +529,7 @@ pub fn update_trucks(
             .into_iter()
             .map(|sound| (slot, MotionEffect::Sound(sound))),
         );
-        if previous_cursor != contact_animations[slot].cursor {
+        if previous_cursor != contact_animations[slot].player {
             frame
                 .surface_sprites
                 .push((slot, contact_animations[slot].sprite));
@@ -865,7 +868,7 @@ mod tests {
                 t.nitro.encoded(),
                 t.speed,
                 t.nitro_button_history,
-                t.nitro_animation
+                t.nitro_effect.encoded()
             ),
             (9, 0xab7c, 0x80, 1)
         );
@@ -900,12 +903,12 @@ mod tests {
         t.controller = ControllerWord(BUTTON_Y);
         t.nitro = crate::trucks::nitro::NitroStock::from_encoded(1);
         t.screen_x = 0x100;
-        t.nitro_animation = 7;
+        t.nitro_effect = 7.into();
         assert_eq!(
             use_nitro(&mut t, false, 8),
             vec![MotionEffect::Sound(NITRO_SOUND_COMMAND)]
         );
-        assert_eq!(t.nitro_animation, 7);
+        assert_eq!(t.nitro_effect.encoded(), 7);
     }
     #[test]
     fn powertrain_steers_then_boosts_then_applies_normal_drag_or_speed_limit() {
@@ -945,7 +948,7 @@ mod tests {
         expected.steering_fraction = 55;
         expected.nitro_button_history = 0x80;
         expected.nitro = crate::trucks::nitro::NitroStock::new(0);
-        expected.nitro_animation = 1;
+        expected.nitro_effect = 1.into();
         let effects = update_powertrain(&mut t, &tables(), true, 1, false, 0);
         assert_eq!(t, expected);
         assert_eq!(
@@ -1320,12 +1323,12 @@ mod tests {
             let mut t = truck();
             t.screen_x = screen_x;
             t.screen_y = 250;
-            t.effect_cooldown = cooldown;
+            t.contact_effect_player = cooldown.into();
             assert_eq!(contact_effect(&mut t), expected);
             assert_eq!(
-                t.effect_cooldown,
+                t.contact_effect_player.encoded(),
                 if expected.is_some() {
-                    CONTACT_EFFECT_TICKS
+                    CONTACT_EFFECT_ENTRY
                 } else {
                     cooldown
                 }
@@ -1411,8 +1414,8 @@ mod tests {
             vec![MotionEffect::ContactSprite(EffectSprite { x: 104, y: 96 })]
         );
         assert_eq!(
-            (t.contact_transition, t.effect_cooldown),
-            (0, CONTACT_EFFECT_TICKS)
+            (t.contact_transition, t.contact_effect_player.encoded()),
+            (0, CONTACT_EFFECT_ENTRY)
         );
         assert!(
             resolve_legacy_blocked_motion(&mut t, &mut w, [0; 4], true)

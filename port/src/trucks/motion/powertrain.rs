@@ -35,7 +35,7 @@ pub(super) struct PowertrainState {
     steering_fraction: u8,
     nitro: NitroStock,
     nitro_button_history: u8,
-    nitro_animation: u8,
+    nitro_effect: crate::presentation::effects::AnimationPlayer,
 }
 impl From<&Truck> for PowertrainState {
     fn from(truck: &Truck) -> Self {
@@ -46,7 +46,7 @@ impl From<&Truck> for PowertrainState {
             steering_fraction: truck.steering_fraction,
             nitro: truck.nitro,
             nitro_button_history: truck.nitro_button_history,
-            nitro_animation: truck.nitro_animation,
+            nitro_effect: truck.nitro_effect,
         }
     }
 }
@@ -62,13 +62,13 @@ impl PowertrainState {
             steering_fraction,
             nitro,
             nitro_button_history,
-            nitro_animation,
+            nitro_effect,
         } = *self;
         truck.acceleration_fraction = acceleration_fraction;
         truck.steering_fraction = steering_fraction;
         truck.nitro = nitro;
         truck.nitro_button_history = nitro_button_history;
-        truck.nitro_animation = nitro_animation;
+        truck.nitro_effect = nitro_effect;
     }
     /// Isolated domain entries intentionally commit their speed/heading too.
     /// Fleet service instead calls commit_retained and keeps the proposal local.
@@ -124,7 +124,7 @@ impl PowertrainState {
         set_low(&mut self.speed, NITRO_SPEED);
         let mut effects = Vec::new();
         if input.screen_x <= u16::from(u8::MAX) {
-            self.nitro_animation = 1;
+            self.nitro_effect.start_nitro();
             effects.push(MotionEffect::NitroSprite(EffectSprite {
                 x: input.screen_x as u8,
                 y: input.screen_y,

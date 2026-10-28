@@ -365,9 +365,9 @@ pub enum ServicePhase {
     Computers,
     Exit,
 }
-/// Every cursor has a single domain owner: trucks own nitro and contact-effect
-/// cursors, world owns surface cursors, and these four remaining slots retain the
-/// source's otherwise unselected middle group. The 16-slot renderer gets a view.
+/// Trucks own nitro/contact players and world contacts own surface players.
+/// These four remaining players preserve the historical middle presentation group.
+/// Staging borrows each actual owner directly; there is no mutable cursor view.
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RaceVideo {
@@ -377,7 +377,8 @@ pub struct RaceVideo {
     #[serde(with = "crate::snapshot::array")]
     pub poses: [crate::presentation::poses::PoseSelection; TRUCKS],
     #[serde(with = "crate::snapshot::array")]
-    pub middle_cursors: [u8; TRUCKS],
+    #[serde(rename = "middle_cursors")]
+    pub middle_effects: [crate::presentation::effects::AnimationPlayer; TRUCKS],
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -461,14 +462,7 @@ pub fn update_frame_services(
     phases.push(ServicePhase::SpritePack);
     sprites::pack_sorted(&race.video.sprites, &mut race.video.memory.staged_oam)?;
     phases.push(ServicePhase::SpriteAnimation);
-    let mut cursors = cursor_view(race);
-    sprites::animate(
-        &mut race.video.memory,
-        &mut cursors,
-        race.progress.animation_frame,
-        &environment.assets.animations,
-    )?;
-    apply_cursor_view(race, cursors);
+    service_effect_players(race, &environment.assets.animations)?;
     phases.push(ServicePhase::HumanRoutes);
     service_human_routes(
         &mut race.trucks,
@@ -597,7 +591,7 @@ pub fn prepare_selected_race(
         }
     }
     phase!(ClearSpriteAnimations);
-    apply_cursor_view(race, [0; crate::presentation::SORTED_SPRITES]);
+    clear_effect_players(race);
     phase!(LoadRoute);
     if let Some(byte) = environment.route.copied_tail() {
         race.route_tail_byte = byte;
@@ -716,20 +710,65 @@ pub fn prepare_selected_race(
     phase!(WaitAndMusic);
     Ok(phases)
 }
+fn service_effect_players(
+    race: &mut RaceState,
+    tables: &crate::presentation::sprites::AnimationTables,
+) -> Result<()> {
+    use anyhow::ensure;
+    ensure!(
+        race.trucks
+            .iter()
+            .all(|t| t.nitro_effect.valid() && t.contact_effect_player.valid())
+            && race.world.contacts.iter().all(|c| c.player.valid())
+            && race.video.middle_effects.iter().all(|p| p.valid()),
+        "invalid animation cursor"
+    );
+    for slot in (0..crate::presentation::SORTED_SPRITES).rev() {
+        let player = match slot / TRUCKS {
+            0 => &mut race.trucks[slot].nitro_effect,
+            1 => &mut race.world.contacts[slot - TRUCKS].player,
+            2 => &mut race.video.middle_effects[slot - TRUCKS * 2],
+            _ => &mut race.trucks[slot - TRUCKS * 3].contact_effect_player,
+        };
+        let at = 0x150 + slot * 4;
+        tables.clips.stage(
+            player,
+            race.progress.animation_frame,
+            &mut race.video.memory.staged_oam[at..at + 4],
+        )?;
+    }
+    Ok(())
+}
+fn clear_effect_players(race: &mut RaceState) {
+    for truck in &mut race.trucks {
+        truck.nitro_effect.clear();
+        truck.contact_effect_player.clear();
+    }
+    for contact in &mut race.world.contacts {
+        contact.player.clear();
+    }
+    for player in &mut race.video.middle_effects {
+        player.clear();
+    }
+}
+#[cfg(test)]
 fn cursor_view(race: &RaceState) -> [u8; crate::presentation::SORTED_SPRITES] {
     std::array::from_fn(|slot| match slot / TRUCKS {
-        0 => race.trucks[slot].nitro_animation,
-        1 => race.world.contacts[slot - TRUCKS].cursor,
-        2 => race.video.middle_cursors[slot - TRUCKS * 2],
-        _ => race.trucks[slot - TRUCKS * 3].effect_cooldown,
+        0 => race.trucks[slot].nitro_effect.encoded(),
+        1 => race.world.contacts[slot - TRUCKS].player.encoded(),
+        2 => race.video.middle_effects[slot - TRUCKS * 2].encoded(),
+        _ => race.trucks[slot - TRUCKS * 3]
+            .contact_effect_player
+            .encoded(),
     })
 }
+#[cfg(test)]
 fn apply_cursor_view(race: &mut RaceState, cursors: [u8; crate::presentation::SORTED_SPRITES]) {
     for slot in 0..TRUCKS {
-        race.trucks[slot].nitro_animation = cursors[slot];
-        race.world.contacts[slot].cursor = cursors[slot + TRUCKS];
-        race.video.middle_cursors[slot] = cursors[slot + TRUCKS * 2];
-        race.trucks[slot].effect_cooldown = cursors[slot + TRUCKS * 3];
+        race.trucks[slot].nitro_effect = cursors[slot].into();
+        race.world.contacts[slot].player = cursors[slot + TRUCKS].into();
+        race.video.middle_effects[slot] = cursors[slot + TRUCKS * 2].into();
+        race.trucks[slot].contact_effect_player = cursors[slot + TRUCKS * 3].into();
     }
 }
 fn seed_retained_sprite_views(race: &mut RaceState) {
@@ -927,14 +966,7 @@ pub fn service_transition_visuals(
         stage_banner(race);
     }
     for _ in 0..animation_calls {
-        let mut cursors = cursor_view(race);
-        crate::presentation::sprites::animate(
-            &mut race.video.memory,
-            &mut cursors,
-            race.progress.animation_frame,
-            &assets.animations,
-        )?;
-        apply_cursor_view(race, cursors);
+        service_effect_players(race, &assets.animations)?;
     }
     Ok(())
 }
@@ -1692,11 +1724,34 @@ mod tests {
             r,
         )
     }
+    /// All accepted historical starts remain numeric at the save boundary,
+    /// independently of future native ownership or clip representation.
+    #[test]
+    fn modernization_animation_legacy_owner_wire_roundtrip_all_entries() {
+        let (mut race, ..) = frame_fixture();
+        for entry in 0..31u8 {
+            let cursors = std::array::from_fn(|slot| (entry + slot as u8) % 31);
+            apply_cursor_view(&mut race, cursors);
+            let saved = serde_json::to_value(&race).unwrap();
+            for slot in 0..TRUCKS {
+                assert_eq!(saved["trucks"][slot]["nitro_animation"], cursors[slot]);
+                assert_eq!(
+                    saved["world"]["contacts"][slot]["cursor"],
+                    cursors[slot + 4]
+                );
+                assert_eq!(saved["video"]["middle_cursors"][slot], cursors[slot + 8]);
+                assert_eq!(saved["trucks"][slot]["effect_cooldown"], cursors[slot + 12]);
+            }
+            let restored: RaceState = serde_json::from_value(saved).unwrap();
+            assert_eq!(cursor_view(&restored), cursors);
+            assert_eq!(restored, race);
+        }
+    }
     #[test]
     fn prepared_frame_executes_all_owners_in_source_order_and_increments_timer_before_return() {
         let (mut r, motion, terrain, sampling, ai, banners, route) = frame_fixture();
         r.progress.winner_plus_one = 3;
-        r.trucks[0].effect_cooldown = 24;
+        r.trucks[0].contact_effect_player = 24.into();
         let resources =
             RaceAssets::from_original(&std::fs::read("../input/game.rom").unwrap(), 0, 0, false)
                 .unwrap();
@@ -1742,7 +1797,7 @@ mod tests {
             ]
         );
         assert_eq!(r.render_mode, 2);
-        assert_eq!(r.trucks[0].effect_cooldown, 25);
+        assert_eq!(r.trucks[0].contact_effect_player.encoded(), 25);
         assert_eq!(
             r.video.memory.staged_oam[0x182],
             resources.animations.tiles[24]

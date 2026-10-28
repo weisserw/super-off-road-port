@@ -465,3 +465,32 @@ its replaced graphics; a later unresolved selection must not partially present
 other trucks. Full legacy-selector and save-roundtrip contracts were passed on
 R2 before conversion. Natural original VRAM observations and fresh native route
 comparisons remain local in modernize/evidence/iteration-003.
+
+## Iteration3 M4 native effect ownership (supersedes cursor implementation above)
+
+`effects::AnimationPlayer` owns Idle or a clip-relative Nitro/Surface/
+SurfaceRepeat/Contact phase. The private phase is serialized through an exact
+legacy byte adapter, retaining all accepted entries0..30 and old save keys.
+Invalid historical bytes remain representable only so existing validation can
+reject them atomically. `AnimationClips::decode` compiles paired bytes once into
+Hold/Finish/Draw actions with native successors; no FE/FF decoder or flat source
+cursor is consulted in normal playback. Overridden terminal cells can still draw
+and advance across clips or into an invalid successor, failing on the next pass.
+
+Race validates all16 actual owners before any staging mutation, then services
+slots15..0 directly. Trucks own nitro/contact players, world contacts own surface
+players and RaceVideo owns the middle group. Racing and transition callers share
+this service. Numeric gather/scatter is cfg(test) fixture-only. Powertrain keeps
+the same retained-player proposal semantics as before; it does not advance it.
+Motion contact checks idle then starts Contact. Nitro starts Nitro. Special
+surface checks idle or the terminal Surface/SurfaceRepeat phase before starting
+or resuming; these are exactly source hex12/17 (decimal18/23), not decimal12/17.
+
+The source guarantees remain: Hold touches nothing; Finish hides only staged Y
+and resets immediately; Draw writes tile/attributes before advancement every
+fourth animation frame. Staged-to-visible NMI transfer, coordinates and retained
+OAM remain unchanged. Preimplementation contracts cover all31 entries, four
+pacing residues,16 slots, all surface gates and legacy owner wire roundtrips.
+Fresh original natural nitro observations include all8 tiles, paced predecessor
+draws and hide/reset, with persistent replay. Source can write1 and advance2 in
+one physical frame, so cursor1 need not appear in a frame-boundary observation.

@@ -77,60 +77,55 @@ pub fn hide_frontend(sprites: &mut SpriteArrays, memory: &mut VideoMemory) -> Re
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AnimationTables {
+    pub clips: super::effects::AnimationClips,
+    #[cfg(test)]
     pub tiles: [u8; CONTACT_FRAMES],
+    #[cfg(test)]
     pub attributes: [u8; CONTACT_FRAMES],
 }
 pub fn load_animations(rom: &[u8]) -> Result<AnimationTables> {
     const TILE_ROM: usize = 0x804;
     const ATTRIBUTES_ROM: usize = 0x823;
+    let tiles = rom
+        .get(TILE_ROM..TILE_ROM + CONTACT_FRAMES)
+        .context("truncated animation tiles")?
+        .try_into()?;
+    let attributes = rom
+        .get(ATTRIBUTES_ROM..ATTRIBUTES_ROM + CONTACT_FRAMES)
+        .context("truncated animation attributes")?
+        .try_into()?;
     Ok(AnimationTables {
-        tiles: rom
-            .get(TILE_ROM..TILE_ROM + CONTACT_FRAMES)
-            .context("truncated animation tiles")?
-            .try_into()?,
-        attributes: rom
-            .get(ATTRIBUTES_ROM..ATTRIBUTES_ROM + CONTACT_FRAMES)
-            .context("truncated animation attributes")?
-            .try_into()?,
+        clips: super::effects::AnimationClips::decode(&tiles, &attributes),
+        #[cfg(test)]
+        tiles,
+        #[cfg(test)]
+        attributes,
     })
 }
+/// Source-byte fixture adapter; normal racing stages the actual owned players.
+#[cfg(test)]
 pub fn clear_cursors(cursors: &mut [u8; SORTED_SPRITES]) {
     cursors.fill(0);
 }
+#[cfg(test)]
 pub fn animate(
     memory: &mut VideoMemory,
     cursors: &mut [u8; SORTED_SPRITES],
     frame: u8,
     tables: &AnimationTables,
 ) -> Result<()> {
-    const SKIP: u8 = 0xfe;
-    const TERMINATE: u8 = 0xff;
-    const ANIMATION_BASE: usize = 0x150;
     ensure!(
         cursors
             .iter()
-            .all(|&cursor| usize::from(cursor) < CONTACT_FRAMES),
+            .all(|&entry| usize::from(entry) < CONTACT_FRAMES),
         "invalid animation cursor"
     );
+    let clips = super::effects::AnimationClips::decode(&tables.tiles, &tables.attributes);
     for slot in (0..SORTED_SPRITES).rev() {
-        let cursor = usize::from(cursors[slot]);
-        let attributes = tables.attributes[cursor];
-        let tile = tables.tiles[cursor];
-        let at = ANIMATION_BASE + slot * 4;
-        match tile {
-            SKIP => continue,
-            TERMINATE => {
-                memory.staged_oam[at + 1] = super::HIDDEN_Y;
-                cursors[slot] = 0;
-            }
-            _ => {
-                memory.staged_oam[at + 2] = tile;
-                memory.staged_oam[at + 3] = attributes;
-                if frame & 3 == 0 {
-                    cursors[slot] = cursors[slot].wrapping_add(1);
-                }
-            }
-        }
+        let mut player = super::effects::AnimationPlayer::from(cursors[slot]);
+        let at = 0x150 + slot * 4;
+        clips.stage(&mut player, frame, &mut memory.staged_oam[at..at + 4])?;
+        cursors[slot] = player.encoded();
     }
     Ok(())
 }

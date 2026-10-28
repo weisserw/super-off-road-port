@@ -3742,9 +3742,10 @@
         "game.asm:2153"
       ],
       "disposition": "merged",
-      "summary": "Source fragment clear_sprite_animation_cursors is expressed by clear_cursors using owned native state and source-width arithmetic. Reset sixteen animation cursor bytes at $0519 before the track's sprite animation service starts. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Clear the sixteen actual native effect players at their existing race initialization point; legacy cursor reset is represented by AnimationPlayer::clear.",
       "equivalents": [
-        "port/src/presentation/sprites.rs::clear_cursors",
+        "port/src/race.rs::clear_effect_players",
+        "port/src/presentation/effects.rs::AnimationPlayer::clear",
         "port/src/presentation/rendering.trace.md",
         "port/src/game/scheduler.rs"
       ],
@@ -3759,6 +3760,31 @@
             "game.asm:2153"
           ],
           "disposition": "merged",
+          "summary": "Clear the sixteen actual native effect players at their existing race initialization point; legacy cursor reset is represented by AnimationPlayer::clear.",
+          "equivalents": [
+            "port/src/race.rs::clear_effect_players",
+            "port/src/presentation/effects.rs::AnimationPlayer::clear",
+            "port/src/presentation/rendering.trace.md",
+            "port/src/game/scheduler.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M4",
+              "summary": "Source fragment clear_sprite_animation_cursors is expressed by clear_cursors using owned native state and source-width arithmetic. Reset sixteen animation cursor bytes at $0519 before the track's sprite animation service starts. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "equivalents": [
+                "port/src/presentation/sprites.rs::clear_cursors",
+                "port/src/presentation/rendering.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M4",
           "summary": "Source fragment clear_sprite_animation_cursors is expressed by clear_cursors using owned native state and source-width arithmetic. Reset sixteen animation cursor bytes at $0519 before the track's sprite animation service starts. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
           "equivalents": [
             "port/src/presentation/sprites.rs::clear_cursors",
@@ -3778,9 +3804,11 @@
         "game.asm:2172"
       ],
       "disposition": "merged",
-      "summary": "Source fragment animate_sixteen_sprite_slots is expressed by animate using owned native state and source-width arithmetic. Visit sixteen sprite slots, fetch paired tile/attribute values from the current animation cursor and write OAM shadow entries.\nAdvance animation only every fourth frame. $FE skips a slot update; $FF reaches the hide/reset tail.\nThe internal $87F6 entry converts a sprite slot to its four-byte OAM offset. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Decode paired source frame streams once into native clip actions. Service the sixteen actual owned effect players directly in descending presentation order, preserving draw-before-fourth-frame advancement and untouched coordinates; no runtime numeric cursor gather/scatter or FE/FF decoder.",
       "equivalents": [
-        "port/src/presentation/sprites.rs::animate",
+        "port/src/race.rs::service_effect_players",
+        "port/src/presentation/effects.rs::AnimationClips::decode",
+        "port/src/presentation/effects.rs::AnimationClips::stage",
         "port/src/presentation/rendering.trace.md",
         "port/src/game/scheduler.rs"
       ],
@@ -3795,6 +3823,32 @@
             "game.asm:2172"
           ],
           "disposition": "merged",
+          "summary": "Decode paired source frame streams once into native clip actions. Service the sixteen actual owned effect players directly in descending presentation order, preserving draw-before-fourth-frame advancement and untouched coordinates; no runtime numeric cursor gather/scatter or FE/FF decoder.",
+          "equivalents": [
+            "port/src/race.rs::service_effect_players",
+            "port/src/presentation/effects.rs::AnimationClips::decode",
+            "port/src/presentation/effects.rs::AnimationClips::stage",
+            "port/src/presentation/rendering.trace.md",
+            "port/src/game/scheduler.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M4",
+              "summary": "Source fragment animate_sixteen_sprite_slots is expressed by animate using owned native state and source-width arithmetic. Visit sixteen sprite slots, fetch paired tile/attribute values from the current animation cursor and write OAM shadow entries.\nAdvance animation only every fourth frame. $FE skips a slot update; $FF reaches the hide/reset tail.\nThe internal $87F6 entry converts a sprite slot to its four-byte OAM offset. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "equivalents": [
+                "port/src/presentation/sprites.rs::animate",
+                "port/src/presentation/rendering.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M4",
           "summary": "Source fragment animate_sixteen_sprite_slots is expressed by animate using owned native state and source-width arithmetic. Visit sixteen sprite slots, fetch paired tile/attribute values from the current animation cursor and write OAM shadow entries.\nAdvance animation only every fourth frame. $FE skips a slot update; $FF reaches the hide/reset tail.\nThe internal $87F6 entry converts a sprite slot to its four-byte OAM offset. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
           "equivalents": [
             "port/src/presentation/sprites.rs::animate",
@@ -3814,9 +3868,9 @@
         "game.asm:2220"
       ],
       "disposition": "merged",
-      "summary": "Source fragment hide_finished_sprite_animation is expressed by animate using owned native state and source-width arithmetic. Move this sprite's shadow Y to $F0, reset its animation cursor and continue the descending slot loop. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Native Finish action hides only staged sprite Y and clears the owned player immediately regardless of pacing; legacy numeric reset exists only at save/debug boundaries.",
       "equivalents": [
-        "port/src/presentation/sprites.rs::animate",
+        "port/src/presentation/effects.rs::AnimationClips::stage",
         "port/src/presentation/rendering.trace.md",
         "port/src/game/scheduler.rs"
       ],
@@ -3831,6 +3885,30 @@
             "game.asm:2220"
           ],
           "disposition": "merged",
+          "summary": "Native Finish action hides only staged sprite Y and clears the owned player immediately regardless of pacing; legacy numeric reset exists only at save/debug boundaries.",
+          "equivalents": [
+            "port/src/presentation/effects.rs::AnimationClips::stage",
+            "port/src/presentation/rendering.trace.md",
+            "port/src/game/scheduler.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M4",
+              "summary": "Source fragment hide_finished_sprite_animation is expressed by animate using owned native state and source-width arithmetic. Move this sprite's shadow Y to $F0, reset its animation cursor and continue the descending slot loop. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "equivalents": [
+                "port/src/presentation/sprites.rs::animate",
+                "port/src/presentation/rendering.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M4",
           "summary": "Source fragment hide_finished_sprite_animation is expressed by animate using owned native state and source-width arithmetic. Move this sprite's shadow Y to $F0, reset its animation cursor and continue the descending slot loop. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
           "equivalents": [
             "port/src/presentation/sprites.rs::animate",

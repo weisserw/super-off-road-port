@@ -1,0 +1,87 @@
+{
+  "id": "M4",
+  "category": "modernization",
+  "status": "retained",
+  "starting_commit": "3f4cf66",
+  "starting_binary_sha256": "381454b42187de9f6d737ef831226d5a491238743ec5a6e41a0135355ad9d04b",
+  "snapshot": "modernize/evidence/iteration-003/M4-preimplementation/source.tar.gz",
+  "before": "Truck nitro_animation/effect_cooldown, world contact.cursor and video middle_cursors are gathered into16 raw cursors, advanced through FE/FF streams and scattered back. Contact consumers inspect source cursor positions.",
+  "after_plan": "Decoded visual actions and native effect players owned by each effect. Typed lifecycle/contact-window queries replace numeric gates; retain immutable legacy entry mapping for snapshots and semantic debug output. Service owners directly in existing reverse slot order without a mutable aggregate cursor copy.",
+  "inspected_callers": [
+    "race::service racing SpriteAnimation phase after sort/pack and before HumanRoutes",
+    "race::service_transition_visuals animation_calls",
+    "race initialization clears all16 owners",
+    "trucks::motion::contact_effect writes24 and checks zero",
+    "trucks::motion::powertrain nitro start writes1 and retained proposal reconciles field",
+    "world::objects::special_surface contact gates12/17",
+    "game::snapshots validates each accepted cursor<31"
+  ],
+  "preserve": [
+    "All31 source tile/attribute pairs, including conditional suffix24..30",
+    "FE preserves OAM and playhead; FF hides Y and resets immediately regardless pacing",
+    "Normal frame stages tile/attribute before advance only on frame&3==0; coordinates unchanged",
+    "Prevalidate all owners before mutating any OAM/player to preserve invalid-cursor atomicity",
+    "Exact transition/race service order and one-NMI visible staging",
+    "All accepted legacy entries and middle slots; no restriction to naturally selected starts"
+  ],
+  "next_contracts": [
+    "All31 entries x4 pacing residues against existing source-backed action expectations; FE synthetic branch and invalid atomicity",
+    "Natural nitro start/progression/finish and surface/contact gates before/after staging",
+    "Fresh original natural effect phase observations and starting executable durable recipes",
+    "Legacy snapshot roundtrips and retained OAM across racing/transition callers"
+  ],
+  "production_representation_edits_started": true,
+  "unselected_overlap": "M8 composite membership/startup echo remains excluded; M4 covers16 effect players only.",
+  "preimplementation_contracts": {
+    "command": "python3 run.py check-fast --test-filter modernization_animation",
+    "result": "PASS3 on raw cursor implementation:31 entries x4 pacing residues x16 slots exact staged/retained OAM; all31 surface gate entries; all31 legacy entries across16 owners preserve exact wire keys/values and roundtrip. fmt/Clippy pass.",
+    "evidence": "modernize/evidence/iteration-003/M4-preimplementation/fast-three-contracts.json"
+  },
+  "starting_integration": {
+    "result": "PASS natural purchase/use/timer/frontend, persistent branch and guarded recipe replay",
+    "evidence": "modernize/evidence/iteration-003/M4-starting-lifecycle-002/result.json",
+    "superseded_setup": "M4-starting-lifecycle could not launch copied binary because copyfile did not preserve executable bit; retained, not passed."
+  },
+  "source_probe_correction": "Surface resume gates are hexadecimal12/17 = decimal18/23. Native queries must use actual phase terminals, not decimal12/17.",
+  "original_probe": {
+    "result": "PASS fresh original natural nitro slot0, all8 tile frames plus hide/reset,200 per-frame cursor/OAM observations and identical persistent replay",
+    "evidence": "modernize/evidence/iteration-003/M4-original-animation-005/result.json",
+    "source_contract_corrections": "Initial first-entry assertion mistakenly required cursor1 at frame boundaries. Source draw-before-advance can write1 then advance2 in same frame. Fixed to assert all8 tiles and exact tile/phase relationship with observed animation counter. Failed replay setup mistakenly used8/40-frame suffix instead of recorded160/40; corrected exact200 one-frame recipe and reran successfully.",
+    "superseded": [
+      "M4-original-animation:600-frame setup offscreen/no sprite",
+      "M4-original-animation-002:post-frame cursor1 assumption; captured all8 tile frames",
+      "M4-original-animation-003:original phase checks passed; replay suffix length incorrect",
+      "M4-original-animation-004:replay edit had not applied; not counted as pass"
+    ]
+  },
+  "native_player_design": {
+    "state": "Idle or Playing{clip:Nitro/Surface/SurfaceRepeat/Contact,frame}, plus isolated invalid legacy entry for rejection compatibility. Every accepted source entry0..30 maps exactly to one native state.",
+    "assets": "Decode paired tile/attribute bytes once into Hold/Finish/Draw actions and typed next phases. Use clip-relative frames in runtime; source flat indices remain boundary encoding only.",
+    "owners": "Rename nitro/effect_cooldown fields to nitro_effect/contact_effect_player with serde rename preserving legacy keys; ContactAnimation owns player; RaceVideo owns middle_effects. Powertrain retains the same player in its proposal result.",
+    "service": "Validate all16 players before mutation. Iterate mutable owners directly in descending legacy presentation order and write existing staging offsets. No gather/scatter aggregate player copies.",
+    "gates": "is_idle and surface restart query matching terminal Surface frame8 / SurfaceRepeat frame4 replace raw0/18/23 checks. Semantic start_nitro/start_surface/restart_surface/start_contact methods replace numeric writes.",
+    "compatibility": "Player serializes to legacy byte; import retains existing<31 validation and atomicity. Existing tests assert encoded values only at fixtures/wire/debug boundaries."
+  },
+  "original_probe_correction": "Formal corrected original rerun M4-original-animation-005 passes source phase/tile assertions and exact200 one-frame persistent replay; earlier failed attempts preserved.",
+  "implementation": "AnimationPlayer owns private native Idle/Nitro/Surface/SurfaceRepeat/Contact phases. AnimationClips decodes immutable paired31-cell assets into Hold/Finish/Draw actions with typed successors, including deferred invalid next entries. Main gameplay uses named lifecycle starts and phase queries. Racing/transitions validate all players then borrow each actual owner directly in reverse presentation order. Numeric gather/scatter and raw table decoder survive only in cfg(test) fixture adapters. Legacy serialized keys/debug bytes are unchanged.",
+  "checks_so_far": [
+    "PASS3 source-backed all31-entry/pacing/OAM, surface-gate and legacy-wire contracts",
+    "PASS656 library tests plus fmt/Clippy",
+    "PASS656 optimized tests, six fmt/desktop/web Clippy/build gates, Rust1.90.0/Cargo.lock",
+    "PASS all8 tiles, draw-before-advance timing and terminal hide/reset across200 frame observations; persistent replay",
+    "PASS48 full states, active/finished complete frames and checkpoint/PCM fields except identity",
+    "PASS4 complete semantic/frame landmarks and checkpoint/PCM fields except identity",
+    "PASS3 semantic states, contact frame and checkpoint/PCM fields except identity; retained original0\u21926\u21925 contract",
+    "PASS7 landmarks/full frames and checkpoint/PCM fields except identity",
+    "PASS3 landmarks/full frames and checkpoint/PCM fields except identity",
+    "PASS native clip actions/direct player owners; numeric gather/scatter adapter is cfg(test) only",
+    "PASS1527regions/1408units/22uncertainties and all original metadata preserved"
+  ],
+  "retained_source_sha256": "10e418b5577e3171738d3dea46da0ed881a0485da08523375e5c5f1b7aa6a433",
+  "retained_binary_sha256": "da2ed8993245ef7214b81d679e612f742c6c9f267cad203ffcb9e85e90219cee",
+  "review": "modernize/evidence/iteration-003/M4-review.json",
+  "qa_commits": [
+    "9e81b48",
+    "00f8464"
+  ]
+}

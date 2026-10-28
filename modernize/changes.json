@@ -1128,6 +1128,101 @@
         "Existing auxiliary/config overlap and native DSP interpolation uncertainties preserved."
       ],
       "implementation_commit_subject": "modernize: compile main audio scores into native events"
+    },
+    {
+      "id": "M4",
+      "iteration": 3,
+      "category": "modernization",
+      "status": "retained",
+      "starting_implementation_commit": "3f4cf66",
+      "design": "modernize/design-iteration-003-M4.json",
+      "retained_source_sha256": "10e418b5577e3171738d3dea46da0ed881a0485da08523375e5c5f1b7aa6a433",
+      "retained_binary_sha256": "da2ed8993245ef7214b81d679e612f742c6c9f267cad203ffcb9e85e90219cee",
+      "before": "Truck nitro_animation/effect_cooldown, world contact.cursor and video middle_cursors are gathered into16 raw cursors, advanced through FE/FF streams and scattered back. Contact consumers inspect source cursor positions.",
+      "after": "AnimationPlayer owns private native Idle/Nitro/Surface/SurfaceRepeat/Contact phases. AnimationClips decodes immutable paired31-cell assets into Hold/Finish/Draw actions with typed successors, including deferred invalid next entries. Main gameplay uses named lifecycle starts and phase queries. Racing/transitions validate all players then borrow each actual owner directly in reverse presentation order. Numeric gather/scatter and raw table decoder survive only in cfg(test) fixture adapters. Legacy serialized keys/debug bytes are unchanged.",
+      "removed_machinery": [
+        "Global mutable16-slot numeric cursor gather/advance/scatter during racing and transitions",
+        "Runtime FE/FF byte interpretation and flat source-entry advancement",
+        "Numeric cooldown/cursor gates and starts in ordinary gameplay"
+      ],
+      "remaining_boundaries": [
+        "Legacy source-entry bytes, save field names and debug quantities encode through exact adapters; all accepted0..30 entries preserved",
+        "Paired original/override source streams decode once at asset loading, including cross-clip/deferred-invalid successors",
+        "Presentation slot order/OAM offsets and staged-to-visible NMI transfer remain exact renderer policies",
+        "Historical middle players remain owned even without natural starts"
+      ],
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter modernization_animation before and after conversion",
+          "result": "PASS3 source-backed all31-entry/pacing/OAM, surface-gate and legacy-wire contracts",
+          "evidence": "modernize/evidence/iteration-003/M4-preimplementation/fast-three-contracts.json"
+        },
+        {
+          "command": "python3 run.py check-fast",
+          "result": "PASS656 library tests plus fmt/Clippy",
+          "evidence": "modernize/evidence/iteration-003/M4-all-fast.json"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+          "result": "PASS656 optimized tests, six fmt/desktop/web Clippy/build gates, Rust1.90.0/Cargo.lock",
+          "evidence": "modernize/evidence/iteration-003/M4-full-latest.json"
+        },
+        {
+          "command": "Fresh original nitro animation",
+          "result": "PASS all8 tiles, draw-before-advance timing and terminal hide/reset across200 frame observations; persistent replay",
+          "evidence": "modernize/evidence/iteration-003/M4-original-animation-005/result.json"
+        },
+        {
+          "command": "Fresh starting/retained nitro visual lifecycle",
+          "result": "PASS48 full states, active/finished complete frames and checkpoint/PCM fields except identity",
+          "evidence": "modernize/evidence/iteration-003/M4-retained-animation/comparison.json"
+        },
+        {
+          "command": "Fresh purchase/driving lifecycle",
+          "result": "PASS4 complete semantic/frame landmarks and checkpoint/PCM fields except identity",
+          "evidence": "modernize/evidence/iteration-003/M4-retained-lifecycle/baseline-comparison.json"
+        },
+        {
+          "command": "Fresh natural pair contact",
+          "result": "PASS3 semantic states, contact frame and checkpoint/PCM fields except identity; retained original0\u21926\u21925 contract",
+          "evidence": "modernize/evidence/iteration-003/M4-retained-contact/comparison.json"
+        },
+        {
+          "command": "Fresh postrace/continue branches",
+          "result": "PASS7 landmarks/full frames and checkpoint/PCM fields except identity",
+          "evidence": "modernize/evidence/iteration-003/M4-retained-postrace/comparison.json"
+        },
+        {
+          "command": "Fresh hazard/lap route",
+          "result": "PASS3 landmarks/full frames and checkpoint/PCM fields except identity",
+          "evidence": "modernize/evidence/iteration-003/M4-retained-hazard/native-hazard-route/baseline-comparison.json"
+        },
+        {
+          "command": "Playback execution boundary audit",
+          "result": "PASS native clip actions/direct player owners; numeric gather/scatter adapter is cfg(test) only",
+          "evidence": "modernize/evidence/iteration-003/M4-execution-boundary-audit.json"
+        },
+        {
+          "command": "Original ledger metadata/accounting",
+          "result": "PASS1527regions/1408units/22uncertainties and all original metadata preserved",
+          "evidence": "modernize/evidence/iteration-003/M4-accounting-audit.json"
+        }
+      ],
+      "test_migration": "Source fixtures construct native players through byte adapter and assert encoded output. Exact numeric expectations, all31 legacy starts and original wire keys remain unchanged. Old cursor-array helper is cfg(test) fixture-only; runtime owns actual players. Three new contracts were established on starting representation before edits.",
+      "source_grounded_contract_corrections": "Surface gates are hex12/17 = decimal18/23. Original nitro can write1/draw/advance2 within one frame; probe checks all8 tile frames and exact observed pacing instead of requiring transient cursor1 at frame boundaries. Failed setup/replay attempts are preserved in design.",
+      "reviews": [
+        "modernize/evidence/iteration-003/M4-review.json"
+      ],
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical audio playback claim.",
+        "Original/native whole racing frames are not claimed aligned; original nitro visual assertions are source-phase observations.",
+        "Existing startup/subframe, composite-tail and native DSP interpolation uncertainties unchanged; M8 remains unselected."
+      ],
+      "qa_tooling_commits": [
+        "9e81b48",
+        "00f8464"
+      ],
+      "implementation_commit_subject": "modernize: own native effect animation players"
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

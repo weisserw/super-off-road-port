@@ -97,8 +97,8 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
             .race
             .trucks
             .iter()
-            .all(|truck| truck.nitro_animation < 31
-                && truck.effect_cooldown < 31
+            .all(|truck| truck.nitro_effect.valid()
+                && truck.contact_effect_player.valid()
                 && truck.upgrades.steering < 7
                 && truck.upgrades.acceleration < 7
                 && truck.upgrades.speed < 8)
@@ -107,7 +107,7 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
                 .world
                 .contacts
                 .iter()
-                .all(|contact| contact.cursor < 31),
+                .all(|contact| contact.player.valid()),
         "invalid truck/animation snapshot"
     );
     ensure!(

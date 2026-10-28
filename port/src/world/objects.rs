@@ -523,7 +523,8 @@ pub fn service_dynamic(
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContactAnimation {
-    pub cursor: u8,
+    #[serde(rename = "cursor")]
+    pub player: crate::presentation::effects::AnimationPlayer,
     pub sprite: ObjectSprite,
 }
 /// Uses staged previous screen position, while mutating current proposed speed.
@@ -536,14 +537,11 @@ pub fn special_surface(
     active_humans: u8,
 ) -> Vec<u16> {
     const SURFACE_MARKERS: u8 = 0xf0;
-    const FIRST_EFFECT: u8 = 10;
-    const RESUMABLE_CURSORS: [u8; 2] = [18, 23];
-    const RESUME_EFFECT: u8 = 19;
     if truck.contact_marker == 0 || history & SURFACE_MARKERS != SURFACE_MARKERS {
         return Vec::new();
     }
-    let starting = contact.cursor == 0;
-    if !starting && !RESUMABLE_CURSORS.contains(&contact.cursor) {
+    let starting = contact.player.is_idle();
+    if !starting && !contact.player.can_resume_surface() {
         return Vec::new();
     }
     if (working.speed as u8 as i8) >= 0 {
@@ -551,11 +549,11 @@ pub fn special_surface(
             (working.speed & !u16::from(u8::MAX)) | u16::from((working.speed as u8) >> 1);
     }
     contact.sprite.coordinates = u16::from_le_bytes([truck.screen_x as u8, truck.screen_y]);
-    contact.cursor = if starting {
-        FIRST_EFFECT
+    if starting {
+        contact.player.start_surface();
     } else {
-        RESUME_EFFECT
-    };
+        contact.player.resume_surface();
+    }
     if starting && active_humans != 0 {
         vec![SURFACE_CONTACT_SOUND]
     } else {
@@ -1533,7 +1531,7 @@ mod tests {
             let mut c = ContactAnimation::default();
             assert!(special_surface(&t, &mut w, history, &mut c, 1).is_empty());
             assert_eq!(w.speed, 0xab40);
-            assert_eq!(c.cursor, 0);
+            assert_eq!(c.player.encoded(), 0);
         }
     }
     #[test]
@@ -1554,8 +1552,44 @@ mod tests {
                 [SURFACE_CONTACT_SOUND]
             );
             assert_eq!(w.speed, expected);
-            assert_eq!(c.cursor, 10);
+            assert_eq!(c.player.encoded(), 10);
             assert_eq!(c.sprite.coordinates, 0x4523);
+        }
+    }
+    /// Source4E38..4E9C: only0/12hex/17hex admit surface contact.
+    #[test]
+    fn modernization_animation_surface_gate_all_accepted_entries() {
+        let mut truck = trucks()[0].clone();
+        truck.contact_marker = 1;
+        for cursor in 0..31 {
+            let mut working = WorkingMotion {
+                world: CENTER,
+                speed: 0x1240,
+                heading: 0,
+            };
+            let mut contact = ContactAnimation {
+                player: cursor.into(),
+                ..ContactAnimation::default()
+            };
+            let sounds = special_surface(&truck, &mut working, 0xf0, &mut contact, 1);
+            let eligible = matches!(cursor, 0 | 18 | 23);
+            assert_eq!(working.speed, if eligible { 0x1220 } else { 0x1240 });
+            assert_eq!(
+                contact.player.encoded(),
+                match cursor {
+                    0 => 10,
+                    18 | 23 => 19,
+                    _ => cursor,
+                }
+            );
+            assert_eq!(
+                sounds,
+                if cursor == 0 {
+                    vec![SURFACE_CONTACT_SOUND]
+                } else {
+                    vec![]
+                }
+            );
         }
     }
     #[test]
@@ -1569,11 +1603,11 @@ mod tests {
                 heading: 0,
             };
             let mut c = ContactAnimation {
-                cursor,
+                player: cursor.into(),
                 ..ContactAnimation::default()
             };
             assert!(special_surface(&t, &mut w, 0xf0, &mut c, 1).is_empty());
-            assert_eq!(c.cursor, 19);
+            assert_eq!(c.player.encoded(), 19);
             assert_eq!(w.speed, 0x20);
         }
         let mut w = WorkingMotion {
@@ -1582,12 +1616,12 @@ mod tests {
             heading: 0,
         };
         let mut c = ContactAnimation {
-            cursor: 19,
+            player: 19.into(),
             ..ContactAnimation::default()
         };
         special_surface(&t, &mut w, 0xf0, &mut c, 1);
         assert_eq!(w.speed, 0x40);
-        assert_eq!(c.cursor, 19);
+        assert_eq!(c.player.encoded(), 19);
     }
     #[test]
     fn special_surface_attract_suppresses_sound_only_not_slowdown_or_cursor() {
@@ -1601,7 +1635,7 @@ mod tests {
         let mut c = ContactAnimation::default();
         assert!(special_surface(&t, &mut w, 0xf0, &mut c, 0).is_empty());
         assert_eq!(w.speed, 0x20);
-        assert_eq!(c.cursor, 10);
+        assert_eq!(c.player.encoded(), 10);
     }
     #[test]
     fn track_three_initialization_expands_parallel_coordinates_and_other_tracks_preserve_staging() {

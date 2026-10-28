@@ -1080,3 +1080,49 @@ fn native_pose_assets_apply_overridden_tilt_resolution_and_graphics_together() {
         "a later unresolved selection must not partially present earlier trucks"
     );
 }
+
+/// game.asm $07BB..$0804, $0804/$0823 paired31-cell streams.
+/// All accepted legacy starts, all pacing residues, and every presentation slot.
+#[test]
+fn modernization_animation_all_entries_pacing_slots_and_retained_oam() {
+    const TILES: [u8; 31] = [
+        0xff, 0x20, 0x22, 0x24, 0x26, 0x28, 0x2a, 0x2c, 0x2e, 0xff, 0x62, 0x64, 0x66, 0x68, 0x6a,
+        0x6c, 0x6e, 0x80, 0xff, 0x82, 0x84, 0x86, 0x88, 0xff, 4, 5, 6, 7, 8, 9, 0xff,
+    ];
+    let tables = load_animations(&rom()).unwrap();
+    for start in 0..31u8 {
+        for residue in 0..4u8 {
+            let mut m = memory();
+            let before = m.clone();
+            let mut cursors = [start; 16];
+            animate(&mut m, &mut cursors, residue, &tables).unwrap();
+            let tile = TILES[usize::from(start)];
+            let stopped = tile == 0xff;
+            let expected = if stopped {
+                0
+            } else {
+                start + u8::from(residue == 0)
+            };
+            assert_eq!(cursors, [expected; 16], "start={start} residue={residue}");
+            let mut expected_oam = before.staged_oam;
+            for slot in 0..16 {
+                let at = 0x150 + slot * 4;
+                if stopped {
+                    expected_oam[at + 1] = 0xf0;
+                } else {
+                    expected_oam[at + 2] = tile;
+                    expected_oam[at + 3] = match start {
+                        1..=8 => 0x2a,
+                        10..=17 | 19..=22 => 0x2c,
+                        24..=29 => 0x2b,
+                        _ => unreachable!(),
+                    };
+                }
+            }
+            assert_eq!(m.staged_oam, expected_oam);
+            assert_eq!(m.visible_oam, before.visible_oam);
+            assert_eq!(m.vram, before.vram);
+            assert_eq!(m.palette, before.palette);
+        }
+    }
+}
