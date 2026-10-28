@@ -1049,6 +1049,85 @@
         "Existing original unowned-WRAM and subframe timing/native DSP uncertainties remain explicit."
       ],
       "implementation_commit_subject": "modernize: decode terrain into native surface patches"
+    },
+    {
+      "id": "M3",
+      "iteration": 3,
+      "category": "modernization",
+      "status": "retained",
+      "starting_implementation_commit": "cf24cc4",
+      "design": "modernize/design-iteration-003-M3.json",
+      "retained_source_sha256": "d12395416d86d464cd1dda35fa0a17fb4539dc43c5d9b8ed76a97d26e008c94f",
+      "retained_binary_sha256": "381454b42187de9f6d737ef831226d5a491238743ec5a6e41a0135355ad9d04b",
+      "before": "Main music/effect playback holds source-address cursors and call/loop targets; each expiry fetches sequence bytes, decodes command tokens, constructs operands and reads duration according to live fixed/force flags.",
+      "after": "ScoreGraph compiles every mapped byte start with last-segment precedence into typed Note/Rest/Control/Fault nodes and native continuation handles. Main playheads/stack targets are EventRef values; immutable source labels support unchanged wire/debug data. Musical repetitions use1..256 native counts with legacy byte encoding. Normal parse has no source-byte reads, opcode decoding, operand-vector construction or target word decoding.",
+      "removed_machinery": [
+        "Runtime main-score byte fetching/opcode decoding/operand collection/target decoding",
+        "Source-address execution cursors and call/loop continuation authority",
+        "Wrapping machine-byte loop counters in ordinary playback"
+      ],
+      "remaining_boundaries": [
+        "Immutable source labels and mappings for legacy snapshot/debug/error compatibility",
+        "Raw asset uploads and overlapping source recipes compile once; dormant invalid paths fail only when executed",
+        "Auxiliary stream, live envelope/config overlap, DSP/note arithmetic, host cadence and synthesis unchanged"
+      ],
+      "validation": [
+        {
+          "command": "Preimplementation duration/context/wrap contracts",
+          "result": "PASS3 on raw sequencer",
+          "evidence": "modernize/evidence/iteration-003/M3-preimplementation/fast.json"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter sound::",
+          "result": "PASS107",
+          "evidence": "modernize/evidence/iteration-003/M3-sound-fast.json"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+          "result": "PASS653 optimized tests and six fmt/desktop/web gates",
+          "evidence": "modernize/evidence/iteration-003/M3-full-latest.json"
+        },
+        {
+          "command": "All32 audio selectors",
+          "result": "PASS ordered DSP/Driver/PCM/observe hashes and288 saved JSON landmarks identical",
+          "evidence": "modernize/evidence/iteration-003/M3-census-comparison.json"
+        },
+        {
+          "command": "Fresh original music and nitro effect",
+          "result": "PASS8-voice music vectors at two phases; effect2 pitch/instrument/amplitude at two phases",
+          "evidence": "modernize/evidence/iteration-003/M3-retained-music/result.json"
+        },
+        {
+          "command": "Fresh postrace branches",
+          "result": "PASS7 landmarks/full frames/checkpoint fields including PCM except build identity",
+          "evidence": "modernize/evidence/iteration-003/M3-retained-postrace/comparison.json"
+        },
+        {
+          "command": "Fresh hazard/lap route",
+          "result": "PASS3 landmarks/full frames/route PCM/checkpoint fields except identity",
+          "evidence": "modernize/evidence/iteration-003/M3-retained-hazard/native-hazard-route/baseline-comparison.json"
+        },
+        {
+          "command": "Runtime boundary audit",
+          "result": "PASS no stream decoding in main playback; voice update bodies unchanged",
+          "evidence": "modernize/evidence/iteration-003/M3-execution-boundary-audit.json"
+        },
+        {
+          "command": "Original accounting audit",
+          "result": "PASS1527 regions/1408 units/22 uncertainties and original metadata preserved",
+          "evidence": "modernize/evidence/iteration-003/M3-accounting-audit.json"
+        }
+      ],
+      "test_migration": "Fixtures compile graph at construction and after mutations; numeric cursor/loop expectations encode through source/legacy adapters. Byte-reader test replaced by compiled continuation word-boundary contract retaining values. Three preimplementation dual-duration/forced-rest/wrapping contracts retain expectations; three graph tests cover overlap, nonwrapping segment tails and legacy rebinding.",
+      "reviews": [
+        "modernize/evidence/iteration-003/M3-review.json"
+      ],
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or physical playback claim.",
+        "Original music/effect assertions compare semantic phases, not whole original PCM or equal source/native frame counts.",
+        "Existing auxiliary/config overlap and native DSP interpolation uncertainties preserved."
+      ],
+      "implementation_commit_subject": "modernize: compile main audio scores into native events"
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

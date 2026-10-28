@@ -27,6 +27,13 @@ Truck now owns `trucks::nitro::NitroStock`, measured in charges. Movement consum
 
 Both value owners isolate noncanonical byte states accepted by old saves in a compatibility variant. Normal gameplay uses native quantities. Legacy conditional arithmetic remains solely to preserve those accepted states, including their display/record effects; it is not a new invalid-BCD hardware claim. Serialization and public semantic observations retain their existing fields and values.
 
+Main music/effect playback follows immutable typed score events in `sound/score.rs`.
+Native playheads and musical call/repetition continuations replace source byte PCs;
+source labels are retained only for asset provenance and legacy debug/save binding.
+Duration-dependent note edges and dormant faults preserve the original language.
+Auxiliary streams, envelope configuration, host timing and synthesis remain their
+existing owners; see `sound/audio.trace.md`.
+
 Terrain queries use a decoded surface-patch atlas and immutable coordinate views.
 The asset loader resolves source byte-column aliases and control/neighbor patterns;
 queries return heights or native block directions. Motion consumes optional wheel

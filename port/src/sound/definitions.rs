@@ -95,6 +95,7 @@ pub struct SampleDefinition {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AudioDefinitions {
+    pub score: super::score::ScoreGraph,
     pub data: SequenceData,
     pub songs: Vec<SongDefinition>,
     pub effects: Vec<EffectDefinition>,
@@ -107,6 +108,15 @@ pub struct AudioDefinitions {
     pub initial_envelopes: Vec<[u8; 7]>,
     pub dsp_initialization: Vec<(u8, u8)>,
     pub command_targets: Vec<DataAddress>,
+}
+impl AudioDefinitions {
+    pub fn compile_score(&mut self) {
+        self.score = super::score::ScoreGraph::compile(&self.data);
+    }
+    pub fn with_compiled_score(mut self) -> Self {
+        self.compile_score();
+        self
+    }
 }
 pub fn load_audio(rom: &[u8]) -> Result<AudioDefinitions> {
     let mut data = SequenceData::default();
@@ -189,6 +199,7 @@ pub fn load_audio(rom: &[u8]) -> Result<AudioDefinitions> {
         command_targets.push(DataAddress(word(0x0a10 + index * 2)?));
     }
     Ok(AudioDefinitions {
+        score: super::score::ScoreGraph::compile(&data),
         data,
         songs,
         effects,

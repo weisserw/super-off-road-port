@@ -194,7 +194,7 @@ impl Sound {
             if voice.active {
                 self.definitions
                     .data
-                    .read(candidate.driver.sequences[slot].cursor)?;
+                    .read(candidate.driver.sequences[slot].cursor.source())?;
             }
             ensure!(
                 voice.modulation_direction >= -1
@@ -207,6 +207,9 @@ impl Sound {
         let mut next = self.clone();
         next.mixer.restore_snapshot_json(&candidate.mixer)?;
         next.driver = candidate.driver;
+        for sequence in &mut next.driver.sequences {
+            sequence.bind(&self.definitions.score);
+        }
         next.host = candidate.host;
         next.native_samples = candidate.native_samples;
         next.output_phase = candidate.output_phase;
@@ -218,7 +221,7 @@ impl Sound {
         Ok(())
     }
     pub fn observe(&self) -> serde_json::Value {
-        serde_json::json!({"native_samples":self.native_samples,"output_phase":self.output_phase,"output_rate":self.output_rate,"updates":self.driver.updates,"song":self.driver.requested_song,"master":self.driver.master,"fade_step":self.driver.fade_step,"heartbeat":self.host.last_heartbeat,"acknowledged":self.host.acknowledged,"second_update_samples":self.host.second_update_samples,"pending_dsp_writes":self.driver.pending_dsp.len(),"voices":self.driver.voices.iter().enumerate().map(|(slot,voice)|serde_json::json!({"active":voice.active,"sample":self.outputs[slot].sample,"duration":voice.duration,"pitch":voice.dsp_pitch,"amplitude":voice.amplitude,"sequence":self.driver.sequences[slot].cursor.0,"stack_depth":self.driver.sequences[slot].stack.len(),"synthesizing":self.mixer.voices[slot].active()})).collect::<Vec<_>>()})
+        serde_json::json!({"native_samples":self.native_samples,"output_phase":self.output_phase,"output_rate":self.output_rate,"updates":self.driver.updates,"song":self.driver.requested_song,"master":self.driver.master,"fade_step":self.driver.fade_step,"heartbeat":self.host.last_heartbeat,"acknowledged":self.host.acknowledged,"second_update_samples":self.host.second_update_samples,"pending_dsp_writes":self.driver.pending_dsp.len(),"voices":self.driver.voices.iter().enumerate().map(|(slot,voice)|serde_json::json!({"active":voice.active,"sample":self.outputs[slot].sample,"duration":voice.duration,"pitch":voice.dsp_pitch,"amplitude":voice.amplitude,"sequence":self.driver.sequences[slot].cursor.source().0,"stack_depth":self.driver.sequences[slot].stack.len(),"synthesizing":self.mixer.voices[slot].active()})).collect::<Vec<_>>()})
     }
     /// Host input, sequencer and synthesis share this single mutable owner.
     pub fn service_host(&mut self, input: host::HostInput) -> Result<()> {
@@ -335,24 +338,28 @@ pub fn decode_brr_pcm(sample: &SampleDefinition, blocks: usize) -> Result<Vec<i1
 mod tests {
     use super::*;
     fn definitions(blocks: Vec<u8>) -> Arc<AudioDefinitions> {
-        Arc::new(AudioDefinitions {
-            data: SequenceData::default(),
-            songs: vec![],
-            effects: vec![],
-            samples: vec![SampleDefinition {
-                start: DataAddress(0x400),
-                loop_address: DataAddress(0x400),
-                blocks,
-                loop_block: 0,
-            }],
-            pitch_low: [0; 256],
-            pitch_high: [0; 256],
-            instrument_note_base: [0; 256],
-            instrument_scale: [0; 256],
-            initial_envelopes: vec![[0; 7]; 28],
-            dsp_initialization: vec![],
-            command_targets: vec![],
-        })
+        Arc::new(
+            AudioDefinitions {
+                score: Default::default(),
+                data: SequenceData::default(),
+                songs: vec![],
+                effects: vec![],
+                samples: vec![SampleDefinition {
+                    start: DataAddress(0x400),
+                    loop_address: DataAddress(0x400),
+                    blocks,
+                    loop_block: 0,
+                }],
+                pitch_low: [0; 256],
+                pitch_high: [0; 256],
+                instrument_note_base: [0; 256],
+                instrument_scale: [0; 256],
+                initial_envelopes: vec![[0; 7]; 28],
+                dsp_initialization: vec![],
+                command_targets: vec![],
+            }
+            .with_compiled_score(),
+        )
     }
     fn sound() -> Sound {
         Sound::new(definitions(vec![

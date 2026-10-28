@@ -353,6 +353,7 @@ mod tests {
     use super::*;
     fn definitions() -> AudioDefinitions {
         AudioDefinitions {
+            score: Default::default(),
             data: SequenceData::default(),
             songs: vec![],
             effects: vec![],
@@ -365,6 +366,7 @@ mod tests {
             dsp_initialization: vec![],
             command_targets: vec![],
         }
+        .with_compiled_score()
     }
     #[test]
     fn pitch_uses_unsigned_instrument_scale_multiply_add_without_discarding_carry() {

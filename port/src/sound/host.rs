@@ -71,7 +71,7 @@ pub fn select_effect(
         driver.noise_mask &= !(1 << slot);
         driver.effect_priorities[slot - 6] = effect.priority;
         driver.sequences[slot] = sequencer::Sequence {
-            cursor: effect.sequence,
+            cursor: definitions.score.resolve(effect.sequence),
             ..Default::default()
         };
     }
@@ -169,6 +169,7 @@ mod tests {
     use super::*;
     fn defs() -> AudioDefinitions {
         AudioDefinitions {
+            score: Default::default(),
             data: SequenceData {
                 segments: vec![DataSegment {
                     origin: DataAddress(0x400),
@@ -192,6 +193,7 @@ mod tests {
             dsp_initialization: vec![],
             command_targets: vec![],
         }
+        .with_compiled_score()
     }
     #[test]
     fn human_sound_gate_tests_only_low_mask_byte_and_keeps_command_bytes() {
@@ -278,7 +280,7 @@ mod tests {
             (v.duration, v.release_threshold, d.noise_mask),
             (1, 0, 0xbf)
         );
-        assert_eq!(d.sequences[6].cursor, DataAddress(0x400));
+        assert_eq!(d.sequences[6].cursor.source(), DataAddress(0x400));
     }
     #[test]
     fn second_reserved_effect_clears_only_noise_bit_seven() {
@@ -476,6 +478,6 @@ mod tests {
         assert_eq!(d.requested_song, Some(5));
         assert_eq!((d.master, d.dsp_flags), (0x7f00, 0x33));
         assert_eq!(h.acknowledged, 1);
-        assert_eq!(d.sequences[0].cursor, a.songs[5].voices[0]);
+        assert_eq!(d.sequences[0].cursor.source(), a.songs[5].voices[0]);
     }
 }

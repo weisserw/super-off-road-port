@@ -1,105 +1,22 @@
 //! Game sequence language and per-voice control flow, never SPC instruction execution.
+#[cfg(test)]
+pub use super::score::{COMMAND_FIRST, COMMAND_LAST, Command, decode_command};
+use super::score::{Control, Event, EventRef, Repetitions, ScoreGraph};
 use super::{definitions::*, voice::*};
 use anyhow::{Context, Result, ensure};
-pub const COMMAND_FIRST: u8 = 0x80;
-pub const COMMAND_LAST: u8 = 0xc2;
-const COMMANDS: [(Command, usize); 34] = [
-    (Command::Stop, 0),
-    (Command::Jump, 2),
-    (Command::Call, 2),
-    (Command::Return, 0),
-    (Command::BeginLoop, 1),
-    (Command::RepeatLoop, 0),
-    (Command::FixedDuration, 1),
-    (Command::ForceDuration, 0),
-    (Command::Transpose, 1),
-    (Command::Instrument, 1),
-    (Command::LeftVolume, 1),
-    (Command::RightVolume, 1),
-    (Command::AuxiliaryStream, 3),
-    (Command::PitchOffset, 1),
-    (Command::PositiveModulation, 3),
-    (Command::NegativeModulation, 3),
-    (Command::Portamento, 1),
-    (Command::DisableModulation, 0),
-    (Command::ReleaseDelta, 1),
-    (Command::ReleaseFixed, 1),
-    (Command::Slew, 2),
-    (Command::DisableSlew, 0),
-    (Command::TargetEnvelope, 3),
-    (Command::EnvelopeRecord, 1),
-    (Command::NoiseOn, 0),
-    (Command::NoiseOff, 0),
-    (Command::NoiseClock, 1),
-    (Command::PrimaryMode, 0),
-    (Command::AuxiliaryEnable, 0),
-    (Command::SecondaryMode, 0),
-    (Command::AllowKeyOn, 0),
-    (Command::SuppressKeyOn, 0),
-    (Command::SkipTranspose, 0),
-    (Command::ReloadSongOne, 0),
-];
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Command {
-    Stop,
-    Jump,
-    Call,
-    Return,
-    BeginLoop,
-    RepeatLoop,
-    FixedDuration,
-    ForceDuration,
-    Transpose,
-    Instrument,
-    LeftVolume,
-    RightVolume,
-    AuxiliaryStream,
-    PitchOffset,
-    PositiveModulation,
-    NegativeModulation,
-    Portamento,
-    DisableModulation,
-    ReleaseDelta,
-    ReleaseFixed,
-    Slew,
-    DisableSlew,
-    TargetEnvelope,
-    EnvelopeRecord,
-    NoiseOn,
-    NoiseOff,
-    NoiseClock,
-    PrimaryMode,
-    AuxiliaryEnable,
-    SecondaryMode,
-    AllowKeyOn,
-    SuppressKeyOn,
-    SkipTranspose,
-    ReloadSongOne,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CommandDefinition {
-    pub command: Command,
-    pub operands: usize,
-}
-pub fn decode_command(token: u8) -> Result<CommandDefinition> {
-    ensure!(
-        (COMMAND_FIRST..=COMMAND_LAST).contains(&token) && token & 1 == 0,
-        "invalid sequence command"
-    );
-    let (command, operands) = COMMANDS[usize::from((token - COMMAND_FIRST) / 2)];
-    Ok(CommandDefinition { command, operands })
-}
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub enum Frame {
-    Call(DataAddress),
-    Loop { start: DataAddress, remaining: u8 },
+    Call(EventRef),
+    Loop {
+        start: EventRef,
+        remaining: Repetitions,
+    },
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Sequence {
-    pub cursor: DataAddress,
+    pub cursor: EventRef,
     pub stack: Vec<Frame>,
     pub auxiliary: DataAddress,
 }
@@ -177,17 +94,139 @@ pub fn load_song(driver: &mut Driver, song: u8, definitions: &AudioDefinitions) 
         if slot < 3 {
             next.voices[slot].envelope_current = 1;
         }
-        next.sequences[slot].cursor = song_data.voices[slot];
+        next.sequences[slot].cursor = definitions.score.resolve(song_data.voices[slot]);
     }
     *driver = next;
     Ok(())
 }
-pub fn read_sequence_byte(sequence: &mut Sequence, data: &SequenceData) -> Result<u8> {
-    let value = data.read(sequence.cursor)?;
-    sequence.cursor.0 = sequence.cursor.0.wrapping_add(1);
-    Ok(value)
+fn apply_control(
+    driver: &mut Driver,
+    slot: usize,
+    control: Control,
+    definitions: &AudioDefinitions,
+) -> Result<()> {
+    ensure!(slot < VOICES, "invalid voice slot");
+    if control == Control::ReloadSongOne {
+        load_song(driver, 1, definitions)?;
+        driver.master = 0x7f00;
+        return Ok(());
+    }
+    let voice = &mut driver.voices[slot];
+    let sequence = &mut driver.sequences[slot];
+    match control {
+        Control::Stop => voice.active = false,
+        Control::Jump(target) => sequence.cursor = target,
+        Control::Call(target) => {
+            ensure!(sequence.stack.len() < 256, "sequence call stack limit");
+            sequence.stack.push(Frame::Call(sequence.cursor));
+            sequence.cursor = target;
+        }
+        Control::Return => {
+            let Some(Frame::Call(target)) = sequence.stack.last() else {
+                anyhow::bail!("unbalanced sequence return");
+            };
+            sequence.cursor = *target;
+            sequence.stack.pop();
+        }
+        Control::BeginLoop(count) => {
+            ensure!(sequence.stack.len() < 256, "sequence loop stack limit");
+            sequence.stack.push(Frame::Loop {
+                start: sequence.cursor,
+                remaining: count,
+            });
+        }
+        Control::RepeatLoop => {
+            let Some(Frame::Loop { start, remaining }) = sequence.stack.last_mut() else {
+                anyhow::bail!("unbalanced loop repeat");
+            };
+            if remaining.repeat() {
+                sequence.cursor = *start;
+            } else {
+                sequence.stack.pop();
+            }
+        }
+        Control::FixedDuration(value) => voice.fixed_duration = value,
+        Control::ForceDuration => voice.force_duration = true,
+        Control::Transpose(value) => voice.transpose = value,
+        Control::Instrument(value) => voice.instrument = value,
+        Control::LeftVolume(value) => voice.volume[0] = value,
+        Control::RightVolume(value) => voice.volume[1] = value,
+        Control::AuxiliaryStream { reload, stream } => {
+            voice.auxiliary_reload = reload;
+            sequence.auxiliary = stream;
+            voice.amplitude = 0;
+            voice.auxiliary_cursor = 0;
+            voice.primary_mode = false;
+            voice.auxiliary_enable = false;
+            voice.secondary_mode = true;
+        }
+        Control::PitchOffset(value) => voice.pitch_low_offset = value,
+        Control::Modulation {
+            direction,
+            delay,
+            step,
+            period,
+        } => {
+            voice.modulation_direction_reload = direction;
+            voice.modulation_delay_reload = delay;
+            voice.modulation_step = step;
+            voice.modulation_period_reload = period;
+            voice.modulation_period = period;
+        }
+        Control::Portamento(value) => voice.portamento_step = value,
+        Control::DisableModulation => voice.modulation_direction_reload = 0,
+        Control::ReleaseDelta(value) => {
+            voice.release_delta = value;
+            voice.release_fixed = 0;
+        }
+        Control::ReleaseFixed(value) => {
+            voice.release_fixed = value;
+            voice.release_delta = 0;
+        }
+        Control::Slew { step, interval } => {
+            voice.envelope_step = step;
+            voice.envelope_interval = interval;
+        }
+        Control::DisableSlew => voice.envelope_interval = 0,
+        Control::TargetEnvelope {
+            step,
+            interval,
+            delay,
+        } => {
+            voice.target_step = step;
+            voice.target_interval = interval;
+            voice.target_delay = delay;
+            voice.target_countdown = delay;
+        }
+        Control::EnvelopeRecord(value) => {
+            voice.envelope_record = value.wrapping_mul(7);
+            voice.primary_mode = true;
+            voice.secondary_mode = false;
+            voice.auxiliary_enable = false;
+        }
+        Control::NoiseOn => driver.noise_mask |= 1 << slot,
+        Control::NoiseOff => driver.noise_mask &= !(1 << slot),
+        Control::NoiseClock(value) => driver.dsp_flags = (value & 31) | 0x20,
+        Control::PrimaryMode => {
+            voice.primary_mode = true;
+            voice.secondary_mode = false;
+            voice.auxiliary_enable = false;
+        }
+        Control::AuxiliaryEnable => voice.auxiliary_enable = true,
+        Control::SecondaryMode => {
+            voice.secondary_mode = true;
+            voice.primary_mode = false;
+            voice.auxiliary_enable = false;
+        }
+        Control::AllowKeyOn => voice.suppress_key_on = false,
+        Control::SuppressKeyOn => voice.suppress_key_on = true,
+        Control::SkipTranspose => voice.skip_transpose = 1,
+        Control::ReloadSongOne => unreachable!(),
+    }
+    Ok(())
 }
-pub fn apply_command(
+#[cfg(test)]
+fn apply_command(
     driver: &mut Driver,
     slot: usize,
     command: Command,
@@ -195,127 +234,31 @@ pub fn apply_command(
     definitions: &AudioDefinitions,
 ) -> Result<()> {
     ensure!(slot < VOICES, "invalid voice slot");
-    let expected = COMMANDS
+    let expected = super::score::COMMANDS
         .iter()
         .find(|(value, _)| *value == command)
         .unwrap()
         .1;
     ensure!(operands.len() == expected, "invalid sequence operands");
-    if command == Command::ReloadSongOne {
-        load_song(driver, 1, definitions)?;
-        driver.master = 0x7f00;
-        return Ok(());
-    }
-    let voice = &mut driver.voices[slot];
-    let sequence = &mut driver.sequences[slot];
-    let address = || DataAddress(u16::from_le_bytes([operands[0], operands[1]]));
-    match command {
-        Command::Stop => voice.active = false,
-        Command::Jump => sequence.cursor = address(),
-        Command::Call => {
-            ensure!(sequence.stack.len() < 256, "sequence call stack limit");
-            sequence.stack.push(Frame::Call(sequence.cursor));
-            sequence.cursor = address();
-        }
-        Command::Return => {
-            let Some(Frame::Call(target)) = sequence.stack.last() else {
-                anyhow::bail!("unbalanced sequence return");
-            };
-            sequence.cursor = *target;
-            sequence.stack.pop();
-        }
-        Command::BeginLoop => {
-            ensure!(sequence.stack.len() < 256, "sequence loop stack limit");
-            sequence.stack.push(Frame::Loop {
-                start: sequence.cursor,
-                remaining: operands[0],
-            });
-        }
-        Command::RepeatLoop => {
-            let Some(Frame::Loop { start, remaining }) = sequence.stack.last_mut() else {
-                anyhow::bail!("unbalanced loop repeat");
-            };
-            *remaining = remaining.wrapping_sub(1);
-            if *remaining == 0 {
-                sequence.stack.pop();
-            } else {
-                sequence.cursor = *start;
+    let mut values = [0; 3];
+    values[..operands.len()].copy_from_slice(operands);
+    apply_control(
+        driver,
+        slot,
+        definitions.score.control(command, &values),
+        definitions,
+    )
+}
+impl Sequence {
+    pub fn bind(&mut self, graph: &ScoreGraph) {
+        self.cursor = graph.resolve(self.cursor.source());
+        for frame in &mut self.stack {
+            match frame {
+                Frame::Call(target) => *target = graph.resolve(target.source()),
+                Frame::Loop { start, .. } => *start = graph.resolve(start.source()),
             }
         }
-        Command::FixedDuration => voice.fixed_duration = operands[0],
-        Command::ForceDuration => voice.force_duration = true,
-        Command::Transpose => voice.transpose = operands[0],
-        Command::Instrument => voice.instrument = operands[0],
-        Command::LeftVolume => voice.volume[0] = operands[0],
-        Command::RightVolume => voice.volume[1] = operands[0],
-        Command::AuxiliaryStream => {
-            voice.auxiliary_reload = operands[0];
-            sequence.auxiliary = DataAddress(u16::from_le_bytes([operands[1], operands[2]]));
-            voice.amplitude = 0;
-            voice.auxiliary_cursor = 0;
-            voice.primary_mode = false;
-            voice.auxiliary_enable = false;
-            voice.secondary_mode = true;
-        }
-        Command::PitchOffset => voice.pitch_low_offset = operands[0],
-        Command::PositiveModulation | Command::NegativeModulation => {
-            voice.modulation_direction_reload = if command == Command::PositiveModulation {
-                1
-            } else {
-                -1
-            };
-            voice.modulation_delay_reload = operands[0];
-            voice.modulation_step = operands[1];
-            voice.modulation_period_reload = operands[2];
-            voice.modulation_period = operands[2];
-        }
-        Command::Portamento => voice.portamento_step = operands[0],
-        Command::DisableModulation => voice.modulation_direction_reload = 0,
-        Command::ReleaseDelta => {
-            voice.release_delta = operands[0];
-            voice.release_fixed = 0;
-        }
-        Command::ReleaseFixed => {
-            voice.release_fixed = operands[0];
-            voice.release_delta = 0;
-        }
-        Command::Slew => {
-            voice.envelope_step = operands[0];
-            voice.envelope_interval = operands[1];
-        }
-        Command::DisableSlew => voice.envelope_interval = 0,
-        Command::TargetEnvelope => {
-            voice.target_step = operands[0];
-            voice.target_interval = operands[1];
-            voice.target_delay = operands[2];
-            voice.target_countdown = operands[2];
-        }
-        Command::EnvelopeRecord => {
-            voice.envelope_record = operands[0].wrapping_mul(7);
-            voice.primary_mode = true;
-            voice.secondary_mode = false;
-            voice.auxiliary_enable = false;
-        }
-        Command::NoiseOn => driver.noise_mask |= 1 << slot,
-        Command::NoiseOff => driver.noise_mask &= !(1 << slot),
-        Command::NoiseClock => driver.dsp_flags = (operands[0] & 31) | 0x20,
-        Command::PrimaryMode => {
-            voice.primary_mode = true;
-            voice.secondary_mode = false;
-            voice.auxiliary_enable = false;
-        }
-        Command::AuxiliaryEnable => voice.auxiliary_enable = true,
-        Command::SecondaryMode => {
-            voice.secondary_mode = true;
-            voice.primary_mode = false;
-            voice.auxiliary_enable = false;
-        }
-        Command::AllowKeyOn => voice.suppress_key_on = false,
-        Command::SuppressKeyOn => voice.suppress_key_on = true,
-        Command::SkipTranspose => voice.skip_transpose = 1,
-        Command::ReloadSongOne => unreachable!(),
     }
-    Ok(())
 }
 pub fn parse_to_note(
     driver: &mut Driver,
@@ -325,37 +268,43 @@ pub fn parse_to_note(
     ensure!(slot < VOICES, "invalid parser voice");
     let mut next = driver.clone();
     for _ in 0..4096 {
-        let token = read_sequence_byte(&mut next.sequences[slot], &definitions.data)?;
-        if token < 0x80 {
-            let need = next.voices[slot].force_duration || next.voices[slot].fixed_duration == 0;
-            let duration = if need {
-                Some(read_sequence_byte(
-                    &mut next.sequences[slot],
-                    &definitions.data,
-                )?)
-            } else {
-                None
+        let node = definitions.score.fetch(&mut next.sequences[slot].cursor)?;
+        let (pitch, timing) = match node.event {
+            Event::Fault(error) => return error.fail(),
+            Event::Control(control) => {
+                next.sequences[slot].cursor = node.next;
+                apply_control(&mut next, slot, control, definitions)?;
+                if !next.voices[slot].active {
+                    *driver = next;
+                    return Ok(());
+                }
+                continue;
+            }
+            Event::Note { pitch, timing } => (pitch, timing),
+            Event::Rest(timing) => (0, timing),
+        };
+        let need = next.voices[slot].force_duration || next.voices[slot].fixed_duration == 0;
+        let duration = if need {
+            let (duration, continuation) = match timing.explicit {
+                Ok(value) => value,
+                Err(error) => return error.fail(),
             };
-            start_note(
-                &mut next.voices[slot],
-                token,
-                duration,
-                1 << slot,
-                &mut next.keys,
-                definitions,
-            )?;
-            *driver = next;
-            return Ok(());
-        }
-        let metadata = decode_command(token)?;
-        let operands = (0..metadata.operands)
-            .map(|_| read_sequence_byte(&mut next.sequences[slot], &definitions.data))
-            .collect::<Result<Vec<_>>>()?;
-        apply_command(&mut next, slot, metadata.command, &operands, definitions)?;
-        if !next.voices[slot].active {
-            *driver = next;
-            return Ok(());
-        }
+            next.sequences[slot].cursor = continuation;
+            Some(duration)
+        } else {
+            next.sequences[slot].cursor = node.next;
+            None
+        };
+        start_note(
+            &mut next.voices[slot],
+            pitch,
+            duration,
+            1 << slot,
+            &mut next.keys,
+            definitions,
+        )?;
+        *driver = next;
+        return Ok(());
     }
     anyhow::bail!("zero-time sequence command cycle")
 }
@@ -459,6 +408,7 @@ mod tests {
     const SCRIPT: DataAddress = DataAddress(0x400);
     fn defs(bytes: &[u8]) -> AudioDefinitions {
         AudioDefinitions {
+            score: Default::default(),
             data: SequenceData {
                 segments: vec![DataSegment {
                     origin: SCRIPT,
@@ -476,12 +426,13 @@ mod tests {
             dsp_initialization: vec![],
             command_targets: vec![],
         }
+        .with_compiled_score()
     }
     fn driver() -> Driver {
         let mut d = Driver::default();
         d.voices[0].active = true;
         d.voices[0].duration = 1;
-        d.sequences[0].cursor = SCRIPT;
+        d.sequences[0].cursor = (SCRIPT).into();
         d
     }
     #[test]
@@ -511,20 +462,23 @@ mod tests {
         }
     }
     #[test]
-    fn sequence_reader_increments_word_pointer_and_preserves_fetched_token() {
+    fn compiled_command_edge_preserves_next_note_at_word_boundary() {
         let data = SequenceData {
             segments: vec![DataSegment {
                 origin: DataAddress(0x4ff),
                 bytes: vec![0x8e, 0x22],
             }],
         };
-        let mut s = Sequence {
-            cursor: DataAddress(0x4ff),
-            ..Sequence::default()
-        };
-        assert_eq!(read_sequence_byte(&mut s, &data).unwrap(), 0x8e);
-        assert_eq!(s.cursor, DataAddress(0x500));
-        assert_eq!(read_sequence_byte(&mut s, &data).unwrap(), 0x22);
+        let graph = ScoreGraph::compile(&data);
+        let mut head = graph.resolve(DataAddress(0x4ff));
+        let first = graph.fetch(&mut head).unwrap();
+        assert_eq!(first.event, Event::Control(Control::ForceDuration));
+        assert_eq!(first.next.source(), DataAddress(0x500));
+        head = first.next;
+        assert!(matches!(
+            graph.fetch(&mut head).unwrap().event,
+            Event::Note { pitch: 0x22, .. }
+        ));
     }
     #[test]
     fn stop_only_deactivates_voice_without_invented_key_off_or_pitch_reset() {
@@ -540,46 +494,46 @@ mod tests {
     fn jump_reads_little_endian_target_and_parser_continues_to_note() {
         let mut d = driver();
         parse_to_note(&mut d, 0, &defs(&[0x82, 0x04, 0x04, 0x80, 7, 9])).unwrap();
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x406));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x406));
         assert_eq!((d.voices[0].duration, d.voices[0].note_origin), (9, 7));
     }
     #[test]
     fn nested_calls_push_pointer_after_operands_and_return_last_in_first_out() {
         let mut d = driver();
-        d.sequences[0].cursor = DataAddress(0x403);
+        d.sequences[0].cursor = (DataAddress(0x403)).into();
         apply_command(&mut d, 0, Command::Call, &[0x20, 4], &defs(&[])).unwrap();
-        d.sequences[0].cursor = DataAddress(0x426);
+        d.sequences[0].cursor = (DataAddress(0x426)).into();
         apply_command(&mut d, 0, Command::Call, &[0x40, 4], &defs(&[])).unwrap();
         assert_eq!(
             d.sequences[0].stack,
             [
-                Frame::Call(DataAddress(0x403)),
-                Frame::Call(DataAddress(0x426))
+                Frame::Call(DataAddress(0x403).into()),
+                Frame::Call(DataAddress(0x426).into())
             ]
         );
         apply_command(&mut d, 0, Command::Return, &[], &defs(&[])).unwrap();
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x426));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x426));
         apply_command(&mut d, 0, Command::Return, &[], &defs(&[])).unwrap();
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x403));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x403));
     }
     #[test]
     fn counted_loop_rewinds_then_drops_three_byte_frame_at_count_one() {
         let mut d = driver();
-        d.sequences[0].cursor = DataAddress(0x402);
+        d.sequences[0].cursor = (DataAddress(0x402)).into();
         apply_command(&mut d, 0, Command::BeginLoop, &[2], &defs(&[])).unwrap();
-        d.sequences[0].cursor = DataAddress(0x410);
+        d.sequences[0].cursor = (DataAddress(0x410)).into();
         apply_command(&mut d, 0, Command::RepeatLoop, &[], &defs(&[])).unwrap();
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x402));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x402));
         assert_eq!(
             d.sequences[0].stack,
             [Frame::Loop {
-                start: DataAddress(0x402),
-                remaining: 1
+                start: DataAddress(0x402).into(),
+                remaining: (1u8).into()
             }]
         );
-        d.sequences[0].cursor = DataAddress(0x410);
+        d.sequences[0].cursor = (DataAddress(0x410)).into();
         apply_command(&mut d, 0, Command::RepeatLoop, &[], &defs(&[])).unwrap();
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x410));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x410));
         assert!(d.sequences[0].stack.is_empty());
     }
     #[test]
@@ -590,8 +544,8 @@ mod tests {
         assert_eq!(
             d.sequences[0].stack,
             [Frame::Loop {
-                start: SCRIPT,
-                remaining: 255
+                start: SCRIPT.into(),
+                remaining: (255u8).into()
             }]
         );
     }
@@ -609,7 +563,7 @@ mod tests {
         let mut d = driver();
         parse_to_note(&mut d, 0, &defs(&[0x8c, 7, 0x8e, 5, 11])).unwrap();
         assert_eq!((d.voices[0].fixed_duration, d.voices[0].duration), (7, 11));
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x405));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x405));
         assert!(!d.voices[0].force_duration);
     }
     #[test]
@@ -617,7 +571,7 @@ mod tests {
         let mut d = driver();
         parse_to_note(&mut d, 0, &defs(&[0x8c, 7, 5, 6])).unwrap();
         assert_eq!(
-            (d.voices[0].duration, d.sequences[0].cursor),
+            (d.voices[0].duration, d.sequences[0].cursor.source()),
             (7, DataAddress(0x403))
         );
     }
@@ -812,7 +766,7 @@ mod tests {
         d.voices[0].duration = 1;
         update_voice(&mut d, 0, &defs(&[1, 3])).unwrap();
         assert_eq!(d.voices[0].duration, 3);
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x402));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x402));
     }
     #[test]
     fn original_song_load_resets_priorities_keys_controls_but_keeps141_live_envelope_overlap() {
@@ -830,7 +784,7 @@ mod tests {
         assert_eq!(d.effect_priorities, [0, 0]);
         assert_eq!(d.keys, KeyMasks::default());
         assert_eq!((d.master, d.fade_step, d.selected_song_shadow), (0, 0, 0));
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x1568));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x1568));
         assert!(
             d.voices
                 .iter()
@@ -857,7 +811,7 @@ mod tests {
         d.selected_song_shadow = 7;
         apply_command(&mut d, 0, Command::ReloadSongOne, &[], &a).unwrap();
         assert_eq!(d.requested_song, Some(1));
-        assert_eq!(d.sequences[0].cursor, DataAddress(0x1568));
+        assert_eq!(d.sequences[0].cursor.source(), DataAddress(0x1568));
         assert_eq!(d.master, 0x7f00);
     }
     #[test]
@@ -915,7 +869,7 @@ mod tests {
         // Literal instrument/duration pairs from each independently read prefix.
         for (effect, instrument, duration) in [(1, 25, 80), (5, 14, 60), (6, 14, 60)] {
             let mut d = driver();
-            d.sequences[0].cursor = a.effects[effect].sequence;
+            d.sequences[0].cursor = (a.effects[effect].sequence).into();
             parse_to_note(&mut d, 0, &a).unwrap();
             assert_eq!(
                 (d.voices[0].instrument, d.voices[0].duration),
@@ -925,5 +879,82 @@ mod tests {
             assert_eq!(d.voices[0].envelope_current, d.voices[0].note_origin);
             assert_eq!(d.keys, KeyMasks { on: 1, off: 1 });
         }
+    }
+}
+
+#[cfg(test)]
+mod modernization_contracts {
+    use super::*;
+    fn definitions(bytes: &[u8]) -> AudioDefinitions {
+        let mut definitions = load_audio(&std::fs::read("../input/game.rom").unwrap()).unwrap();
+        definitions.data = SequenceData {
+            segments: vec![DataSegment {
+                origin: DataAddress(0x400),
+                bytes: bytes.to_vec(),
+            }],
+        };
+        definitions.compile_score();
+        definitions
+    }
+    fn active() -> Driver {
+        let mut driver = Driver::default();
+        driver.voices[0].active = true;
+        driver.sequences[0].cursor = (DataAddress(0x400)).into();
+        driver
+    }
+    #[test]
+    fn modernization_audio_duration_context_defers_dormant_odd_command() {
+        let defs = definitions(&[5, 0x91, 7, 9]);
+        let mut variable = active();
+        parse_to_note(&mut variable, 0, &defs).unwrap();
+        assert_eq!(variable.voices[0].duration, 0x91);
+        assert_eq!(variable.sequences[0].cursor.source(), DataAddress(0x402));
+        let mut fixed = active();
+        fixed.voices[0].fixed_duration = 1;
+        parse_to_note(&mut fixed, 0, &defs).unwrap();
+        assert_eq!(fixed.sequences[0].cursor.source(), DataAddress(0x401));
+        let retained = fixed.clone();
+        assert!(parse_to_note(&mut fixed, 0, &defs).is_err());
+        assert_eq!(fixed, retained);
+    }
+    #[test]
+    fn modernization_audio_forced_rest_consumes_once_and_keeps_next_note_fixed() {
+        let defs = definitions(&[0, 13, 5]);
+        let mut driver = active();
+        driver.voices[0].fixed_duration = 7;
+        driver.voices[0].force_duration = true;
+        driver.voices[0].skip_transpose = 3;
+        parse_to_note(&mut driver, 0, &defs).unwrap();
+        assert_eq!(driver.voices[0].duration, 13);
+        assert_eq!(driver.voices[0].skip_transpose, 3);
+        assert!(!driver.voices[0].force_duration);
+        assert_eq!(driver.keys, KeyMasks::default());
+        assert_eq!(driver.sequences[0].cursor.source(), DataAddress(0x402));
+        parse_to_note(&mut driver, 0, &defs).unwrap();
+        assert_eq!(driver.voices[0].duration, 7);
+        assert_eq!(driver.sequences[0].cursor.source(), DataAddress(0x403));
+    }
+    #[test]
+    fn modernization_audio_source_wrap_and_missing_successor_are_deferred() {
+        let mut defs = definitions(&[]);
+        defs.data.segments = vec![
+            DataSegment {
+                origin: DataAddress(0xffff),
+                bytes: vec![5],
+            },
+            DataSegment {
+                origin: DataAddress(0),
+                bytes: vec![9],
+            },
+        ];
+        defs.compile_score();
+        let mut driver = active();
+        driver.sequences[0].cursor = (DataAddress(0xffff)).into();
+        parse_to_note(&mut driver, 0, &defs).unwrap();
+        assert_eq!(driver.voices[0].duration, 9);
+        assert_eq!(driver.sequences[0].cursor.source(), DataAddress(1));
+        let retained = driver.clone();
+        assert!(parse_to_note(&mut driver, 0, &defs).is_err());
+        assert_eq!(driver, retained);
     }
 }

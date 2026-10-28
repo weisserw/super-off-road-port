@@ -5,7 +5,7 @@
   "iteration": 3,
   "selection_status": "selected",
   "pilot_started": true,
-  "active_candidate": "M3",
+  "active_candidate": "M4",
   "baseline": "modernize/baseline.json",
   "starting_checkpoint": "modernize/iteration-003-preparation.json",
   "previous_iteration": "modernize/iterations/002/status.json",
@@ -22,9 +22,9 @@
     "M4"
   ],
   "changes": "modernize/changes.json",
-  "changes_note": "M1/R2/M5/R1/M6/M7/M2 retained with individual implementation commits. Two selected targets remain; supplementary M8 remains unselected.",
-  "next_action": "Capture M3 source/build checkpoint and establish typed music/effect event graph contracts, including duration-context boundaries, calls/loops, source-address legacy maps and deferred errors. Remaining order M3,M4.",
-  "validation_status": "M2 passes647 optimized tests and desktop/web gates;31 terrain/98 truck contracts;4,521,984 exact census outcomes;96 independent original query outputs; exact contact/postrace/hazard state/frame/PCM and preserved original ledger metadata.",
+  "changes_note": "Eight selected targets retained; M4 remains. Supplementary M8 is unselected.",
+  "next_action": "Establish M4 native animation ownership contracts and original/starting-build scenarios, then implement and validate.",
+  "validation_status": "M3 passes653 optimized tests, all6 desktop/web gates,107 sound tests,32-selector exact audio census and288 snapshots, original music/effect vectors and fresh postrace/hazard comparisons.",
   "menu_revision": 4,
   "investigation": "Revision4 completes16-area source survey with8 modernization and2 refactoring options; supplementary M8 resolves the prior composite shortfall but remains unselected.",
   "execution_order": [
@@ -46,7 +46,7 @@
     "M6": "retained",
     "M7": "retained",
     "M2": "retained",
-    "M3": "pending",
+    "M3": "retained",
     "M4": "pending"
   },
   "implementation_commits": {
@@ -55,7 +55,8 @@
     "M5": "f3ebcb8",
     "R1": "b9c60df",
     "M6": "a134cf9",
-    "M7": "8bc4086"
+    "M7": "8bc4086",
+    "M2": "cf24cc4"
   },
   "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged.",
   "supplemental_menu": "M8 remains a revision4 proposal awaiting selection; the original9-target execution scope is unchanged."

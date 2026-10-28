@@ -494,11 +494,12 @@
         "game.asm:393"
       ],
       "disposition": "merged",
-      "summary": "Source fragment discard_attract_sound_command is expressed by parse_to_note using owned native state and source-width arithmetic. Balance send_race_sound_if_human's saved accumulator without sending audio, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Balance send_race_sound_if_human's saved accumulator without sending audio, then return. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
       "equivalents": [
         "port/src/sound/sequencer.rs::parse_to_note",
         "port/src/sound/audio.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/game/scheduler.rs",
+        "port/src/sound/score.rs"
       ],
       "units": [
         {
@@ -511,8 +512,33 @@
             "game.asm:393"
           ],
           "disposition": "merged",
-          "summary": "Source fragment discard_attract_sound_command is expressed by parse_to_note using owned native state and source-width arithmetic. Balance send_race_sound_if_human's saved accumulator without sending audio, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Balance send_race_sound_if_human's saved accumulator without sending audio, then return. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
+            "port/src/sound/sequencer.rs::parse_to_note",
+            "port/src/sound/audio.trace.md",
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment discard_attract_sound_command is expressed by parse_to_note using owned native state and source-width arithmetic. Balance send_race_sound_if_human's saved accumulator without sending audio, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::parse_to_note",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M3",
+          "previous_summary": "Source fragment discard_attract_sound_command is expressed by parse_to_note using owned native state and source-width arithmetic. Balance send_race_sound_if_human's saved accumulator without sending audio, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/sound/sequencer.rs::parse_to_note",
             "port/src/sound/audio.trace.md",
             "port/src/game/scheduler.rs"
@@ -29066,11 +29092,12 @@
         "game.asm:20574"
       ],
       "disposition": "merged",
-      "summary": "Source fragment spc_load_song_and_process_voice is expressed by load_song using owned native state and source-width arithmetic. Finish sixteen sequence pointers, select a song parameter block and copy exactly 141 bytes into ARAM $1097..$1124, replacing initial envelope records 1..20 and record21 timer at $1123. Mark eight voices active and assign DSP register bases.\nInternal $068A clears direct-page driver state and two overlapping 256-byte voice-state spans; initialize even duration counters to one.\nInternal $06AB skips inactive voices, loads a voice mask and decrements note duration. Negative sequence commands dispatch through pushed return addresses; that dispatch table remains structurally unresolved.\nOrdinary notes run envelope/modulation/pitch helpers and combine base pitch, signed slide and modulation into the DSP pitch shadow. $06FD begins the pitch-versus-target comparison. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Finish sixteen sequence pointers, select a song parameter block and copy exactly 141 bytes into ARAM $1097..$1124, replacing initial envelope records 1..20 and record21 timer at $1123. Mark eight voices active and assign DSP register bases.\nInternal $068A clears direct-page driver state and two overlapping 256-byte voice-state spans; initialize even duration counters to one.\nInternal $06AB skips inactive voices, loads a voice mask and decrements note duration. Negative sequence commands dispatch through pushed return addresses; that dispatch table remains structurally unresolved.\nOrdinary notes run envelope/modulation/pitch helpers and combine base pitch, signed slide and modulation into the DSP pitch shadow. $06FD begins the pitch-versus-target comparison. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
       "equivalents": [
         "port/src/sound/sequencer.rs::load_song",
         "port/src/sound/audio.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/game/scheduler.rs",
+        "port/src/sound/score.rs"
       ],
       "units": [
         {
@@ -29083,8 +29110,33 @@
             "game.asm:20574"
           ],
           "disposition": "merged",
-          "summary": "Source fragment spc_load_song_and_process_voice is expressed by load_song using owned native state and source-width arithmetic. Finish sixteen sequence pointers, select a song parameter block and copy exactly 141 bytes into ARAM $1097..$1124, replacing initial envelope records 1..20 and record21 timer at $1123. Mark eight voices active and assign DSP register bases.\nInternal $068A clears direct-page driver state and two overlapping 256-byte voice-state spans; initialize even duration counters to one.\nInternal $06AB skips inactive voices, loads a voice mask and decrements note duration. Negative sequence commands dispatch through pushed return addresses; that dispatch table remains structurally unresolved.\nOrdinary notes run envelope/modulation/pitch helpers and combine base pitch, signed slide and modulation into the DSP pitch shadow. $06FD begins the pitch-versus-target comparison. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Finish sixteen sequence pointers, select a song parameter block and copy exactly 141 bytes into ARAM $1097..$1124, replacing initial envelope records 1..20 and record21 timer at $1123. Mark eight voices active and assign DSP register bases.\nInternal $068A clears direct-page driver state and two overlapping 256-byte voice-state spans; initialize even duration counters to one.\nInternal $06AB skips inactive voices, loads a voice mask and decrements note duration. Negative sequence commands dispatch through pushed return addresses; that dispatch table remains structurally unresolved.\nOrdinary notes run envelope/modulation/pitch helpers and combine base pitch, signed slide and modulation into the DSP pitch shadow. $06FD begins the pitch-versus-target comparison. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
+            "port/src/sound/sequencer.rs::load_song",
+            "port/src/sound/audio.trace.md",
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment spc_load_song_and_process_voice is expressed by load_song using owned native state and source-width arithmetic. Finish sixteen sequence pointers, select a song parameter block and copy exactly 141 bytes into ARAM $1097..$1124, replacing initial envelope records 1..20 and record21 timer at $1123. Mark eight voices active and assign DSP register bases.\nInternal $068A clears direct-page driver state and two overlapping 256-byte voice-state spans; initialize even duration counters to one.\nInternal $06AB skips inactive voices, loads a voice mask and decrements note duration. Negative sequence commands dispatch through pushed return addresses; that dispatch table remains structurally unresolved.\nOrdinary notes run envelope/modulation/pitch helpers and combine base pitch, signed slide and modulation into the DSP pitch shadow. $06FD begins the pitch-versus-target comparison. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::load_song",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M3",
+          "previous_summary": "Source fragment spc_load_song_and_process_voice is expressed by load_song using owned native state and source-width arithmetic. Finish sixteen sequence pointers, select a song parameter block and copy exactly 141 bytes into ARAM $1097..$1124, replacing initial envelope records 1..20 and record21 timer at $1123. Mark eight voices active and assign DSP register bases.\nInternal $068A clears direct-page driver state and two overlapping 256-byte voice-state spans; initialize even duration counters to one.\nInternal $06AB skips inactive voices, loads a voice mask and decrements note duration. Negative sequence commands dispatch through pushed return addresses; that dispatch table remains structurally unresolved.\nOrdinary notes run envelope/modulation/pitch helpers and combine base pitch, signed slide and modulation into the DSP pitch shadow. $06FD begins the pitch-versus-target comparison. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/sound/sequencer.rs::load_song",
             "port/src/sound/audio.trace.md",
             "port/src/game/scheduler.rs"
@@ -29332,11 +29384,13 @@
         "game.asm:21206"
       ],
       "disposition": "merged",
-      "summary": "Source fragment spc_advance_sequence_pointer is expressed by read_sequence_byte using owned native state and source-width arithmetic. Increment the low sequence-pointer byte, carrying into its high byte. Refresh flags from the fetched byte without changing it, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Increment the low sequence-pointer byte, carrying into its high byte. Refresh flags from the fetched byte without changing it, then return. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
       "equivalents": [
-        "port/src/sound/sequencer.rs::read_sequence_byte",
+        "port/src/sound/score.rs::ScoreGraph::compile",
+        "port/src/sound/sequencer.rs::parse_to_note",
         "port/src/sound/audio.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/game/scheduler.rs",
+        "port/src/sound/score.rs"
       ],
       "units": [
         {
@@ -29349,8 +29403,34 @@
             "game.asm:21206"
           ],
           "disposition": "merged",
-          "summary": "Source fragment spc_advance_sequence_pointer is expressed by read_sequence_byte using owned native state and source-width arithmetic. Increment the low sequence-pointer byte, carrying into its high byte. Refresh flags from the fetched byte without changing it, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Increment the low sequence-pointer byte, carrying into its high byte. Refresh flags from the fetched byte without changing it, then return. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
+            "port/src/sound/score.rs::ScoreGraph::compile",
+            "port/src/sound/sequencer.rs::parse_to_note",
+            "port/src/sound/audio.trace.md",
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment spc_advance_sequence_pointer is expressed by read_sequence_byte using owned native state and source-width arithmetic. Increment the low sequence-pointer byte, carrying into its high byte. Refresh flags from the fetched byte without changing it, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::read_sequence_byte",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M3",
+          "previous_summary": "Source fragment spc_advance_sequence_pointer is expressed by read_sequence_byte using owned native state and source-width arithmetic. Increment the low sequence-pointer byte, carrying into its high byte. Refresh flags from the fetched byte without changing it, then return. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/sound/sequencer.rs::read_sequence_byte",
             "port/src/sound/audio.trace.md",
             "port/src/game/scheduler.rs"
@@ -30592,11 +30672,13 @@
         "game.asm:22042"
       ],
       "disposition": "merged",
-      "summary": "Source fragment spc_sequence_command_handlers spc_command_set_target_envelope spc_command_set_auxiliary_stream is expressed by apply_command using owned native state and source-width arithmetic. Command-specific entries update voice state or redirect sequence flow, then return to the sequence parser. Two-byte targets are little-endian; calls push the current sequence pointer on the per-voice stack, counted loops rewind it until exhausted, and return pops it. Other entries set duration, volume, instrument, auxiliary sequence, pitch/envelope parameters, noise masks and DSP flags. See the internal handler labels for each operand contract; these are uploaded SPC code, not main-CPU ROM execution. Command $8E enters at $0ABB and forces one duration read without an operand. Command $BA enters at $0BE0, clears enable/primary mode and sets secondary mode; it installs no stream pointer. B6 only sets enable to $FF; B8 clears enable/secondary and sets primary. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Command-specific entries update voice state or redirect sequence flow, then return to the sequence parser. Two-byte targets are little-endian; calls push the current sequence pointer on the per-voice stack, counted loops rewind it until exhausted, and return pops it. Other entries set duration, volume, instrument, auxiliary sequence, pitch/envelope parameters, noise masks and DSP flags. See the internal handler labels for each operand contract; these are uploaded SPC code, not main-CPU ROM execution. Command $8E enters at $0ABB and forces one duration read without an operand. Command $BA enters at $0BE0, clears enable/primary mode and sets secondary mode; it installs no stream pointer. B6 only sets enable to $FF; B8 clears enable/secondary and sets primary. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
       "equivalents": [
-        "port/src/sound/sequencer.rs::apply_command",
+        "port/src/sound/sequencer.rs::apply_control",
+        "port/src/sound/score.rs::ScoreGraph::control",
         "port/src/sound/audio.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/game/scheduler.rs",
+        "port/src/sound/score.rs"
       ],
       "units": [
         {
@@ -30609,11 +30691,24 @@
             "game.asm:22042"
           ],
           "disposition": "merged",
-          "summary": "Source fragment spc_sequence_command_handlers is expressed by parse_to_note using owned native state and source-width arithmetic. Command-specific entries update voice state or redirect sequence flow, then return to the sequence parser. Two-byte targets are little-endian; calls push the current sequence pointer on the per-voice stack, counted loops rewind it until exhausted, and return pops it. Other entries set duration, volume, instrument, auxiliary sequence, pitch/envelope parameters, noise masks and DSP flags. See the internal handler labels for each operand contract; these are uploaded SPC code, not main-CPU ROM execution. Command $8E enters at $0ABB and forces one duration read without an operand. Command $BA enters at $0BE0, clears enable/primary mode and sets secondary mode; it installs no stream pointer. B6 only sets enable to $FF; B8 clears enable/secondary and sets primary. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Command-specific entries update voice state or redirect sequence flow, then return to the sequence parser. Two-byte targets are little-endian; calls push the current sequence pointer on the per-voice stack, counted loops rewind it until exhausted, and return pops it. Other entries set duration, volume, instrument, auxiliary sequence, pitch/envelope parameters, noise masks and DSP flags. See the internal handler labels for each operand contract; these are uploaded SPC code, not main-CPU ROM execution. Command $8E enters at $0ABB and forces one duration read without an operand. Command $BA enters at $0BE0, clears enable/primary mode and sets secondary mode; it installs no stream pointer. B6 only sets enable to $FF; B8 clears enable/secondary and sets primary. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
             "port/src/sound/sequencer.rs::parse_to_note",
             "port/src/sound/audio.trace.md",
-            "port/src/game/scheduler.rs"
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment spc_sequence_command_handlers is expressed by parse_to_note using owned native state and source-width arithmetic. Command-specific entries update voice state or redirect sequence flow, then return to the sequence parser. Two-byte targets are little-endian; calls push the current sequence pointer on the per-voice stack, counted loops rewind it until exhausted, and return pops it. Other entries set duration, volume, instrument, auxiliary sequence, pitch/envelope parameters, noise masks and DSP flags. See the internal handler labels for each operand contract; these are uploaded SPC code, not main-CPU ROM execution. Command $8E enters at $0ABB and forces one duration read without an operand. Command $BA enters at $0BE0, clears enable/primary mode and sets secondary mode; it installs no stream pointer. B6 only sets enable to $FF; B8 clears enable/secondary and sets primary. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::parse_to_note",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
           ]
         },
         {
@@ -30626,11 +30721,25 @@
             "game.asm:22204"
           ],
           "disposition": "merged",
-          "summary": "Source fragment spc_command_set_target_envelope is expressed by apply_command using owned native state and source-width arithmetic. Sequence commandAC: read per-voice target step, interval and initial delay, seed active countdown and continue sequence parsing. Selected vector now names this existing internal entry. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Sequence commandAC: read per-voice target step, interval and initial delay, seed active countdown and continue sequence parsing. Selected vector now names this existing internal entry. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
-            "port/src/sound/sequencer.rs::apply_command",
+            "port/src/sound/sequencer.rs::apply_control",
+            "port/src/sound/score.rs::ScoreGraph::control",
             "port/src/sound/audio.trace.md",
-            "port/src/game/scheduler.rs"
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment spc_command_set_target_envelope is expressed by apply_command using owned native state and source-width arithmetic. Sequence commandAC: read per-voice target step, interval and initial delay, seed active countdown and continue sequence parsing. Selected vector now names this existing internal entry. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::apply_command",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
           ]
         },
         {
@@ -30643,8 +30752,34 @@
             "game.asm:22129"
           ],
           "disposition": "merged",
-          "summary": "Source fragment spc_command_set_auxiliary_stream is expressed by apply_command using owned native state and source-width arithmetic. Command98 reads delay and split ARAM pointer, enables auxiliary mode and resumes sequence parsing. Two bounded attack/release streams have independently selected operands; updater distinguishes restart80 from negative hold markers. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Command98 reads delay and split ARAM pointer, enables auxiliary mode and resumes sequence parsing. Two bounded attack/release streams have independently selected operands; updater distinguishes restart80 from negative hold markers. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
+            "port/src/sound/sequencer.rs::apply_control",
+            "port/src/sound/score.rs::ScoreGraph::control",
+            "port/src/sound/audio.trace.md",
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment spc_command_set_auxiliary_stream is expressed by apply_command using owned native state and source-width arithmetic. Command98 reads delay and split ARAM pointer, enables auxiliary mode and resumes sequence parsing. Two bounded attack/release streams have independently selected operands; updater distinguishes restart80 from negative hold markers. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::apply_command",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M3",
+          "previous_summary": "Source fragment spc_sequence_command_handlers spc_command_set_target_envelope spc_command_set_auxiliary_stream is expressed by apply_command using owned native state and source-width arithmetic. Command-specific entries update voice state or redirect sequence flow, then return to the sequence parser. Two-byte targets are little-endian; calls push the current sequence pointer on the per-voice stack, counted loops rewind it until exhausted, and return pops it. Other entries set duration, volume, instrument, auxiliary sequence, pitch/envelope parameters, noise masks and DSP flags. See the internal handler labels for each operand contract; these are uploaded SPC code, not main-CPU ROM execution. Command $8E enters at $0ABB and forces one duration read without an operand. Command $BA enters at $0BE0, clears enable/primary mode and sets secondary mode; it installs no stream pointer. B6 only sets enable to $FF; B8 clears enable/secondary and sets primary. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/sound/sequencer.rs::apply_command",
             "port/src/sound/audio.trace.md",
             "port/src/game/scheduler.rs"
@@ -30698,11 +30833,12 @@
         "game.asm:22325"
       ],
       "disposition": "merged",
-      "summary": "Source fragment spc_sequence_stack_helpers is expressed by parse_to_note using owned native state and source-width arithmetic. Pop a two-byte sequence return pointer from the per-voice stack, push one byte, or push the current two-byte sequence pointer. $50+X is the stack cursor into the $0380 workspace; callers establish each stack balance. Native Sequence stack push/pop operations retain the source per-voice stack balance and capacity. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Pop a two-byte sequence return pointer from the per-voice stack, push one byte, or push the current two-byte sequence pointer. $50+X is the stack cursor into the $0380 workspace; callers establish each stack balance. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
       "equivalents": [
         "port/src/sound/sequencer.rs::parse_to_note",
         "port/src/sound/audio.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/game/scheduler.rs",
+        "port/src/sound/score.rs"
       ],
       "units": [
         {
@@ -30715,8 +30851,33 @@
             "game.asm:22325"
           ],
           "disposition": "merged",
-          "summary": "Source fragment spc_sequence_stack_helpers is expressed by parse_to_note using owned native state and source-width arithmetic. Pop a two-byte sequence return pointer from the per-voice stack, push one byte, or push the current two-byte sequence pointer. $50+X is the stack cursor into the $0380 workspace; callers establish each stack balance. Native Sequence stack push/pop operations retain the source per-voice stack balance and capacity. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Pop a two-byte sequence return pointer from the per-voice stack, push one byte, or push the current two-byte sequence pointer. $50+X is the stack cursor into the $0380 workspace; callers establish each stack balance. Native equivalent: immutable ScoreGraph nodes compile the main score grammar and semantic operands. Main playback follows native event handles and typed controls, with native1..256 musical repetitions. Source labels remain only at asset/debug/save boundaries; voice arithmetic, auxiliary streams, configuration overlap, host/DSP cadence and synthesis retain their existing owners.",
           "equivalents": [
+            "port/src/sound/sequencer.rs::parse_to_note",
+            "port/src/sound/audio.trace.md",
+            "port/src/game/scheduler.rs",
+            "port/src/sound/score.rs"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M3",
+              "previous_summary": "Source fragment spc_sequence_stack_helpers is expressed by parse_to_note using owned native state and source-width arithmetic. Pop a two-byte sequence return pointer from the per-voice stack, push one byte, or push the current two-byte sequence pointer. $50+X is the stack cursor into the $0380 workspace; callers establish each stack balance. Native Sequence stack push/pop operations retain the source per-voice stack balance and capacity. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/sound/sequencer.rs::parse_to_note",
+                "port/src/sound/audio.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M3",
+          "previous_summary": "Source fragment spc_sequence_stack_helpers is expressed by parse_to_note using owned native state and source-width arithmetic. Pop a two-byte sequence return pointer from the per-voice stack, push one byte, or push the current two-byte sequence pointer. $50+X is the stack cursor into the $0380 workspace; callers establish each stack balance. Native Sequence stack push/pop operations retain the source per-voice stack balance and capacity. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/sound/sequencer.rs::parse_to_note",
             "port/src/sound/audio.trace.md",
             "port/src/game/scheduler.rs"

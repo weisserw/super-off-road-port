@@ -1104,3 +1104,41 @@ above; no disposition or source identity is changed by this appendix.
 The Stage3 table/test both-entry0400 claim is superseded only for the first stream. Actual ROM77E04 bytes0000C0FF and original game.asm41145 establish first execution handoffFFC0 (IPL); second7FE04 bytes00000004 remains0400. Decoder unchanged, fixture tuple now supplies each source entry. Initial definitions14/15 retained. Both payloads remainexact7E00 and consumed7E08; no gap/header enters sample data.
 
 Stage4 auxiliary normal-stream fixture correction: its default duration0 equaled defaultrelease_threshold0, naturally invoking the unconditional source release scan (game.asm20870) after the assertednormal token read. Added duration1 to isolate intended ordinary/restart/hold path, preserving every assertion. Separate release-scan fixture unchanged; no artificial nonzero guard added. Initialvoice27/28 retained.
+
+## Modernization iteration3 M3: compiled native score events
+
+Immutable `ScoreGraph` compiles every mapped byte entry, including operand/data
+entries which a legacy cursor may select. Later uploaded segments shadow earlier
+ones exactly; tails past the16-bit address domain do not wrap into missing bytes.
+The graph owns typed Note/Rest/Control/Fault nodes and explicit continuations.
+A note/rest has both fixed-duration and explicit-duration alternatives, so an odd
+command byte can remain a valid duration on another path. Missing operands and
+invalid dormant nodes are deferred until selected, preserving native validation.
+
+Main `Sequence` playheads and call/loop targets are opaque `EventRef` handles.
+Playback follows compiled edges and typed semantic operands; it performs no main
+stream byte fetch, opcode decode, operand-vector construction or LE target read.
+Immutable source labels remain for legacy save/debug binding only. Native musical
+repetition counts are1..256; old byte0 encodes256 at the boundary. The parser's
+4096-step limit, stack kinds/limits, clone/commit boundary, global C2 reload and
+source arithmetic in voice rules remain intact. Auxiliary byte streams, live
+141-byte configuration/envelope overlap, host cadence, DSP order, BRR/mixer and
+resampler are unchanged. No SPC instruction interpreter or live RAM map is added.
+
+Event handles serialize as the same numeric DataAddress values; loop counts keep
+the old byte schema. Restore retains the existing active-cursor byte-existence
+validation, then binds main cursor/stack labels without executing them. Definition
+identity still hashes the same immutable input definitions, not graph indices.
+The old byte-reader test now checks the compiled force-duration/next-note edge
+across a word boundary; source values and semantic coverage are retained. Other
+fixtures compile raw bytes once and assert legacy labels at explicit boundaries.
+
+Three preimplementation tests establish duration-dependent boundaries, forced-rest
+consumption and FFFF wrapping/deferred missing successors. Compiler regressions
+cover overlapping segments, nonwrapping segment tails and label-based rebinding.
+All32 original song/effect selectors exactly match the starting census:512 ordered
+DSP/Driver steps,120 audio frontend frames,288 saved snapshots,48kHz PCM and snapshot
+continuations. Fresh original initial music vectors and natural nitro effect2
+observations remain independent evidence: the effect's source4365/duration109 and
+105 phases match native pitch879/1023, instrument23 and amplitude81/78. Physical
+frame clocks and original Gaussian/native linear PCM interpolation are not equated.
