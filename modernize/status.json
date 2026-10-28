@@ -5,7 +5,7 @@
   "iteration": 3,
   "selection_status": "selected",
   "pilot_started": true,
-  "active_candidate": "M7",
+  "active_candidate": "M2",
   "baseline": "modernize/baseline.json",
   "starting_checkpoint": "modernize/iteration-003-preparation.json",
   "previous_iteration": "modernize/iterations/002/status.json",
@@ -22,9 +22,9 @@
     "M4"
   ],
   "changes": "modernize/changes.json",
-  "changes_note": "M1/R2/M5/R1/M6 retained with individual implementation commits. Four selected targets remain; supplementary M8 remains unselected.",
-  "next_action": "Capture M7 starting source/build; characterize native leaderboard score/name entries, duplicate direct-call rank IDs and nondecimal rows with preimplementation contracts, then natural post-loss insertion/warm-entry evidence. Remaining order M7,M2,M3,M4.",
-  "validation_status": "M6 passes644 optimized tests and desktop/web gates; independent original contact,3 exact native contact landmarks,7 player postrace landmarks, hazard/lap landmarks and route frame/PCM/checkpoint parity. Prior targets retained.",
+  "changes_note": "M1/R2/M5/R1/M6/M7 retained with individual implementation commits. Three selected targets remain; supplementary M8 remains unselected.",
+  "next_action": "Capture M2 source/build checkpoint; establish decoded-terrain patch and lazy-edge/error contracts over all16 windows and coordinate aliases, then native surface/blocked wheel query conversion. Remaining order M2,M3,M4.",
+  "validation_status": "M7 passes646 optimized tests and desktop/web gates; new preimplementation score edge/wire contracts, independent original insertion/warm table observations, exact native warm leaderboard and7 postrace state/frame/PCM comparisons. Broad debug run interrupted143 is preserved, not counted as pass.",
   "menu_revision": 4,
   "investigation": "Complete bounded major-subsystem survey recorded:16 inspected areas,7 modernization and2 refactoring candidates; specific deferrals explain the1 modernization shortfall.",
   "execution_order": [
@@ -44,7 +44,7 @@
     "M5": "retained",
     "R1": "retained",
     "M6": "retained",
-    "M7": "pending",
+    "M7": "retained",
     "M2": "pending",
     "M3": "pending",
     "M4": "pending"
@@ -53,7 +53,8 @@
     "M1": "8f837ee",
     "R2": "1d2f964",
     "M5": "f3ebcb8",
-    "R1": "b9c60df"
+    "R1": "b9c60df",
+    "M6": "a134cf9"
   },
   "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged.",
   "supplemental_menu": "M8 proposed after broadened investigation; awaits selection. Prior selections/outcomes and active R1 work preserved."

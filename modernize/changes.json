@@ -878,6 +878,83 @@
         "modernize/evidence/iteration-003/M6-retained-postrace/review.json",
         "modernize/evidence/iteration-003/M6-retained-hazard/native-hazard-route/review.json"
       ]
+    },
+    {
+      "id": "M7",
+      "iteration": 3,
+      "category": "modernization",
+      "status": "retained",
+      "starting_implementation_commit": "a134cf9",
+      "design": "modernize/design-iteration-003-M7.json",
+      "before": "Parallel raw score digit/name arrays and ranked storage IDs in SessionRecords; insertion compares copied digit slices.",
+      "after": "Leaderboard owns paired ScoreEntry values and stable ordered storage IDs. Canonical scores are native monetary amounts; Initials use the shared game alphabet. Insertion compares amounts; rendering encodes digits.",
+      "removed_machinery": [
+        "Parallel score/name storage and slice offsets in rule code",
+        "Runtime digit-array comparison for canonical leaderboard scores"
+      ],
+      "remaining_boundaries": [
+        "LegacySessionRecords retains exact serialized keys/array lengths and accepts the same noncanonical bytes.",
+        "Nondecimal Score values preserve old raw rows; mixed comparisons retain lexicographic ordering.",
+        "Wallet normalization remains unchanged and is applied only at the previous all-score insertion boundary.",
+        "Stable storage IDs and original rank recycling remain observable, including direct-call duplicates."
+      ],
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter modernization_score before/after edits",
+          "result": "PASS2 source-derived duplicate-ID/nondecimal/legacy-wire contracts on both models",
+          "evidence": "modernize/evidence/iteration-003/M7-preimplementation/fast.json"
+        },
+        {
+          "command": "iteration3_scores_original.py guarded natural caches plus reads",
+          "result": "PASS natural storage0 insertion at rank8 below equal highest row, unchanged names/digits/order through warm entry; displayed inserted entry reviewed",
+          "evidence": "modernize/evidence/iteration-003/M7-original-scores-final/result.json"
+        },
+        {
+          "command": "iteration3_scores.py starting build and guarded fresh replay",
+          "result": "PASS proper full-startup/unspent-wallet loss and warm highscore display; capture reviewed",
+          "evidence": "modernize/evidence/iteration-003/M7-starting-scores-formal/result.json"
+        },
+        {
+          "command": "python3 run.py check-fast (all library tests)",
+          "result": "Interrupted143 before completion; not counted as passed; partial log has no assertion failure",
+          "evidence": "modernize/evidence/iteration-003/M7-all-fast-interrupted.json"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+          "result": "PASS646 optimized tests, fmt, desktop/web Clippy/builds; Rust1.90.0/Cargo.lock",
+          "evidence": "modernize/evidence/iteration-003/M7-full-latest.json"
+        },
+        {
+          "command": "iteration3_scores.py fresh build versus M7 starting build",
+          "result": "PASS proper startup/player loss/warm leaderboard state and full frame, route PCM and all checkpoint fields except identity; exact fresh replay",
+          "evidence": "modernize/evidence/iteration-003/M7-retained-scores/comparison.json"
+        },
+        {
+          "command": "iteration3_postrace.py fresh build versus retained M6",
+          "result": "PASS7 complete state/frame/PCM landmarks across player postrace/continue yes/no",
+          "evidence": "modernize/evidence/iteration-003/M7-retained-postrace/comparison.json"
+        },
+        {
+          "command": "port.validate_ledger and original metadata equality against a134cf9",
+          "result": "PASS1527 regions/1408 units/22 uncertainties; all original region/unit metadata preserved",
+          "evidence": "modernize/evidence/iteration-003/M7-accounting-audit.json"
+        }
+      ],
+      "test_migration": "All old values/expectations unchanged. Legacy fixture constructors decode arrays; raw fixture mutation is cfg(test) only; reads encode at assertion boundaries. Full Game validation still requires rank permutation.",
+      "ledger_update": "Native equivalents for regions61/62/63 point to actual leaderboard/default/wire owners; previous descriptions/equivalents retained under modernization_history; original metadata untouched.",
+      "remaining_uncertainty": [
+        "No whole-game QA or desktop/browser runtime claim.",
+        "Original/native physical capture clocks differ; source table observations and native differential captures are separate evidence."
+      ],
+      "qa_commit": "ad72aef",
+      "implementation_commit_subject": "modernize: own leaderboard entries and native score quantities",
+      "retained_source_sha256": "b7a1069f718389c00655f1e901266478d29af2fb4421212e0a314f3291e8e611",
+      "retained_binary_sha256": "b3f4410b507e08d21252a62f873efddb9b0e2771b30bb64385014ece966de5ad",
+      "reviews": [
+        "modernize/evidence/iteration-003/M7-original-scores-final/review.json",
+        "modernize/evidence/iteration-003/M7-retained-scores/review.json",
+        "modernize/evidence/iteration-003/M7-retained-postrace/review.json"
+      ]
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",

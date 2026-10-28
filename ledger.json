@@ -19398,11 +19398,12 @@
         "game.asm:12927"
       ],
       "disposition": "replaced",
-      "summary": "Ten six-byte most-significant-first decimal digit records copied to RAM $0578. The high-score insertion helper compares them lexicographically. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+      "summary": "Ten six-byte most-significant-first decimal digit records copied to RAM $0578. The high-score insertion helper compares them lexicographically. Native equivalent: results::load_assets decodes the original arrays through SessionRecords::from_legacy into Leaderboard score/name entries with native canonical amounts and stable ordered storage IDs. LegacySessionRecords preserves the old wire shape; nondecimal rows remain lossless compatibility values. Insertion/drawing consume the single session-owned leaderboard.",
       "equivalents": [
         "port/src/frontend/results.rs::load_assets",
-        "port/src/game/resources.rs",
-        "port/src/frontend/shop.trace.md"
+        "port/src/frontend/leaderboard.rs",
+        "port/src/frontend/attract.rs::SessionRecords",
+        "port/src/frontend/results.trace.md"
       ],
       "units": [
         {
@@ -19415,8 +19416,33 @@
             "game.asm:12927"
           ],
           "disposition": "replaced",
-          "summary": "Ten six-byte most-significant-first decimal digit records copied to RAM $0578. The high-score insertion helper compares them lexicographically. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+          "summary": "Ten six-byte most-significant-first decimal digit records copied to RAM $0578. The high-score insertion helper compares them lexicographically. Native equivalent: results::load_assets decodes the original arrays through SessionRecords::from_legacy into Leaderboard score/name entries with native canonical amounts and stable ordered storage IDs. LegacySessionRecords preserves the old wire shape; nondecimal rows remain lossless compatibility values. Insertion/drawing consume the single session-owned leaderboard.",
           "equivalents": [
+            "port/src/frontend/results.rs::load_assets",
+            "port/src/frontend/leaderboard.rs",
+            "port/src/frontend/attract.rs::SessionRecords",
+            "port/src/frontend/results.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M7",
+              "previous_summary": "Ten six-byte most-significant-first decimal digit records copied to RAM $0578. The high-score insertion helper compares them lexicographically. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+              "previous_equivalents": [
+                "port/src/frontend/results.rs::load_assets",
+                "port/src/game/resources.rs",
+                "port/src/frontend/shop.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M7",
+          "previous_summary": "Ten six-byte most-significant-first decimal digit records copied to RAM $0578. The high-score insertion helper compares them lexicographically. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+          "previous_equivalents": [
             "port/src/frontend/results.rs::load_assets",
             "port/src/game/resources.rs",
             "port/src/frontend/shop.trace.md"
@@ -19434,11 +19460,12 @@
         "game.asm:12934"
       ],
       "disposition": "replaced",
-      "summary": "Ten three-byte high-score names copied to RAM $05B4, indexed by the same storage IDs as the score records. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+      "summary": "Ten three-byte high-score names copied to RAM $05B4, indexed by the same storage IDs as the score records. Native equivalent: results::load_assets decodes the original arrays through SessionRecords::from_legacy into Leaderboard score/name entries with native canonical amounts and stable ordered storage IDs. LegacySessionRecords preserves the old wire shape; nondecimal rows remain lossless compatibility values. Insertion/drawing consume the single session-owned leaderboard.",
       "equivalents": [
         "port/src/frontend/results.rs::load_assets",
-        "port/src/game/resources.rs",
-        "port/src/frontend/shop.trace.md"
+        "port/src/frontend/leaderboard.rs",
+        "port/src/frontend/attract.rs::SessionRecords",
+        "port/src/frontend/results.trace.md"
       ],
       "units": [
         {
@@ -19451,8 +19478,33 @@
             "game.asm:12934"
           ],
           "disposition": "replaced",
-          "summary": "Ten three-byte high-score names copied to RAM $05B4, indexed by the same storage IDs as the score records. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+          "summary": "Ten three-byte high-score names copied to RAM $05B4, indexed by the same storage IDs as the score records. Native equivalent: results::load_assets decodes the original arrays through SessionRecords::from_legacy into Leaderboard score/name entries with native canonical amounts and stable ordered storage IDs. LegacySessionRecords preserves the old wire shape; nondecimal rows remain lossless compatibility values. Insertion/drawing consume the single session-owned leaderboard.",
           "equivalents": [
+            "port/src/frontend/results.rs::load_assets",
+            "port/src/frontend/leaderboard.rs",
+            "port/src/frontend/attract.rs::SessionRecords",
+            "port/src/frontend/results.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M7",
+              "previous_summary": "Ten three-byte high-score names copied to RAM $05B4, indexed by the same storage IDs as the score records. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+              "previous_equivalents": [
+                "port/src/frontend/results.rs::load_assets",
+                "port/src/game/resources.rs",
+                "port/src/frontend/shop.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M7",
+          "previous_summary": "Ten three-byte high-score names copied to RAM $05B4, indexed by the same storage IDs as the score records. Native equivalent: The ResultAssets defaults decoder copies the parallel names, BCD times/digits and score indirection into SessionRecords; reset and record/highscore consumers use that single session owner.",
+          "previous_equivalents": [
             "port/src/frontend/results.rs::load_assets",
             "port/src/game/resources.rs",
             "port/src/frontend/shop.trace.md"
@@ -19470,11 +19522,12 @@
         "game.asm:12941"
       ],
       "disposition": "replaced",
-      "summary": "Ten storage IDs copied to RAM $05D2. Insertion reorders IDs while keeping the six-digit and three-character records in parallel storage. Native equivalent: shop cursor/cost/cap/bar/money defaults are decoded into actual wallet, purchase, redraw and frontend resource consumers; shared record defaults are decoded by results.",
+      "summary": "Ten storage IDs copied to RAM $05D2. Insertion reorders IDs while keeping the six-digit and three-character records in parallel storage. Native equivalent: results::load_assets decodes the original arrays through SessionRecords::from_legacy into Leaderboard score/name entries with native canonical amounts and stable ordered storage IDs. LegacySessionRecords preserves the old wire shape; nondecimal rows remain lossless compatibility values. Insertion/drawing consume the single session-owned leaderboard.",
       "equivalents": [
-        "port/src/frontend/shop.rs::load_assets",
-        "port/src/game/resources.rs",
-        "port/src/frontend/shop.trace.md"
+        "port/src/frontend/results.rs::load_assets",
+        "port/src/frontend/leaderboard.rs",
+        "port/src/frontend/attract.rs::SessionRecords",
+        "port/src/frontend/results.trace.md"
       ],
       "units": [
         {
@@ -19487,8 +19540,33 @@
             "game.asm:12941"
           ],
           "disposition": "replaced",
-          "summary": "Ten storage IDs copied to RAM $05D2. Insertion reorders IDs while keeping the six-digit and three-character records in parallel storage. Native equivalent: shop cursor/cost/cap/bar/money defaults are decoded into actual wallet, purchase, redraw and frontend resource consumers; shared record defaults are decoded by results.",
+          "summary": "Ten storage IDs copied to RAM $05D2. Insertion reorders IDs while keeping the six-digit and three-character records in parallel storage. Native equivalent: results::load_assets decodes the original arrays through SessionRecords::from_legacy into Leaderboard score/name entries with native canonical amounts and stable ordered storage IDs. LegacySessionRecords preserves the old wire shape; nondecimal rows remain lossless compatibility values. Insertion/drawing consume the single session-owned leaderboard.",
           "equivalents": [
+            "port/src/frontend/results.rs::load_assets",
+            "port/src/frontend/leaderboard.rs",
+            "port/src/frontend/attract.rs::SessionRecords",
+            "port/src/frontend/results.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M7",
+              "previous_summary": "Ten storage IDs copied to RAM $05D2. Insertion reorders IDs while keeping the six-digit and three-character records in parallel storage. Native equivalent: shop cursor/cost/cap/bar/money defaults are decoded into actual wallet, purchase, redraw and frontend resource consumers; shared record defaults are decoded by results.",
+              "previous_equivalents": [
+                "port/src/frontend/shop.rs::load_assets",
+                "port/src/game/resources.rs",
+                "port/src/frontend/shop.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M7",
+          "previous_summary": "Ten storage IDs copied to RAM $05D2. Insertion reorders IDs while keeping the six-digit and three-character records in parallel storage. Native equivalent: shop cursor/cost/cap/bar/money defaults are decoded into actual wallet, purchase, redraw and frontend resource consumers; shared record defaults are decoded by results.",
+          "previous_equivalents": [
             "port/src/frontend/shop.rs::load_assets",
             "port/src/game/resources.rs",
             "port/src/frontend/shop.trace.md"

@@ -8,14 +8,14 @@ use crate::{
     trucks::motion::Upgrades,
 };
 fn records(value: u8) -> SessionRecords {
-    SessionRecords {
-        track_names: [value; 48],
-        track_times: [value; 32],
-        score_digits: [value; 60],
-        score_names: [value; 30],
-        score_order: [value; 10],
-        truck_names: [value; 12],
-    }
+    SessionRecords::from_legacy(
+        [value; 48],
+        [value; 32],
+        [value; 60],
+        [value; 30],
+        [value; 10],
+        [value; 12],
+    )
 }
 fn session() -> Session {
     Session {

@@ -27,6 +27,11 @@ Truck now owns `trucks::nitro::NitroStock`, measured in charges. Movement consum
 
 Both value owners isolate noncanonical byte states accepted by old saves in a compatibility variant. Normal gameplay uses native quantities. Legacy conditional arithmetic remains solely to preserve those accepted states, including their display/record effects; it is not a new invalid-BCD hardware claim. Serialization and public semantic observations retain their existing fields and values.
 
+Session leaderboards pair native score quantities with three-character initials
+in `frontend/leaderboard.rs`. Stable storage identities and rank order preserve
+ties and source recycling; legacy parallel arrays are confined to the record wire
+adapter. Nondecimal restored rows retain lossless comparison/display behavior.
+
 Pair contacts select native `ContactResponse` actions from relative headings;
 source nibble packing exists only in historical test fixtures. Responses preserve
 low-byte arithmetic and the sequential transactional separation policy.

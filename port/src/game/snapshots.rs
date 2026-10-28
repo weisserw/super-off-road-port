@@ -155,7 +155,7 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
             "invalid composite snapshot"
         );
     }
-    let mut score_order = state.session.records.score_order;
+    let mut score_order = state.session.records.scores.order;
     score_order.sort_unstable();
     ensure!(
         score_order == std::array::from_fn(|i| i as u8),

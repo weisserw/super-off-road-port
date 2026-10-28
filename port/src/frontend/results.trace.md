@@ -320,3 +320,30 @@ original identity/classification remains unchanged for implementation accounting
 Initial40/42: default score-order permutation validation missing in implementation, added. Podium fixture expected2000 for clear4000/4360 but source load_podium_resources3121 (game.asm11553) calls clear_vram_and_reset_ppu1C0D (7272), explicitly LDA0000 then0401 stores and RTS; reset_video_registers is a separate entry. Corrected these literals to0. Same source zero-clear at28A9 corrects loss neighbor4300 expectation to0; implementation corrected accordingly. Podium helper STZ HDMAEN does not writeTMW, so retained main_window_layers1F asserted instead of0. Full Game must separately disable Window.hdma_enabled, not erase configured masks. Postrace API receives actual trucks for all HUD digits and retains actual Route for source AI ranking; count alone cannot fabricate a valid ranking. Existing fixtures adapted with source-state fields only, original behavior assertions retained except explicitly erroneous literals.
 
 Stage4 source wait integration: loss prelude converts inactive stock, inserts records and chooses/applies penalty before its leading wait. Game resumes actual loss resource upload at the following NMI, stages continue/game-over text/cursor while still inhibited, then releases layers/inhibit only after the next NMI. Source prompt placement24,AE becomes visible through the following normal OAM boundary. Focused Game integration verifies these separate boundaries, one LOSS sound request and pending-fade snapshot/frame/PCM fork replay; all42domain assertions remain unchanged.
+
+## Modernization iteration3 M7: native leaderboard entries and score quantities
+
+Session records now own a `Leaderboard` of score/name entries with the original
+stable storage identities and rank order. Canonical six-digit rows decode to a
+native monetary score (stored units are hundreds); normal insertion compares
+quantities rather than display slices. The name stays in the shared three-letter
+game alphabet and pairs with its score in one entry. Rendering alone converts the
+quantity to six leading-zero-aware digits and appends the original two zeros.
+
+`LegacySessionRecords` preserves the exact snapshot keys and fixed arrays.
+ROM defaults, wallet reads and restored digit rows decode at their boundaries.
+Nondecimal rows retain a lossless compatibility value; mixed comparisons use the
+source lexicographic rule. They are not silently normalized or numerically summed.
+The strict comparison, reverse rank search, lowest-storage reuse, duplicate-ID
+aliasing in direct domain calls and prevalidation-before-mutation remain intact.
+Full snapshots and asset defaults still require a rank permutation. Wallet
+normalization and descending all-truck insertion keep their previous order.
+
+Existing encoded fixture construction is explicit and test-only; all original
+numeric expectations remain unchanged. Two additional contracts characterize
+duplicate-ID insertion and nondecimal candidate/row preservation, including the
+old serialized shape. They passed on the starting implementation before edits.
+Independent original observations show natural storage0 reuse at rank8 below an
+equal highest score and unchanged rows/names/order through warm entry. The native
+warm-entry scenario lets startup install its signature before joining; the older
+early-Start recipe is retained but does not certify that retention contract.

@@ -1,0 +1,73 @@
+{
+  "id": "M7",
+  "category": "modernization",
+  "status": "retained",
+  "starting_commit": "a134cf9",
+  "starting_binary_sha256": "ee3e96ca2fcd1a4f42ad8d6c813bf332c6b90f028d47d536429595a17443f3c1",
+  "snapshot": "modernize/evidence/iteration-003/M7-preimplementation/source.tar.gz",
+  "before": "SessionRecords owns parallel score digit/name arrays plus source storage-order IDs; insertion compares and shifts raw slices.",
+  "after_plan": "Leaderboard owns ScoreEntry values pairing native score quantities with initials and original stable storage IDs; ordering remains explicit. Decode six stored digits at ROM/wallet/snapshot boundaries. Keep nondecimal legacy rows losslessly in a compatibility value and compare lexical digits only when one operand is noncanonical.",
+  "invariants": [
+    "Strict greater-than and reverse rank search; reuse lowest ordered storage ID.",
+    "Duplicate in-range IDs accepted by direct domain calls; full snapshots/defaults still require permutation.",
+    "Read candidate wallet without normalizing in insert_selected_score; insert_all_scores preserves descending normalize/insert order.",
+    "Legacy wire keys/arrays unchanged, including arbitrary digit/name bytes; error validation precedes mutation."
+  ],
+  "next_contracts": [
+    "Duplicate direct-call storage IDs with once-written alias observation",
+    "Nondecimal candidate/row lexical ordering and raw copy",
+    "SessionRecords serialized legacy array roundtrip and full Game validation unchanged"
+  ],
+  "scope": "Score/name entry ownership, score quantity, insertion/drawing and legacy/default adapters. Wallet economics and track records stay unchanged.",
+  "preimplementation_result": "PASS2 new source-derived duplicate-ID/nondecimal contracts before conversion; source-backed original natural insertion and warm persistence observed.",
+  "implementation": "Leaderboard owns10 ScoreEntry values and ordered storage IDs; canonical Score holds native amount. SessionRecords serializes via strict LegacySessionRecords; nondecimal rows use lossless Score compatibility. Renderer encodes digits only at drawing boundary.",
+  "natural_evidence": [
+    "modernize/evidence/iteration-003/M7-original-scores-final",
+    "modernize/evidence/iteration-003/M7-starting-scores-formal"
+  ],
+  "setup_correction": "Old lifecycle starts11 ticks before first signature installation, so its highscore display alone does not certify warm retention. New natural plan waits for AttractPanel after full splashes, joins without purchase, loses and declines; reviewed highscore screen retains100000 under equal highest row.",
+  "retained_source_sha256": "b7a1069f718389c00655f1e901266478d29af2fb4421212e0a314f3291e8e611",
+  "retained_binary_sha256": "b3f4410b507e08d21252a62f873efddb9b0e2771b30bb64385014ece966de5ad",
+  "validation": [
+    {
+      "command": "python3 run.py check-fast --test-filter modernization_score before/after edits",
+      "result": "PASS2 source-derived duplicate-ID/nondecimal/legacy-wire contracts on both models",
+      "evidence": "modernize/evidence/iteration-003/M7-preimplementation/fast.json"
+    },
+    {
+      "command": "iteration3_scores_original.py guarded natural caches plus reads",
+      "result": "PASS natural storage0 insertion at rank8 below equal highest row, unchanged names/digits/order through warm entry; displayed inserted entry reviewed",
+      "evidence": "modernize/evidence/iteration-003/M7-original-scores-final/result.json"
+    },
+    {
+      "command": "iteration3_scores.py starting build and guarded fresh replay",
+      "result": "PASS proper full-startup/unspent-wallet loss and warm highscore display; capture reviewed",
+      "evidence": "modernize/evidence/iteration-003/M7-starting-scores-formal/result.json"
+    },
+    {
+      "command": "python3 run.py check-fast (all library tests)",
+      "result": "Interrupted143 before completion; not counted as passed; partial log has no assertion failure",
+      "evidence": "modernize/evidence/iteration-003/M7-all-fast-interrupted.json"
+    },
+    {
+      "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+      "result": "PASS646 optimized tests, fmt, desktop/web Clippy/builds; Rust1.90.0/Cargo.lock",
+      "evidence": "modernize/evidence/iteration-003/M7-full-latest.json"
+    },
+    {
+      "command": "iteration3_scores.py fresh build versus M7 starting build",
+      "result": "PASS proper startup/player loss/warm leaderboard state and full frame, route PCM and all checkpoint fields except identity; exact fresh replay",
+      "evidence": "modernize/evidence/iteration-003/M7-retained-scores/comparison.json"
+    },
+    {
+      "command": "iteration3_postrace.py fresh build versus retained M6",
+      "result": "PASS7 complete state/frame/PCM landmarks across player postrace/continue yes/no",
+      "evidence": "modernize/evidence/iteration-003/M7-retained-postrace/comparison.json"
+    },
+    {
+      "command": "port.validate_ledger and original metadata equality against a134cf9",
+      "result": "PASS1527 regions/1408 units/22 uncertainties; all original region/unit metadata preserved",
+      "evidence": "modernize/evidence/iteration-003/M7-accounting-audit.json"
+    }
+  ]
+}

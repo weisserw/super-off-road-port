@@ -30,8 +30,37 @@ pub const ATTRACT_PALETTE_ROM: std::ops::Range<usize> = 0x45340..0x45440;
 /// Session-only records: future results owner refines methods, keeping this one
 /// shared value rather than a second attract copy. Cartridge has no battery.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(from = "LegacySessionRecords", into = "LegacySessionRecords")]
 pub struct SessionRecords {
+    pub track_names: [u8; 48],
+    pub track_times: [u8; 32],
+    pub scores: super::leaderboard::Leaderboard,
+    pub truck_names: [u8; 12],
+}
+impl SessionRecords {
+    pub fn from_legacy(
+        track_names: [u8; 48],
+        track_times: [u8; 32],
+        score_digits: [u8; 60],
+        score_names: [u8; 30],
+        score_order: [u8; 10],
+        truck_names: [u8; 12],
+    ) -> Self {
+        Self {
+            track_names,
+            track_times,
+            scores: super::leaderboard::Leaderboard::from_legacy(
+                score_digits,
+                score_names,
+                score_order,
+            ),
+            truck_names,
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LegacySessionRecords {
     #[serde(with = "crate::snapshot::array")]
     pub track_names: [u8; 48],
     #[serde(with = "crate::snapshot::array")]
@@ -44,6 +73,30 @@ pub struct SessionRecords {
     pub score_order: [u8; 10],
     #[serde(with = "crate::snapshot::array")]
     pub truck_names: [u8; 12],
+}
+impl From<LegacySessionRecords> for SessionRecords {
+    fn from(value: LegacySessionRecords) -> Self {
+        Self::from_legacy(
+            value.track_names,
+            value.track_times,
+            value.score_digits,
+            value.score_names,
+            value.score_order,
+            value.truck_names,
+        )
+    }
+}
+impl From<SessionRecords> for LegacySessionRecords {
+    fn from(value: SessionRecords) -> Self {
+        Self {
+            track_names: value.track_names,
+            track_times: value.track_times,
+            score_digits: value.scores.legacy_digits(),
+            score_names: value.scores.legacy_names(),
+            score_order: value.scores.order,
+            truck_names: value.truck_names,
+        }
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrontendAssets {

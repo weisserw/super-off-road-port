@@ -7,14 +7,14 @@ use crate::{
     trucks::{ai::Driver, motion::Upgrades},
 };
 fn records(value: u8) -> SessionRecords {
-    SessionRecords {
-        track_names: [value; 48],
-        track_times: [value; 32],
-        score_digits: [value; 60],
-        score_names: [value; 30],
-        score_order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        truck_names: [value; 12],
-    }
+    SessionRecords::from_legacy(
+        [value; 48],
+        [value; 32],
+        [value; 60],
+        [value; 30],
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [value; 12],
+    )
 }
 fn session() -> Session {
     Session {
@@ -141,11 +141,13 @@ fn awards(timer: u16, pending: u8) -> Awards {
 fn ranking_session() -> Session {
     let mut s = session();
     s.wallets = [[0; 6]; 4];
-    s.records.score_digits = [0; 60];
-    s.records.score_names = [0; 30];
+    s.records.scores.set_legacy_digits([0; 60]);
+    s.records.scores.set_legacy_names([0; 30]);
     for i in 0..10 {
-        s.records.score_digits[i * 6 + 3] = i as u8;
-        s.records.score_names[i * 3..i * 3 + 3].fill(i as u8);
+        s.records.scores.set_legacy_digit(i * 6 + 3, i as u8);
+        s.records
+            .scores
+            .set_legacy_name_slice(i * 3..i * 3 + 3, &[i as u8; 3]);
     }
     s.records.truck_names = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
     s
@@ -160,9 +162,15 @@ fn loader_reads_all_parallel_defaults_and_exact_podium_loss_consumers() {
     assert_eq!(a.podium_colors, [0x35, 0x25, 0x45]);
     assert_eq!(a.defaults.track_names.as_slice(), &rom[0x3688..0x36b8]);
     assert_eq!(a.defaults.track_times.as_slice(), &rom[0x36b8..0x36d8]);
-    assert_eq!(a.defaults.score_digits.as_slice(), &rom[0x3815..0x3851]);
-    assert_eq!(a.defaults.score_names.as_slice(), &rom[0x3851..0x386f]);
-    assert_eq!(a.defaults.score_order.as_slice(), &rom[0x386f..0x3879]);
+    assert_eq!(
+        a.defaults.scores.legacy_digits().as_slice(),
+        &rom[0x3815..0x3851]
+    );
+    assert_eq!(
+        a.defaults.scores.legacy_names().as_slice(),
+        &rom[0x3851..0x386f]
+    );
+    assert_eq!(a.defaults.scores.order.as_slice(), &rom[0x386f..0x3879]);
     assert_eq!(a.defaults.truck_names.as_slice(), &rom[0x36d8..0x36e4]);
     assert_eq!(a.podium_tiles, &rom[PODIUM_TILES_ROM]);
     assert_eq!(a.loss_tiles_a, &rom[LOSS_TILES_A_ROM]);
@@ -188,7 +196,7 @@ fn loader_rejects_truncated_last_loss_tiles_and_invalid_decoded_lengths() {
     a.loss_replacements[2].pop();
     assert!(validate_assets(&a).is_err());
     a = fixture();
-    a.defaults.score_order[9] = 0;
+    a.defaults.scores.order[9] = 0;
     assert!(validate_assets(&a).is_err());
     a = fixture();
     a.loss_map.words.pop();
@@ -568,17 +576,17 @@ fn highscore_order_is_ascending_and_reuses_lowest_storage_with_indirect_shift() 
     s.selected_wallet = 2;
     s.wallets[2] = [0, 0, 0, 5, 0, 0];
     assert!(insert_selected_score(&mut s).unwrap());
-    assert_eq!(s.records.score_order, [1, 2, 3, 4, 0, 5, 6, 7, 8, 9]);
-    assert_eq!(&s.records.score_digits[..6], &[0, 0, 0, 5, 0, 0]);
-    assert_eq!(&s.records.score_names[..3], &[17, 18, 19]);
-    assert_eq!(&s.records.score_digits[54..], &[0, 0, 0, 9, 0, 0]);
+    assert_eq!(s.records.scores.order, [1, 2, 3, 4, 0, 5, 6, 7, 8, 9]);
+    assert_eq!(&s.records.scores.legacy_digits()[..6], &[0, 0, 0, 5, 0, 0]);
+    assert_eq!(&s.records.scores.legacy_names()[..3], &[17, 18, 19]);
+    assert_eq!(&s.records.scores.legacy_digits()[54..], &[0, 0, 0, 9, 0, 0]);
 }
 #[test]
 fn equal_all_scores_does_not_insert_but_equal_highest_can_insert_below_it() {
     let mut s = ranking_session();
     s.selected_wallet = 0;
     s.wallets[0] = [0; 6];
-    s.records.score_digits = [0; 60];
+    s.records.scores.set_legacy_digits([0; 60]);
     let old = s.records.clone();
     assert!(!insert_selected_score(&mut s).unwrap());
     assert_eq!(s.records, old);
@@ -586,7 +594,7 @@ fn equal_all_scores_does_not_insert_but_equal_highest_can_insert_below_it() {
     s.selected_wallet = 0;
     s.wallets[0] = [0, 0, 0, 9, 0, 0];
     assert!(insert_selected_score(&mut s).unwrap());
-    assert_eq!(s.records.score_order, [1, 2, 3, 4, 5, 6, 7, 8, 0, 9]);
+    assert_eq!(s.records.scores.order, [1, 2, 3, 4, 5, 6, 7, 8, 0, 9]);
 }
 #[test]
 fn scores_compare_first_difference_not_sum_and_reject_invalid_indirection_atomically() {
@@ -594,9 +602,9 @@ fn scores_compare_first_difference_not_sum_and_reject_invalid_indirection_atomic
     s.selected_wallet = 1;
     s.wallets[1] = [1, 0, 0, 0, 0, 0];
     insert_selected_score(&mut s).unwrap();
-    assert_eq!(s.records.score_order, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
-    assert_eq!(s.records.score_digits[..6], [1, 0, 0, 0, 0, 0]);
-    s.records.score_order[0] = 10;
+    assert_eq!(s.records.scores.order, [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
+    assert_eq!(s.records.scores.legacy_digits()[..6], [1, 0, 0, 0, 0, 0]);
+    s.records.scores.order[0] = 10;
     let old = s.clone();
     assert!(insert_selected_score(&mut s).is_err());
     assert_eq!(s, old);
@@ -604,23 +612,24 @@ fn scores_compare_first_difference_not_sum_and_reject_invalid_indirection_atomic
 #[test]
 fn all_scores_normalize_before_descending_insertion_including_nonhuman_trucks() {
     let mut s = ranking_session();
-    s.records.score_digits = [0; 60];
+    s.records.scores.set_legacy_digits([0; 60]);
     s.wallets = [[0, 0, 0, 0, 0, 10], [0; 6], [0; 6], [0, 0, 0, 0, 0, 11]];
     s.active_humans = 0;
     insert_all_scores(&mut s).unwrap();
     assert_eq!(s.wallets[0], [0, 0, 0, 0, 1, 0]);
     assert_eq!(s.wallets[3], [0, 0, 0, 0, 1, 1]);
     assert_eq!(s.selected_wallet, 0);
-    assert_eq!(s.records.score_order[9], 0);
-    assert_eq!(s.records.score_digits[..6], [0, 0, 0, 0, 1, 1]);
+    assert_eq!(s.records.scores.order[9], 0);
+    assert_eq!(s.records.scores.legacy_digits()[..6], [0, 0, 0, 0, 1, 1]);
 }
 #[test]
 fn highscore_rows_use_order_indirection_blank_pairs_leading_zero_and_fixed_borders() {
     let a = fixture();
     let mut r = records(0);
-    r.score_digits[9 * 6..10 * 6].copy_from_slice(&[0, 0, 1, 0, 2, 0]);
-    r.score_names[9 * 3..10 * 3].copy_from_slice(&[0x80, 2, 3]);
-    r.score_order = [9, 1, 2, 3, 4, 5, 6, 7, 8, 0];
+    r.scores
+        .set_legacy_digit_slice(9 * 6..10 * 6, &[0, 0, 1, 0, 2, 0]);
+    r.scores.set_legacy_name_slice(9 * 3..10 * 3, &[0x80, 2, 3]);
+    r.scores.order = [9, 1, 2, 3, 4, 5, 6, 7, 8, 0];
     let mut m = memory();
     draw_highscores(&a, &r, &mut m).unwrap();
     let at = a.score_destinations[0];
@@ -1092,4 +1101,44 @@ fn postrace_completed_contraction_settles_pickups_once_before_nonhuman_shop_rout
     assert_eq!(pending, [0; 4]);
     assert_eq!(s.wallets.map(|w| w[3]), [2, 3, 4, 5]);
     assert_eq!(p.phase, PostracePhase::Shop);
+}
+
+#[test]
+fn modernization_score_duplicate_ids_keep_shared_storage_and_strict_comparison() {
+    let mut s = ranking_session();
+    s.records.scores.order = [0; 10];
+    s.selected_wallet = 0;
+    s.wallets[0] = [0, 0, 0, 0, 0, 1];
+    assert!(insert_selected_score(&mut s).unwrap());
+    assert_eq!(s.records.scores.order, [0; 10]);
+    assert_eq!(&s.records.scores.legacy_digits()[..6], &[0, 0, 0, 0, 0, 1]);
+    assert_eq!(&s.records.scores.legacy_names()[..3], &[11, 12, 13]);
+    let retained = s.clone();
+    assert!(!insert_selected_score(&mut s).unwrap());
+    assert_eq!(s, retained);
+}
+
+#[test]
+fn modernization_score_nondecimal_rows_compare_lexically_without_normalizing_wallet() {
+    let mut s = ranking_session();
+    s.records
+        .scores
+        .set_legacy_digit_slice(54..60, &[0, 10, 0, 0, 0, 0]);
+    s.selected_wallet = 0;
+    s.wallets[0] = [0, 9, 255, 255, 255, 255];
+    assert!(insert_selected_score(&mut s).unwrap());
+    assert_eq!(s.records.scores.order, [1, 2, 3, 4, 5, 6, 7, 8, 0, 9]);
+    assert_eq!(
+        &s.records.scores.legacy_digits()[..6],
+        &[0, 9, 255, 255, 255, 255]
+    );
+    assert_eq!(
+        &s.records.scores.legacy_digits()[54..],
+        &[0, 10, 0, 0, 0, 0]
+    );
+    assert_eq!(s.wallets[0], [0, 9, 255, 255, 255, 255]);
+    let wire = serde_json::to_value(&s.records).unwrap();
+    let restored: SessionRecords = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(restored, s.records);
+    assert_eq!(serde_json::to_value(restored).unwrap(), wire);
 }

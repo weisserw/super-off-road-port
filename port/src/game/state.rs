@@ -128,14 +128,14 @@ impl State {
     pub fn cold(random: RandomState) -> Self {
         // Deterministic native power-on policy for source RAM not explicitly
         // initialized at boot; warm entry does not repeat this initialization.
-        let records = attract::SessionRecords {
-            track_names: [0; 48],
-            track_times: [0; 32],
-            score_digits: [0; 60],
-            score_names: [0; 30],
-            score_order: std::array::from_fn(|i| i as u8),
-            truck_names: [0; 12],
-        };
+        let records = attract::SessionRecords::from_legacy(
+            [0; 48],
+            [0; 32],
+            [0; 60],
+            [0; 30],
+            std::array::from_fn(|i| i as u8),
+            [0; 12],
+        );
         let session = attract::Session {
             signature: [0; 5],
             records,

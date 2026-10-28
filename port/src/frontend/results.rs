@@ -12,7 +12,7 @@ use crate::{
 use anyhow::{Context, Result, ensure};
 use std::collections::BTreeMap;
 pub const TRUCKS: usize = 4;
-pub const SCORE_ROWS: usize = 10;
+pub use super::leaderboard::SCORE_ROWS;
 pub const PODIUM_RANKS: usize = 3;
 pub const AWARDS_TIMEOUT: u16 = 400;
 pub const RECORD_COMMIT_TIME: u16 = 250;
@@ -73,14 +73,14 @@ pub fn load_assets(rom: &[u8]) -> Result<ResultAssets> {
             .context("unterminated results text")?;
         Ok(tail[..=end].to_vec())
     };
-    let defaults = SessionRecords {
-        track_names: bytes(0x3688, 48)?.try_into().unwrap(),
-        track_times: bytes(0x36b8, 32)?.try_into().unwrap(),
-        score_digits: bytes(0x3815, 60)?.try_into().unwrap(),
-        score_names: bytes(0x3851, 30)?.try_into().unwrap(),
-        score_order: bytes(0x386f, 10)?.try_into().unwrap(),
-        truck_names: bytes(0x36d8, 12)?.try_into().unwrap(),
-    };
+    let defaults = SessionRecords::from_legacy(
+        bytes(0x3688, 48)?.try_into().unwrap(),
+        bytes(0x36b8, 32)?.try_into().unwrap(),
+        bytes(0x3815, 60)?.try_into().unwrap(),
+        bytes(0x3851, 30)?.try_into().unwrap(),
+        bytes(0x386f, 10)?.try_into().unwrap(),
+        bytes(0x36d8, 12)?.try_into().unwrap(),
+    );
     let palettes = words(0x3b5a0, 16)?;
     let descriptor = memory::decode_rectangle(&bytes(0x2a62, 20)?)?;
     let assets = ResultAssets {
@@ -129,7 +129,7 @@ pub fn validate_assets(assets: &ResultAssets) -> Result<()> {
             && assets.loss_replacements.iter().all(|p| p.len() == 48),
         "invalid results asset span"
     );
-    let mut order = assets.defaults.score_order;
+    let mut order = assets.defaults.scores.order;
     order.sort_unstable();
     ensure!(
         order == std::array::from_fn(|i| i as u8),
@@ -458,38 +458,20 @@ pub fn settle_pickup_awards(
 pub fn insert_selected_score(session: &mut Session) -> Result<bool> {
     let selected = usize::from(session.selected_wallet);
     ensure!(
-        selected < 4
-            && session
-                .records
-                .score_order
-                .iter()
-                .all(|&id| usize::from(id) < SCORE_ROWS),
+        selected < 4 && session.records.scores.valid_ids(),
         "invalid score indirection"
     );
-    let score = session.wallets[selected];
-    for rank in (0..SCORE_ROWS).rev() {
-        let id = usize::from(session.records.score_order[rank]);
-        if score.as_slice() > &session.records.score_digits[id * 6..id * 6 + 6] {
-            let storage = usize::from(session.records.score_order[0]);
-            session.records.score_digits[storage * 6..storage * 6 + 6].copy_from_slice(&score);
-            let name: [u8; 3] = session.records.truck_names[selected * 3..selected * 3 + 3]
-                .try_into()
-                .unwrap();
-            session.records.score_names[storage * 3..storage * 3 + 3].copy_from_slice(&name);
-            session.records.score_order.copy_within(1..rank + 1, 0);
-            session.records.score_order[rank] = storage as u8;
-            return Ok(true);
-        }
-    }
-    Ok(false)
+    let score = super::leaderboard::Score::from_digits(session.wallets[selected]);
+    let name = super::leaderboard::Initials(
+        session.records.truck_names[selected * 3..selected * 3 + 3]
+            .try_into()
+            .unwrap(),
+    );
+    session.records.scores.insert(score, name)
 }
 pub fn insert_all_scores(session: &mut Session) -> Result<()> {
     ensure!(
-        session
-            .records
-            .score_order
-            .iter()
-            .all(|&id| usize::from(id) < SCORE_ROWS),
+        session.records.scores.valid_ids(),
         "invalid score indirection"
     );
     for slot in (0..TRUCKS).rev() {
@@ -505,13 +487,7 @@ pub fn draw_highscores(
     memory: &mut VideoMemory,
 ) -> Result<()> {
     validate_assets(assets)?;
-    ensure!(
-        records
-            .score_order
-            .iter()
-            .all(|&id| usize::from(id) < SCORE_ROWS),
-        "invalid highscore ID"
-    );
+    ensure!(records.scores.valid_ids(), "invalid highscore ID");
     memory::draw_text(
         memory,
         &assets.score_heading,
@@ -519,10 +495,10 @@ pub fn draw_highscores(
         memory::TextSize::Paired,
     )?;
     for row in (0..SCORE_ROWS).rev() {
-        let id = usize::from(records.score_order[row]);
+        let id = usize::from(records.scores.order[row]);
         let base = assets.score_destinations[row];
         let mut significant = false;
-        for (digit, &value) in records.score_digits[id * 6..id * 6 + 6].iter().enumerate() {
+        for (digit, &value) in records.scores.entries[id].score.digits().iter().enumerate() {
             significant |= value != 0;
             let tile = if significant {
                 value.wrapping_add(1).wrapping_mul(2)
@@ -533,7 +509,7 @@ pub fn draw_highscores(
         }
         paired(memory, base + 6, 2);
         paired(memory, base + 7, 2);
-        for (character, &glyph) in records.score_names[id * 3..id * 3 + 3].iter().enumerate() {
+        for (character, &glyph) in records.scores.entries[id].name.0.iter().enumerate() {
             paired(
                 memory,
                 assets.score_name_destinations[row] + character as u16,
