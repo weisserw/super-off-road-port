@@ -29,3 +29,5 @@ with PortClient(['/root/romatlas/target/release/romatlas','serve','--platform','
  s.input(['b']);s.advance(1);s.input([]);s.advance(130);capture('yes-shop')
  s.restore('loss');s.input(['right']);s.advance(2);s.input([]);q=capture('no-selected');assert q['choice']==[1]
  s.input(['b']);s.advance(1);s.input([]);s.advance(200);capture('no-frontend')
+
+ (out/'result.json').write_text(json.dumps({'passed':True,'scope':'Original default/Right input choices and captured natural yes/no routes; endpoint interpretation requires review.json.'},indent=2)+'\n')
