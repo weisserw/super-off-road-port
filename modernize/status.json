@@ -5,7 +5,7 @@
   "iteration": 3,
   "selection_status": "selected",
   "pilot_started": true,
-  "active_candidate": "M2",
+  "active_candidate": "M3",
   "baseline": "modernize/baseline.json",
   "starting_checkpoint": "modernize/iteration-003-preparation.json",
   "previous_iteration": "modernize/iterations/002/status.json",
@@ -22,11 +22,11 @@
     "M4"
   ],
   "changes": "modernize/changes.json",
-  "changes_note": "M1/R2/M5/R1/M6/M7 retained with individual implementation commits. Three selected targets remain; supplementary M8 remains unselected.",
-  "next_action": "Capture M2 source/build checkpoint; establish decoded-terrain patch and lazy-edge/error contracts over all16 windows and coordinate aliases, then native surface/blocked wheel query conversion. Remaining order M2,M3,M4.",
-  "validation_status": "M7 passes646 optimized tests and desktop/web gates; new preimplementation score edge/wire contracts, independent original insertion/warm table observations, exact native warm leaderboard and7 postrace state/frame/PCM comparisons. Broad debug run interrupted143 is preserved, not counted as pass.",
+  "changes_note": "M1/R2/M5/R1/M6/M7/M2 retained with individual implementation commits. Two selected targets remain; supplementary M8 remains unselected.",
+  "next_action": "Capture M3 source/build checkpoint and establish typed music/effect event graph contracts, including duration-context boundaries, calls/loops, source-address legacy maps and deferred errors. Remaining order M3,M4.",
+  "validation_status": "M2 passes647 optimized tests and desktop/web gates;31 terrain/98 truck contracts;4,521,984 exact census outcomes;96 independent original query outputs; exact contact/postrace/hazard state/frame/PCM and preserved original ledger metadata.",
   "menu_revision": 4,
-  "investigation": "Complete bounded major-subsystem survey recorded:16 inspected areas,7 modernization and2 refactoring candidates; specific deferrals explain the1 modernization shortfall.",
+  "investigation": "Revision4 completes16-area source survey with8 modernization and2 refactoring options; supplementary M8 resolves the prior composite shortfall but remains unselected.",
   "execution_order": [
     "M1",
     "R2",
@@ -45,7 +45,7 @@
     "R1": "retained",
     "M6": "retained",
     "M7": "retained",
-    "M2": "pending",
+    "M2": "retained",
     "M3": "pending",
     "M4": "pending"
   },
@@ -54,8 +54,9 @@
     "R2": "1d2f964",
     "M5": "f3ebcb8",
     "R1": "b9c60df",
-    "M6": "a134cf9"
+    "M6": "a134cf9",
+    "M7": "8bc4086"
   },
   "validation_environment_note": "Use attached PTY and CARGO_INCREMENTAL=0 for full release checks this session; prior interrupted incremental build produced stale-object linker errors. Source flags, optimization and locked dependencies unchanged.",
-  "supplemental_menu": "M8 proposed after broadened investigation; awaits selection. Prior selections/outcomes and active R1 work preserved."
+  "supplemental_menu": "M8 remains a revision4 proposal awaiting selection; the original9-target execution scope is unchanged."
 }

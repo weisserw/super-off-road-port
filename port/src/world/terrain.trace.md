@@ -195,3 +195,40 @@ are expected pending implementation, not passing fidelity claims. Local ROM
 fixtures load owned data without embedding original graphics/audio assets.
 No emulator experiment, behavior implementation, QA, toolkit edit or audit.
 Exact commands, outcomes and logs: checks/contracts/terrain-results.json.
+
+## Modernization iteration3 M2: decoded surfaces and coordinate views
+
+`Terrain` now owns byte-view `SurfacePatch` values: five native height endpoints,
+four explicit marked/blocked triangle regions and a predecoded blocking exit.
+All complete byte-aligned starts are decoded, including non-cell-aligned views.
+`SamplingTables::from_source_tables` compiles the44 source row words and256
+wrapped column choices into patch IDs. Queries select the two aliased Y banks
+and look up a patch; they no longer form source offsets, unpack control pairs or
+search packed neighboring patterns. Missing row/geometry errors remain deferred
+to the same query boundary. The interpolation body is token-identical after its
+input changes to `HeightPatch`; projection and wheel positions remain unchanged.
+
+The loader preserves lower/left/upper/right first-opening order and the original
+diagonal fallback order. There is a useful bound behind its availability: a full
+neighborhood requires index+135; positive neighbor controls are at index+134 and
+index+5. Negative controls are no earlier than-130, exactly within the existing
+configured preceding-control policy. Thus valid native geometry cannot encounter
+a later unavailable neighbor read. This does not prove those original unowned
+WRAM bytes were zero; that hardware uncertainty and configured policy are retained.
+
+Wheel results and blocked-motion inputs now use optional `BlockDirection` values,
+removing direction-plus-one transport bytes. Both-blocked rejection, reverse front
+pair selection, single-axis restoration, old sampled heights and history order
+remain the same. Old raw fixture construction/encoded assertions are test-only
+adapters; no raw terrain copy or packed wheel flag remains in production owners.
+
+Before edits, source contracts and the custom row-word FFFF+3->2 wrap regression
+passed. A separate starting-build census records4,521,984 height/block/history/error
+outcomes across all16 original windows, column aliases, row banks and fraction
+boundaries. The new atlas matches every per-track digest/count. This is differential
+evidence, not a replacement for source expectations. Independent original execution
+also supplies96 natural sampler inputs/outputs across900 further race frames:
+36 distinct heights and11 marked returns match native results exactly. Those
+observations contain no blocked wheel; blocking/edge policies remain established
+by independent source contracts and the full-view census, not claimed as naturally
+observed in that original run.

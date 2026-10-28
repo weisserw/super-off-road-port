@@ -2,7 +2,7 @@
 //! Independent original-source derivations and cross-owner effects: motion.trace.md.
 //! Native integer rules and actual sequential fleet service; no emulated RAM.
 use crate::controls::ControllerWord;
-use crate::world::terrain::{Projection, SamplingTables, Terrain};
+use crate::world::terrain::{BlockDirection, Projection, SamplingTables, Terrain};
 use crate::world::tracks::{TRUCKS, WHEELS};
 use anyhow::{Context, Result};
 
@@ -309,7 +309,7 @@ pub fn contact_effect(truck: &mut Truck) -> Option<EffectSprite> {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockedResponse {
-    pub flags: [u8; WHEELS_PER_TRUCK],
+    pub blocked: [Option<BlockDirection>; WHEELS_PER_TRUCK],
     pub effects: Vec<MotionEffect>,
 }
 /// Called only after terrain/object side effects. Two last-wheel blocks take the
@@ -317,7 +317,7 @@ pub struct BlockedResponse {
 pub fn resolve_blocked_motion(
     truck: &mut Truck,
     working: &mut WorkingMotion,
-    mut flags: [u8; WHEELS_PER_TRUCK],
+    mut blocked: [Option<BlockDirection>; WHEELS_PER_TRUCK],
     human: bool,
 ) -> BlockedResponse {
     const AXIS_TURN: u16 = 4;
@@ -329,12 +329,12 @@ pub fn resolve_blocked_motion(
             effects.push(MotionEffect::ContactSprite(sprite));
         }
     };
-    if flags[2] != 0 && flags[3] != 0 {
+    if blocked[2].is_some() && blocked[3].is_some() {
         working.world = truck.world;
         working.speed = reverse_halved_speed(truck.speed);
         count_blocked(truck, working, human);
         spawn(truck, &mut effects);
-        return BlockedResponse { flags, effects };
+        return BlockedResponse { blocked, effects };
     }
     if truck.contact_transition == 0 {
         if truck.contact_marker == 0 {
@@ -345,16 +345,16 @@ pub fn resolve_blocked_motion(
         spawn(truck, &mut effects);
     }
     if working.speed & NEGATIVE_SPEED_BIT != 0 {
-        flags[2] = flags[1];
-        flags[3] = flags[0];
+        blocked[2] = blocked[1];
+        blocked[3] = blocked[0];
     }
-    if flags[2] == 0 && flags[3] == 0 {
+    if blocked[2].is_none() && blocked[3].is_none() {
         truck.blocked_frames = 0;
     } else {
         // The source table alternates Y/X for negative turns; positive turns
         // invert it. Select from the old quadrant before rotating the heading.
         let quadrant = (working.heading as u8 >> QUADRANT_SHIFT) & 3;
-        let negative_turn = flags[2] != 0;
+        let negative_turn = blocked[2].is_some();
         let restore_x = (quadrant & 1 != 0) == negative_turn;
         let axis = if restore_x { 0 } else { 1 };
         working.world[axis] = truck.world[axis];
@@ -366,7 +366,7 @@ pub fn resolve_blocked_motion(
         spawn(truck, &mut effects);
         count_blocked(truck, working, human);
     }
-    BlockedResponse { flags, effects }
+    BlockedResponse { blocked, effects }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ShadowSprite {
@@ -532,9 +532,9 @@ pub fn update_trucks(
                 .push((slot, contact_animations[slot].sprite));
         }
         frame.phases.push(MotionPhase::ContactResponse(slot));
-        let both_blocked = sampled.block_flags[2] != 0 && sampled.block_flags[3] != 0;
+        let both_blocked = sampled.blocked[2].is_some() && sampled.blocked[3].is_some();
         let response =
-            resolve_blocked_motion(&mut trucks[slot], &mut working, sampled.block_flags, human);
+            resolve_blocked_motion(&mut trucks[slot], &mut working, sampled.blocked, human);
         frame
             .effects
             .extend(response.effects.into_iter().map(|effect| (slot, effect)));
@@ -672,6 +672,25 @@ mod tests {
             speed: t.speed,
             heading: t.heading,
         }
+    }
+    fn resolve_legacy_blocked_motion(
+        truck: &mut Truck,
+        working: &mut WorkingMotion,
+        flags: [u8; WHEELS_PER_TRUCK],
+        human: bool,
+    ) -> BlockedResponse {
+        resolve_blocked_motion(
+            truck,
+            working,
+            flags.map(|value| {
+                if value == 0 {
+                    None
+                } else {
+                    Some(BlockDirection(value.wrapping_sub(1)))
+                }
+            }),
+            human,
+        )
     }
     #[test]
     fn named_tables_load_all_finite_domains_and_reject_truncated_rom() {
@@ -1325,7 +1344,7 @@ mod tests {
             speed: 0xab7c,
             heading: 8,
         };
-        resolve_blocked_motion(&mut t, &mut w, [0, 0, 1, 1], true);
+        resolve_legacy_blocked_motion(&mut t, &mut w, [0, 0, 1, 1], true);
         assert_eq!(
             w,
             WorkingMotion {
@@ -1353,7 +1372,7 @@ mod tests {
                 speed: 20,
                 heading,
             };
-            resolve_blocked_motion(&mut t, &mut w, flags, true);
+            resolve_legacy_blocked_motion(&mut t, &mut w, flags, true);
             assert_eq!(
                 (w.heading, w.world, t.blocked_frames),
                 (expected_heading, expected_world, 1)
@@ -1368,8 +1387,12 @@ mod tests {
             speed: 0x81,
             heading: 0,
         };
-        let r = resolve_blocked_motion(&mut t, &mut w, [1, 0, 0, 0], true);
-        assert_eq!(r.flags, [1, 0, 0, 1]);
+        let r = resolve_legacy_blocked_motion(&mut t, &mut w, [1, 0, 0, 0], true);
+        assert_eq!(
+            r.blocked
+                .map(|value| value.map_or(0, |direction| direction.0.wrapping_add(1))),
+            [1, 0, 0, 1]
+        );
         assert_eq!((w.heading, w.world), (4, [START_WORLD[0], 0x1300]));
     }
     #[test]
@@ -1378,11 +1401,11 @@ mod tests {
         t.contact_marker = 0;
         t.blocked_frames = 9;
         let mut w = working(&t);
-        let r = resolve_blocked_motion(&mut t, &mut w, [0; 4], true);
+        let r = resolve_legacy_blocked_motion(&mut t, &mut w, [0; 4], true);
         assert!(r.effects.is_empty());
         assert_eq!((t.contact_transition, t.blocked_frames), (1, 0));
         t.contact_marker = CONTACT;
-        let r = resolve_blocked_motion(&mut t, &mut w, [0; 4], true);
+        let r = resolve_legacy_blocked_motion(&mut t, &mut w, [0; 4], true);
         assert_eq!(
             r.effects,
             vec![MotionEffect::ContactSprite(EffectSprite { x: 104, y: 96 })]
@@ -1392,7 +1415,7 @@ mod tests {
             (0, CONTACT_EFFECT_TICKS)
         );
         assert!(
-            resolve_blocked_motion(&mut t, &mut w, [0; 4], true)
+            resolve_legacy_blocked_motion(&mut t, &mut w, [0; 4], true)
                 .effects
                 .is_empty()
         );
@@ -1452,12 +1475,8 @@ mod tests {
             u16::from_le_bytes(bytes[0x1f87 + i * 2..0x1f89 + i * 2].try_into().unwrap())
         });
         (
-            Terrain { cells },
-            SamplingTables {
-                sine,
-                wheel_phases: phases,
-                row_offsets,
-            },
+            Terrain::from_fixture_bytes(cells),
+            SamplingTables::from_source_tables(sine, phases, row_offsets),
         )
     }
     #[test]

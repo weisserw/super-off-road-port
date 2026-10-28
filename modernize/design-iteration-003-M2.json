@@ -1,0 +1,94 @@
+{
+  "id": "M2",
+  "category": "modernization",
+  "status": "retained",
+  "starting_commit": "8bc4086",
+  "starting_binary_sha256": "b3f4410b507e08d21252a62f873efddb9b0e2771b30bb64385014ece966de5ad",
+  "snapshot": "modernize/evidence/iteration-003/M2-preimplementation/source.tar.gz",
+  "before": "Terrain stores raw copy-window bytes; every probe recomputes source row/byte-column offsets, unpacks triangle controls and reads neighbor controls. WheelSamples encodes blocked direction as direction+1.",
+  "after_plan": "Decode an atlas of native geometry/triangle/material patches for every byte-aligned source view. Compile source row/column aliases into immutable coordinate-to-patch views at SamplingTables loading. Predecode ordered block escape decisions, preserve query-time unsupported/missing geometry errors and source integer interpolation. Pass optional native BlockDirection values to motion instead of encoded flags.",
+  "source_probe_findings": [
+    "Y-high doubled at byte width selects row(y_high&127); only row selectors0..43 are supported. Each of256 X-high values selects a wrapped3*column byte view, not a regular grid column.",
+    "44 row words and256 column views cover5932 distinct start offsets with original tables; many final-edge views lack full geometry. Custom row-word addition wraps before indexing.",
+    "Complete geometry requires bytes through index+135. Lower/right neighbor controls are index+134/index+5, so are necessarily available whenever geometry is. Left/upper negative offsets are at least-130 and fall entirely within the explicit configured preceding-control policy. Thus neighbor errors are unreachable after valid geometry under the current source/native copy-window contract; keep ordered first-opening selection and document this bound rather than invent missing neighbors.",
+    "Initialization/suspension and pair separation share the query. Preserve per-wheel3->0 and pair current->other marker-history ordering, retained blocked-wheel heights, ones-complement reflection and track8 bias."
+  ],
+  "next_contracts": [
+    "Preimplementation custom row-word wrap seam expectation",
+    "Differential census over all16 original copy windows, all256 column aliases, both row-selector banks and fraction boundaries, alongside independent existing source contracts.",
+    "Fresh player/postrace, contact and attract hazard/lap comparisons after conversion."
+  ],
+  "production_representation_edits_started": true,
+  "preimplementation_result": {
+    "command": "python3 run.py check-fast --test-filter modernization_terrain",
+    "result": "PASS1 row-word wrap/row-bank alias contract on starting terrain representation; fmt/Clippy pass",
+    "evidence": "modernize/evidence/iteration-003/M2-preimplementation/fast.json"
+  },
+  "implementation": "Terrain owns native SurfacePatch atlas; SamplingTables compiles coordinate views; regions/escape decode once at asset loading. Runtime samples use native geometry/regions and optional wheel BlockDirection. Source byte fixtures are cfg(test) adapters only.",
+  "checks_so_far": [
+    "31 terrain-related tests pass before/after",
+    "Motion/contact/AI truck contracts pass after typed blockage conversion",
+    "4,521,984 queries across16 copy windows exactly match starting census",
+    "Interpolation function body token-identical after input-type conversion",
+    "96 original natural wheel sampler calls observed across900 further race frames; native comparison pending"
+  ],
+  "qa_commits": [
+    "7c56d59"
+  ],
+  "retained_source_sha256": "d4c2b8410a947d7288921b12912e5de9f297e457ce18039507de5948b3683d21",
+  "retained_binary_sha256": "1d41053eb99d0dc8fdba31a616f585b7b651f7a8dc5a4674c129bf7a80c85e23",
+  "validation": [
+    {
+      "command": "python3 run.py check-fast --test-filter modernization_terrain before edits",
+      "result": "PASS1 customFFFF+3 row-word wrap/row-bank alias test, fmt/Clippy",
+      "evidence": "modernize/evidence/iteration-003/M2-preimplementation/fast.json"
+    },
+    {
+      "command": "python3 run.py check-fast --test-filter terrain before/after edits",
+      "result": "PASS31 source-derived terrain-related contracts on both models",
+      "evidence": [
+        "modernize/evidence/iteration-003/M2-preimplementation/terrain-fast.json",
+        "modernize/evidence/iteration-003/M2-terrain-fast.json"
+      ]
+    },
+    {
+      "command": "python3 run.py check-fast --test-filter trucks::",
+      "result": "PASS98 movement/contact/AI-related contracts after typed wheel blockage conversion",
+      "evidence": "modernize/evidence/iteration-003/M2-trucks-fast.json"
+    },
+    {
+      "command": "modernization_terrain_census example, starting and native atlas",
+      "result": "PASS4,521,984 exact height/block/history/error outcomes across all16 source windows,256 column aliases, both row banks and fraction/unsupported boundaries",
+      "evidence": "modernize/evidence/iteration-003/M2-census-comparison.json"
+    },
+    {
+      "command": "iteration3_terrain_original.py plus modernization_terrain_reference example",
+      "result": "PASS96 natural original wheel calls across900 further race frames,36 distinct heights and11 marked returns; native values/history match exactly; no state writes",
+      "evidence": "modernize/evidence/iteration-003/M2-original-probe-comparison.json"
+    },
+    {
+      "command": "Interpolation token audit",
+      "result": "PASS function body unchanged apart from input type",
+      "evidence": "modernize/evidence/iteration-003/M2-interpolation-audit.json"
+    },
+    {
+      "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+      "result": "PASS647 optimized tests, fmt, desktop/web Clippy/builds; Rust1.90.0/Cargo.lock",
+      "evidence": "modernize/evidence/iteration-003/M2-full-latest.json"
+    },
+    {
+      "command": "Fresh contact, player postrace and hazard/lap integrations versus starting build",
+      "result": "PASS full state/frame/PCM and all checkpoint fields except build identity",
+      "evidence": [
+        "modernize/evidence/iteration-003/M2-retained-contact/comparison.json",
+        "modernize/evidence/iteration-003/M2-retained-postrace/comparison.json",
+        "modernize/evidence/iteration-003/M2-retained-hazard/native-hazard-route/baseline-comparison.json"
+      ]
+    },
+    {
+      "command": "Original ledger identity/accounting audit",
+      "result": "PASS1527 regions/1408 units/22 uncertainties; all original region/unit metadata preserved",
+      "evidence": "modernize/evidence/iteration-003/M2-accounting-audit.json"
+    }
+  ]
+}

@@ -335,3 +335,13 @@ working_pose heading remains explicit for inherited grid-probe state. Unit tests
 that formerly asserted raw pose words now assert their independently source-
 backed boundary encoding and working heading (31/0DC0 flat,15/2DC0 tilted).
 The encoded-pose packing vectors remain tested at the asset boundary.
+
+## Modernization iteration3 M2: native wheel blockage transport
+
+Terrain sampling now returns optional `BlockDirection` values instead of source
+zero/direction-plus-one bytes. `resolve_blocked_motion` consumes presence directly;
+its two-wheel rejection, reverse front-pair remapping, quadrant-selected axis
+restoration, heading arithmetic, counters and effect ordering are unchanged.
+Historical raw flag fixtures use a test-only adapter and retain their numeric
+expectations. See world/terrain.trace.md for decoded patch/coordinate ownership,
+source bounds, original sampler observations and the separate differential census.

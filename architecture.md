@@ -27,6 +27,12 @@ Truck now owns `trucks::nitro::NitroStock`, measured in charges. Movement consum
 
 Both value owners isolate noncanonical byte states accepted by old saves in a compatibility variant. Normal gameplay uses native quantities. Legacy conditional arithmetic remains solely to preserve those accepted states, including their display/record effects; it is not a new invalid-BCD hardware claim. Serialization and public semantic observations retain their existing fields and values.
 
+Terrain queries use a decoded surface-patch atlas and immutable coordinate views.
+The asset loader resolves source byte-column aliases and control/neighbor patterns;
+queries return heights or native block directions. Motion consumes optional wheel
+blockages. Integer geometry, marker history, retained heights and deferred row/
+geometry errors preserve the source contract; see `world/terrain.trace.md`.
+
 Session leaderboards pair native score quantities with three-character initials
 in `frontend/leaderboard.rs`. Stable storage identities and rank order preserve
 ties and source recycling; legacy parallel arrays are confined to the record wire

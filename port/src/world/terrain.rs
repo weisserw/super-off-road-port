@@ -1,6 +1,6 @@
-//! Source terrain neighborhoods, wheel probes and world-to-screen projection.
-//! Independent derivations and source ranges are in
-//! terrain.trace.md. Coordinates retain source word units, not invented metres.
+//! Native surface patches, wheel probes and world-to-screen projection.
+//! Source address/control encodings are decoded at asset boundaries.
+//! Independent derivations are in terrain.trace.md; units remain source words.
 use super::tracks::{TRUCKS, WHEELS};
 use anyhow::{Context, Result, ensure};
 
@@ -10,12 +10,48 @@ pub const TERRAIN_ROWS: usize = 44;
 pub const CELL_BYTES: usize = 3;
 pub const ROW_BYTES: usize = TERRAIN_ROWS * CELL_BYTES;
 
-/// Immutable source sine/row tables. Physical addresses remain loader details.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PatchId(u16);
+/// Sine/phase assets and decoded coordinate views. Different source byte columns
+/// may select the same patch; the two Y banks intentionally share row selectors.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SamplingTables {
     pub sine: [i8; SINE_SAMPLES],
     pub wheel_phases: [u8; WHEELS_PER_TRUCK],
-    pub row_offsets: [u16; TERRAIN_ROWS],
+    coordinate_views: Vec<[PatchId; 256]>,
+}
+impl SamplingTables {
+    pub fn from_source_tables(
+        sine: [i8; SINE_SAMPLES],
+        wheel_phases: [u8; WHEELS_PER_TRUCK],
+        rows: [u16; TERRAIN_ROWS],
+    ) -> Self {
+        Self {
+            sine,
+            wheel_phases,
+            coordinate_views: rows
+                .into_iter()
+                .map(|row| {
+                    std::array::from_fn(|column| {
+                        let offset = (column as u8).wrapping_mul(CELL_BYTES as u8);
+                        PatchId(row.wrapping_add(u16::from(offset)))
+                    })
+                })
+                .collect(),
+        }
+    }
+    fn patch_id(&self, position: [u16; 2]) -> Result<PatchId> {
+        let row = usize::from((position[1] >> 8) as u8 & 0x7f);
+        let column = usize::from((position[0] >> 8) as u8);
+        Ok(self
+            .coordinate_views
+            .get(row)
+            .context("unsupported terrain row")?[column])
+    }
+    #[cfg(test)]
+    fn source_rows(&self) -> [u16; TERRAIN_ROWS] {
+        std::array::from_fn(|row| self.coordinate_views[row][0].0)
+    }
 }
 pub fn load_sampling_tables(rom: &[u8]) -> Result<SamplingTables> {
     const SINE_ROM: usize = 0x1dc7;
@@ -30,71 +66,140 @@ pub fn load_sampling_tables(rom: &[u8]) -> Result<SamplingTables> {
     let rows = rom
         .get(ROW_ROM..ROW_ROM + TERRAIN_ROWS * 2)
         .context("truncated terrain rows")?;
-    Ok(SamplingTables {
-        sine: std::array::from_fn(|index| sine[index] as i8),
-        wheel_phases: phases.try_into()?,
-        row_offsets: std::array::from_fn(|index| {
-            u16::from_le_bytes([rows[index * 2], rows[index * 2 + 1]])
-        }),
-    })
+    Ok(SamplingTables::from_source_tables(
+        std::array::from_fn(|index| sine[index] as i8),
+        phases.try_into()?,
+        std::array::from_fn(|index| u16::from_le_bytes([rows[index * 2], rows[index * 2 + 1]])),
+    ))
 }
-/// Five height bytes surrounding a selected packed control cell. Heights are
-/// unsigned endpoints; their differences are signed in interpolation products.
+/// Unsigned endpoints; interpolation differences remain signed source words.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Neighborhood {
-    pub corners: [u8; 4], // a,b,c,d in original unreflected order
-    pub center: u8,
-    pub control: u8,
+struct HeightPatch {
+    corners: [u8; 4],
+    center: u8,
 }
-/// Controls of adjacent cells, accessed only on the fully blocked path. Explicit
-/// inputs avoid inventing a RAM image or zero-filled out-of-window neighbors.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct AdjacentControls {
-    pub lower: u8,
-    pub left: u8,
-    pub upper: u8,
-    pub right: u8,
+struct TriangleRegion {
+    marked: bool,
+    blocked: bool,
+}
+impl TriangleRegion {
+    fn decode(control: u8) -> [Self; 4] {
+        std::array::from_fn(|region| {
+            let pair = control >> (region * 2);
+            Self {
+                marked: pair & 1 != 0,
+                blocked: pair & 2 != 0,
+            }
+        })
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SurfacePatch {
+    geometry: HeightPatch,
+    regions: [TriangleRegion; 4],
+    blocked_exit: BlockDirection,
+}
+impl SurfacePatch {
+    fn sample(self, fractions: [u8; 2], original_track: u8, history: u8) -> Sample {
+        let [x, y] = fractions;
+        let triangle = 2 * usize::from(y >= x) + usize::from(u16::from(x) + u16::from(y) > 255);
+        let region = self.regions[triangle];
+        Sample {
+            surface: if region.blocked {
+                Surface::Blocked(self.blocked_exit)
+            } else {
+                Surface::Height(interpolate_geometry(
+                    self.geometry,
+                    fractions,
+                    original_track,
+                ))
+            },
+            control_history: (history >> 1) | (u8::from(region.marked) << 7),
+        }
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Terrain {
-    pub cells: Vec<u8>,
+    patches: Vec<SurfacePatch>,
+    #[cfg(test)]
+    fixture_bytes: Vec<u8>,
+}
+impl Terrain {
+    fn decode_views(bytes: &[u8]) -> Self {
+        // All byte-aligned views are meaningful, including non-cell-aligned
+        // column aliases. Incomplete geometry stays unavailable at query time.
+        let patches = (0..bytes.len().saturating_sub(ROW_BYTES + CELL_BYTES))
+            .map(|index| {
+                let geometry = HeightPatch {
+                    corners: [
+                        bytes[index],
+                        bytes[index + CELL_BYTES],
+                        bytes[index + ROW_BYTES],
+                        bytes[index + ROW_BYTES + CELL_BYTES],
+                    ],
+                    center: bytes[index + 1],
+                };
+                let control = bytes[index + 2];
+                let blocked_exit = decode_escape(control, |slot| {
+                    let delta = [
+                        (ROW_BYTES + 2) as isize,
+                        -1,
+                        2 - ROW_BYTES as isize,
+                        (CELL_BYTES + 2) as isize,
+                    ][slot];
+                    let at = index as isize + delta;
+                    // Complete geometry includes index+135. Positive neighbor reads
+                    // are at most index+134; all negative reads are in -130..-1.
+                    if at < 0 {
+                        crate::config::UNCOPIED_TERRAIN_CONTROL
+                    } else {
+                        bytes[at as usize]
+                    }
+                });
+                SurfacePatch {
+                    geometry,
+                    regions: TriangleRegion::decode(control),
+                    blocked_exit,
+                }
+            })
+            .collect();
+        Self {
+            patches,
+            #[cfg(test)]
+            fixture_bytes: bytes.to_vec(),
+        }
+    }
+    fn patch_at(&self, tables: &SamplingTables, position: [u16; 2]) -> Result<SurfacePatch> {
+        let id = tables.patch_id(position)?;
+        self.patches
+            .get(usize::from(id.0))
+            .copied()
+            .context("probe beyond loaded terrain")
+    }
+    #[cfg(test)]
+    pub(crate) fn from_fixture_bytes(bytes: Vec<u8>) -> Self {
+        Self::decode_views(&bytes)
+    }
+    #[cfg(test)]
+    pub(crate) fn fixture_bytes(&self) -> &[u8] {
+        &self.fixture_bytes
+    }
+    #[cfg(test)]
+    pub(crate) fn set_fixture_byte(&mut self, index: usize, value: u8) {
+        let mut bytes = self.fixture_bytes.clone();
+        bytes[index] = value;
+        *self = Self::decode_views(&bytes);
+    }
 }
 pub fn decode_terrain(bytes: &[u8]) -> Result<Terrain> {
     ensure!(
         bytes.len() == super::tracks::TERRAIN_BYTES,
         "invalid terrain copy window"
     );
-    Ok(Terrain {
-        cells: bytes.to_vec(),
-    })
+    Ok(Terrain::decode_views(bytes))
 }
-/// Reproduce source byte-width row/column indexing before checked native reads.
-pub fn neighborhood(
-    terrain: &Terrain,
-    tables: &SamplingTables,
-    position: [u16; 2],
-) -> Result<Neighborhood> {
-    let index = cell_index(tables, position)?;
-    let read = |offset| {
-        terrain
-            .cells
-            .get(index + offset)
-            .copied()
-            .context("probe beyond loaded terrain")
-    };
-    Ok(Neighborhood {
-        corners: [
-            read(0)?,
-            read(CELL_BYTES)?,
-            read(ROW_BYTES)?,
-            read(ROW_BYTES + CELL_BYTES)?,
-        ],
-        center: read(1)?,
-        control: read(2)?,
-    })
-}
-/// Source directional code, not an invented compass/angle classification.
-/// Values are retained because motion compares and transforms the encoding.
+/// Source directional code, retained because bounce rules transform its value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BlockDirection(pub u8);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -107,7 +212,7 @@ pub struct Sample {
     pub surface: Surface,
     pub control_history: u8,
 }
-pub fn interpolate(patch: Neighborhood, fractions: [u8; 2], original_track: u8) -> u8 {
+fn interpolate_geometry(patch: HeightPatch, fractions: [u8; 2], original_track: u8) -> u8 {
     const SIGN_BIT: u8 = 0x80;
     const HEIGHT_BIAS_TRACK: u8 = 8;
     const HEIGHT_BIAS: u8 = 0x20;
@@ -139,16 +244,9 @@ pub fn interpolate(patch: Neighborhood, fractions: [u8; 2], original_track: u8) 
         height
     }
 }
-pub fn classify(
-    patch: Neighborhood,
-    adjacent: AdjacentControls,
-    fractions: [u8; 2],
-    original_track: u8,
-    history: u8,
-) -> Sample {
+// Packed controls and ordered neighboring patterns are asset-loader inputs only.
+fn decode_escape(control: u8, mut read_neighbor: impl FnMut(usize) -> u8) -> BlockDirection {
     const BLOCK_PAIR_MASK: u8 = 0xaa;
-    const MARKER_TO_HIGH: u32 = 7;
-    const BLOCK_FLAG: u8 = 2;
     const FALLBACK: u8 = 0x08;
     const DIAGONAL_A: u8 = 0x22;
     const DIAGONAL_B: u8 = 0x0a;
@@ -158,18 +256,7 @@ pub fn classify(
     const RETURN_B: u8 = 0xe0;
     const RETURN_C: u8 = 0x20;
     const RETURN_D: u8 = 0x60;
-    let [x, y] = fractions;
-    let quadrant =
-        2 * u8::from(y >= x) + u8::from(u16::from(x) + u16::from(y) > u16::from(u8::MAX));
-    let pair = patch.control >> (quadrant * 2);
-    let control_history = (history >> 1) | ((pair & 1) << MARKER_TO_HIGH);
-    if pair & BLOCK_FLAG == 0 {
-        return Sample {
-            surface: Surface::Height(interpolate(patch, fractions, original_track)),
-            control_history,
-        };
-    }
-    let pattern = patch.control & BLOCK_PAIR_MASK;
+    let pattern = control & BLOCK_PAIR_MASK;
     let direction = if pattern != BLOCK_PAIR_MASK {
         match pattern {
             DIAGONAL_A => RETURN_A,
@@ -179,14 +266,14 @@ pub fn classify(
             _ => FALLBACK,
         }
     } else {
-        let AdjacentControls {
-            lower,
-            left,
-            upper,
-            right,
-        } = adjacent;
-        let [lower, left, upper, right] =
-            [lower, left, upper, right].map(|value| value & BLOCK_PAIR_MASK);
+        let mut controls = [BLOCK_PAIR_MASK; 4];
+        for (slot, value) in controls.iter_mut().enumerate() {
+            *value = read_neighbor(slot);
+            if *value & BLOCK_PAIR_MASK == 0 {
+                break;
+            }
+        }
+        let [lower, left, upper, right] = controls.map(|value| value & BLOCK_PAIR_MASK);
         // Cardinal openings take precedence; diagonal fallbacks then follow
         // the original left/right/upper/lower branch order, not nearest angle.
         if lower == 0 {
@@ -217,10 +304,78 @@ pub fn classify(
             FALLBACK
         }
     };
-    Sample {
-        surface: Surface::Blocked(BlockDirection(direction)),
-        control_history,
+    BlockDirection(direction)
+}
+// Historical source fixtures retain their input format at this test boundary.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Neighborhood {
+    pub corners: [u8; 4],
+    pub center: u8,
+    pub control: u8,
+}
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdjacentControls {
+    pub lower: u8,
+    pub left: u8,
+    pub upper: u8,
+    pub right: u8,
+}
+#[cfg(test)]
+pub fn neighborhood(
+    terrain: &Terrain,
+    tables: &SamplingTables,
+    position: [u16; 2],
+) -> Result<Neighborhood> {
+    let patch = terrain.patch_at(tables, position)?;
+    Ok(Neighborhood {
+        corners: patch.geometry.corners,
+        center: patch.geometry.center,
+        control: patch
+            .regions
+            .iter()
+            .enumerate()
+            .fold(0, |control, (index, region)| {
+                control
+                    | ((u8::from(region.marked) | (u8::from(region.blocked) << 1)) << (index * 2))
+            }),
+    })
+}
+#[cfg(test)]
+pub fn interpolate(patch: Neighborhood, fractions: [u8; 2], original_track: u8) -> u8 {
+    interpolate_geometry(
+        HeightPatch {
+            corners: patch.corners,
+            center: patch.center,
+        },
+        fractions,
+        original_track,
+    )
+}
+#[cfg(test)]
+pub fn classify(
+    patch: Neighborhood,
+    adjacent: AdjacentControls,
+    fractions: [u8; 2],
+    original_track: u8,
+    history: u8,
+) -> Sample {
+    let controls = [
+        adjacent.lower,
+        adjacent.left,
+        adjacent.upper,
+        adjacent.right,
+    ];
+    SurfacePatch {
+        geometry: HeightPatch {
+            corners: patch.corners,
+            center: patch.center,
+        },
+        regions: TriangleRegion::decode(patch.control),
+        blocked_exit: decode_escape(patch.control, |slot| controls[slot]),
     }
+    .sample(fractions, original_track, history)
 }
 pub fn wheel_probe(
     tables: &SamplingTables,
@@ -241,9 +396,16 @@ pub fn wheel_probe(
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WheelSamples {
     pub heights: [u8; WHEELS],
-    pub block_flags: [u8; WHEELS_PER_TRUCK],
+    pub blocked: [Option<BlockDirection>; WHEELS_PER_TRUCK],
     pub control_history: u8,
     pub working_surface_height: u8,
+}
+#[cfg(test)]
+impl WheelSamples {
+    fn legacy_block_flags(&self) -> [u8; WHEELS_PER_TRUCK] {
+        self.blocked
+            .map(|value| value.map_or(0, |direction| direction.0.wrapping_add(1)))
+    }
 }
 /// Wheel group is a native logical truck slot. The source's descending wheel
 /// scan (last index to first) must remain observable in control-history order.
@@ -263,7 +425,7 @@ pub fn sample_wheels(
     ensure!(truck_slot < TRUCKS, "invalid truck probe slot");
     let mut sampled = WheelSamples {
         heights,
-        block_flags: [0; WHEELS_PER_TRUCK],
+        blocked: [None; WHEELS_PER_TRUCK],
         control_history: history,
         working_surface_height: surface_summaries[truck_slot],
     };
@@ -281,7 +443,7 @@ pub fn sample_wheels(
             Surface::Height(height) => {
                 sampled.heights[truck_slot * WHEELS_PER_TRUCK + wheel] = height
             }
-            Surface::Blocked(direction) => sampled.block_flags[wheel] = direction.0.wrapping_add(1),
+            Surface::Blocked(direction) => sampled.blocked[wheel] = Some(direction),
         }
     }
     Ok(sampled)
@@ -318,17 +480,6 @@ pub fn project(projection: Projection, world: [u16; 2], height: u8) -> ScreenPos
     ScreenPosition { x, y }
 }
 
-fn cell_index(tables: &SamplingTables, position: [u16; 2]) -> Result<usize> {
-    let column = (position[0] >> u8::BITS) as u8;
-    let row_byte = ((position[1] >> u8::BITS) as u8).wrapping_mul(2);
-    let row = *tables
-        .row_offsets
-        .get(usize::from(row_byte / 2))
-        .context("unsupported terrain row")?;
-    Ok(usize::from(row.wrapping_add(u16::from(
-        column.wrapping_mul(CELL_BYTES as u8),
-    ))))
-}
 pub fn sample_at(
     terrain: &Terrain,
     tables: &SamplingTables,
@@ -336,60 +487,7 @@ pub fn sample_at(
     original_track: u8,
     history: u8,
 ) -> Result<Sample> {
-    const BLOCK_PAIR_MASK: u8 = 0xaa;
-    const CONTROL_OFFSET: usize = 2;
-    let patch = neighborhood(terrain, tables, position)?;
-    let adjacent = if patch.control & BLOCK_PAIR_MASK == BLOCK_PAIR_MASK {
-        let index = cell_index(tables, position)?;
-        let read = |delta: isize| -> Result<u8> {
-            let relative = index as isize + delta;
-            if (2 - ROW_BYTES as isize..0).contains(&relative) {
-                return Ok(crate::config::UNCOPIED_TERRAIN_CONTROL);
-            }
-            let at = usize::try_from(relative)
-                .context("terrain neighbor precedes supported WRAM controls")?;
-            terrain
-                .cells
-                .get(at)
-                .copied()
-                .context("terrain neighbor beyond loaded window")
-        };
-        // The source returns at the first open cardinal neighbor. Later reads
-        // may lie outside the copied terrain at an edge and must not be made
-        // when an earlier opening already determines the blocking direction.
-        let mut controls = [BLOCK_PAIR_MASK; 4];
-        for (slot, delta) in [
-            (ROW_BYTES + CONTROL_OFFSET) as isize,
-            -1,
-            CONTROL_OFFSET as isize - ROW_BYTES as isize,
-            (CELL_BYTES + CONTROL_OFFSET) as isize,
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            controls[slot] = read(delta)?;
-            if controls[slot] & BLOCK_PAIR_MASK == 0 {
-                break;
-            }
-        }
-        let [lower, left, upper, right] = controls;
-        AdjacentControls {
-            lower,
-            left,
-            upper,
-            right,
-        }
-    } else {
-        AdjacentControls {
-            lower: 0,
-            left: 0,
-            upper: 0,
-            right: 0,
-        }
-    };
-    Ok(classify(
-        patch,
-        adjacent,
+    Ok(terrain.patch_at(tables, position)?.sample(
         position.map(|coordinate| coordinate as u8),
         original_track,
         history,
@@ -434,11 +532,7 @@ mod tests {
                     .unwrap(),
             )
         });
-        SamplingTables {
-            sine,
-            wheel_phases,
-            row_offsets,
-        }
+        SamplingTables::from_source_tables(sine, wheel_phases, row_offsets)
     }
     fn patch(corners: [u8; 4], center: u8, control: u8) -> Neighborhood {
         Neighborhood {
@@ -452,7 +546,7 @@ mod tests {
         for record in cells.chunks_exact_mut(CELL_BYTES) {
             record[2] = control;
         }
-        Terrain { cells }
+        Terrain::from_fixture_bytes(cells)
     }
     #[test]
     fn rom_tables_load_full_signed_sine_four_phases_and_all_row_offsets() {
@@ -467,16 +561,16 @@ mod tests {
             [91, 91, -91, -91]
         );
         assert_eq!(
-            [t.row_offsets[0], t.row_offsets[1], t.row_offsets[43]],
+            [t.source_rows()[0], t.source_rows()[1], t.source_rows()[43]],
             [0, 132, 5676]
         );
         assert!(load_sampling_tables(&rom()[..ROW_ROM.end - 1]).is_err());
     }
     #[test]
     fn terrain_validation_retains_final_inclusive_byte_and_rejects_truncated_windows() {
-        let mut cells = flat(0).cells;
+        let mut cells = flat(0).fixture_bytes().to_vec();
         cells[TERRAIN_BYTES - 1] = 0xe7;
-        assert_eq!(decode_terrain(&cells).unwrap().cells, cells);
+        assert_eq!(decode_terrain(&cells).unwrap().fixture_bytes(), cells);
         assert!(decode_terrain(&cells[..TERRAIN_BYTES - 1]).is_err());
         assert!(decode_terrain(&[]).is_err());
     }
@@ -496,16 +590,19 @@ mod tests {
         for (i, start) in TERRAIN_STARTS.into_iter().enumerate() {
             let data = decode_terrain(&bytes[start..start + TERRAIN_BYTES]).unwrap();
             assert_eq!(
-                [data.cells[0], data.cells[TERRAIN_BYTES - 1]],
+                [
+                    data.fixture_bytes()[0],
+                    data.fixture_bytes()[TERRAIN_BYTES - 1]
+                ],
                 [expected_first[i], expected_last[i]]
             );
-            assert_eq!(data.cells, &bytes[start..start + TERRAIN_BYTES]);
+            assert_eq!(data.fixture_bytes(), &bytes[start..start + TERRAIN_BYTES]);
         }
     }
     #[test]
     fn first_open_neighbor_at_top_edge_does_not_read_unneeded_upper_cell() {
         let mut terrain = flat(0);
-        terrain.cells[2] = ALL_BLOCK_PAIRS;
+        terrain.set_fixture_byte(2, ALL_BLOCK_PAIRS);
         // The lower neighbor is open. Source returns C0 before attempting the
         // negative upper offset, which is outside this loaded field.
         assert_eq!(
@@ -519,7 +616,7 @@ mod tests {
     #[test]
     fn top_edge_uses_explicit_uncopied_wram_control_policy() {
         let mut terrain = flat(ALL_BLOCK_PAIRS);
-        terrain.cells[2] = ALL_BLOCK_PAIRS;
+        terrain.set_fixture_byte(2, ALL_BLOCK_PAIRS);
         assert_eq!(
             sample_at(&terrain, &tables(), [0x0100, 0], ORDINARY_TRACK, 0)
                 .unwrap()
@@ -540,7 +637,7 @@ mod tests {
             (ROW_BYTES + 3, 50),
             (2, 0xa5),
         ] {
-            terrain.cells[start + offset] = value;
+            terrain.set_fixture_byte(start + offset, value);
         }
         assert_eq!(
             neighborhood(&terrain, &tables(), [0x1f43, 0x027f]).unwrap(),
@@ -550,24 +647,39 @@ mod tests {
     #[test]
     fn neighborhood_reproduces_byte_width_coordinate_index_wrap_before_word_addition() {
         let mut terrain = flat(0);
-        terrain.cells[0] = 11;
-        terrain.cells[CELL_BYTES] = 22;
+        terrain.set_fixture_byte(0, 11);
+        terrain.set_fixture_byte(CELL_BYTES, 22);
         // 3*$56=$102 truncates to$02, and 2*$80 truncates to0.
         // This addresses byte2 rather than a fictitious column86 or row128.
-        terrain.cells[2] = 33;
-        terrain.cells[5] = 44;
-        terrain.cells[3] = 55;
-        terrain.cells[ROW_BYTES + 2] = 66;
-        terrain.cells[ROW_BYTES + 5] = 77;
-        terrain.cells[4] = 88;
+        terrain.set_fixture_byte(2, 33);
+        terrain.set_fixture_byte(5, 44);
+        terrain.set_fixture_byte(3, 55);
+        terrain.set_fixture_byte(ROW_BYTES + 2, 66);
+        terrain.set_fixture_byte(ROW_BYTES + 5, 77);
+        terrain.set_fixture_byte(4, 88);
         assert_eq!(
             neighborhood(&terrain, &tables(), [0x5600, 0x8000]).unwrap(),
             patch([33, 44, 66, 77], 55, 88)
         );
     }
     #[test]
+    fn modernization_terrain_row_word_wraps_before_byte_view_lookup() {
+        let mut bytes = rom();
+        bytes[ROW_ROM.start..ROW_ROM.start + 2].copy_from_slice(&[0xff, 0xff]);
+        let sampling = load_sampling_tables(&bytes).unwrap();
+        // FFFF + byte(3*1) wraps to2 before selecting the neighborhood.
+        // Raw byte2 and every corner offset are control bytes in this fixture.
+        for y in [0, 0x8000] {
+            assert_eq!(
+                neighborhood(&flat(0), &sampling, [0x0100, y]).unwrap(),
+                patch([0; 4], FLAT_HEIGHT, FLAT_HEIGHT)
+            );
+        }
+    }
+
+    #[test]
     fn checked_neighborhood_does_not_invent_missing_bottom_row_or_short_field_bytes() {
-        assert!(neighborhood(&Terrain { cells: vec![0; 2] }, &tables(), [0, 0]).is_err());
+        assert!(neighborhood(&Terrain::from_fixture_bytes(vec![0; 2]), &tables(), [0, 0]).is_err());
         assert!(neighborhood(&flat(0), &tables(), [0x2b00, 0x2b00]).is_err());
     }
     #[test]
@@ -856,7 +968,7 @@ mod tests {
         let mut expected = [PRIOR_SAMPLE; WHEELS];
         expected[8..12].fill(FLAT_HEIGHT);
         assert_eq!(r.heights, expected);
-        assert_eq!(r.block_flags, [0; 4]);
+        assert_eq!(r.legacy_block_flags(), [0; 4]);
         assert_eq!(r.control_history, 0xf5);
         assert_eq!(r.working_surface_height, 30);
     }
@@ -866,9 +978,9 @@ mod tests {
         // Wheel2 is at($1136,$1136): cell17,17. Its lower control remains0,
         // so all-blocked local cell returns cardinal$C0 and records$C1.
         let cell = ROW_BYTES * 17 + CELL_BYTES * 17;
-        terrain.cells[cell + 2] = ALL_BLOCK_PAIRS;
+        terrain.set_fixture_byte(cell + 2, ALL_BLOCK_PAIRS);
         // Wheel3 at cell17,15 supplies marker1; only first scan contributes.
-        terrain.cells[ROW_BYTES * 15 + CELL_BYTES * 17 + 2] = ALL_SURFACE_MARKERS;
+        terrain.set_fixture_byte(ROW_BYTES * 15 + CELL_BYTES * 17 + 2, ALL_SURFACE_MARKERS);
         let r = sample_wheels(
             &terrain,
             &tables(),
@@ -882,7 +994,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(&r.heights[..4], &[40, 40, 77, 40]);
-        assert_eq!(r.block_flags, [0, 0, 0xc1, 0]);
+        assert_eq!(r.legacy_block_flags(), [0, 0, 0xc1, 0]);
         assert_eq!(r.control_history, 0x10);
         assert_eq!(r.working_surface_height, 10);
     }
@@ -904,7 +1016,7 @@ mod tests {
         );
         assert!(
             sample_wheels(
-                &Terrain { cells: vec![0; 2] },
+                &Terrain::from_fixture_bytes(vec![0; 2]),
                 &tables(),
                 INTERIOR_ORIGIN,
                 0,

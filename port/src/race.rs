@@ -1630,12 +1630,12 @@ mod tests {
                 }
             }
         }
-        let terrain = Terrain { cells };
-        let sampling = SamplingTables {
-            sine: [0; 256],
-            wheel_phases: [0; 4],
-            row_offsets: std::array::from_fn(|i| (i * ROW_BYTES) as u16),
-        };
+        let terrain = Terrain::from_fixture_bytes(cells);
+        let sampling = SamplingTables::from_source_tables(
+            [0; 256],
+            [0; 4],
+            std::array::from_fn(|i| (i * ROW_BYTES) as u16),
+        );
         let motion = MotionTables {
             speed_limits: [0; 9],
             acceleration_steps: [0; 7],

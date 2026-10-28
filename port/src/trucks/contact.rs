@@ -347,24 +347,24 @@ mod tests {
     // Fixture loading only; no response, bearing or separation oracle is here.
     fn sampling() -> SamplingTables {
         let b = rom();
-        SamplingTables {
-            sine: std::array::from_fn(|i| b[SINE_ROM.start + i] as i8),
-            wheel_phases: b[PHASE_ROM].try_into().unwrap(),
-            row_offsets: std::array::from_fn(|i| {
+        SamplingTables::from_source_tables(
+            std::array::from_fn(|i| b[SINE_ROM.start + i] as i8),
+            b[PHASE_ROM].try_into().unwrap(),
+            std::array::from_fn(|i| {
                 u16::from_le_bytes(
                     b[ROW_ROM.start + i * 2..ROW_ROM.start + i * 2 + 2]
                         .try_into()
                         .unwrap(),
                 )
             }),
-        }
+        )
     }
     fn flat() -> Terrain {
         let mut cells = vec![40; TERRAIN_BYTES];
         for c in cells.chunks_exact_mut(CELL_BYTES) {
             c[2] = 0;
         }
-        Terrain { cells }
+        Terrain::from_fixture_bytes(cells)
     }
     fn truck() -> Truck {
         Truck {
@@ -769,10 +769,10 @@ mod tests {
         ] {
             let mut terrain = flat();
             if blocks[0] {
-                terrain.cells[ROW_BYTES * 16 + CELL_BYTES * 17 + 2] = 0xaa;
+                terrain.set_fixture_byte(ROW_BYTES * 16 + CELL_BYTES * 17 + 2, 0xaa);
             }
             if blocks[1] {
-                terrain.cells[ROW_BYTES * 16 + CELL_BYTES * 15 + 2] = 0xaa;
+                terrain.set_fixture_byte(ROW_BYTES * 16 + CELL_BYTES * 15 + 2, 0xaa);
             }
             let env = environment(&terrain, &sine, &tables);
             let mut w = working(0, 0);
@@ -803,7 +803,7 @@ mod tests {
             cells: [0; BEARING_CELLS],
         };
         // Only the current candidate supplies marker1. Other marker0 then shifts it tobit6.
-        terrain.cells[ROW_BYTES * 16 + CELL_BYTES * 17 + 2] = 0x55;
+        terrain.set_fixture_byte(ROW_BYTES * 16 + CELL_BYTES * 17 + 2, 0x55);
         let env = environment(&terrain, &sine, &tables);
         let mut w = working(0, 0);
         let mut other = truck();
@@ -930,7 +930,7 @@ mod tests {
     }
     #[test]
     fn checked_native_interfaces_reject_missing_terrain_and_invalid_slot() {
-        let terrain = Terrain { cells: vec![] };
+        let terrain = Terrain::from_fixture_bytes(vec![]);
         let sine = sampling();
         let tables = BearingTable {
             cells: [0; BEARING_CELLS],

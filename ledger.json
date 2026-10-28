@@ -9726,11 +9726,12 @@
         "game.asm:6271"
       ],
       "disposition": "merged",
-      "summary": "Source fragment sample_wheels_and_project_world_position is expressed by sample_wheels using owned native state and source-width arithmetic. Sample all four wheel positions against terrain. Carry clear stores the returned height; carry set records the blocking direction plus one in the wheel collision flags.\nRecover the truck's average surface/height byte after the scan. Internal $969A applies the track's projection scales and offsets using Mode 7 multiplication, forming projected X in $84 and an intermediate projected Y.\nWorld coordinates and intermediate products are fixed-point values; their exact real-world units are not established. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Sample all four wheel positions against terrain. Carry clear stores the returned height; carry set records the blocking direction plus one in the wheel collision flags.\nRecover the truck's average surface/height byte after the scan. Internal $969A applies the track's projection scales and offsets using Mode 7 multiplication, forming projected X in $84 and an intermediate projected Y.\nWorld coordinates and intermediate products are fixed-point values; their exact real-world units are not established. Native equivalent: sample_wheels uses native surface patches and optional BlockDirection values. Existing wheel ordering, retained heights, marker history and independent projection arithmetic remain intact.",
       "equivalents": [
         "port/src/world/terrain.rs::sample_wheels",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.rs::project",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9743,8 +9744,33 @@
             "game.asm:6271"
           ],
           "disposition": "merged",
-          "summary": "Source fragment sample_wheels_and_project_world_position is expressed by sample_wheels using owned native state and source-width arithmetic. Sample all four wheel positions against terrain. Carry clear stores the returned height; carry set records the blocking direction plus one in the wheel collision flags.\nRecover the truck's average surface/height byte after the scan. Internal $969A applies the track's projection scales and offsets using Mode 7 multiplication, forming projected X in $84 and an intermediate projected Y.\nWorld coordinates and intermediate products are fixed-point values; their exact real-world units are not established. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Sample all four wheel positions against terrain. Carry clear stores the returned height; carry set records the blocking direction plus one in the wheel collision flags.\nRecover the truck's average surface/height byte after the scan. Internal $969A applies the track's projection scales and offsets using Mode 7 multiplication, forming projected X in $84 and an intermediate projected Y.\nWorld coordinates and intermediate products are fixed-point values; their exact real-world units are not established. Native equivalent: sample_wheels uses native surface patches and optional BlockDirection values. Existing wheel ordering, retained heights, marker history and independent projection arithmetic remain intact.",
           "equivalents": [
+            "port/src/world/terrain.rs::sample_wheels",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.rs::project",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment sample_wheels_and_project_world_position is expressed by sample_wheels using owned native state and source-width arithmetic. Sample all four wheel positions against terrain. Carry clear stores the returned height; carry set records the blocking direction plus one in the wheel collision flags.\nRecover the truck's average surface/height byte after the scan. Internal $969A applies the track's projection scales and offsets using Mode 7 multiplication, forming projected X in $84 and an intermediate projected Y.\nWorld coordinates and intermediate products are fixed-point values; their exact real-world units are not established. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::sample_wheels",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment sample_wheels_and_project_world_position is expressed by sample_wheels using owned native state and source-width arithmetic. Sample all four wheel positions against terrain. Carry clear stores the returned height; carry set records the blocking direction plus one in the wheel collision flags.\nRecover the truck's average surface/height byte after the scan. Internal $969A applies the track's projection scales and offsets using Mode 7 multiplication, forming projected X in $84 and an intermediate projected Y.\nWorld coordinates and intermediate products are fixed-point values; their exact real-world units are not established. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::sample_wheels",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9762,11 +9788,12 @@
         "game.asm:6387"
       ],
       "disposition": "merged",
-      "summary": "Source fragment finish_projection_and_classify_terrain is expressed by sample_wheels using owned native state and source-width arithmetic. Finish projected Y using the surface-height contribution and $2C00 baseline, then return screen Y in $86.\nInternal $974F loads a terrain neighborhood, selects a packed quadrant from relative X/Y and tests its blocking bits. Clear quadrants proceed to height interpolation; blocked quadrants select directional return tails.\n$65 receives one shifted terrain control bit. Its later game meaning remains uncertain. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Finish projected Y using the surface-height contribution and $2C00 baseline, then return screen Y in $86.\nInternal $974F loads a terrain neighborhood, selects a packed quadrant from relative X/Y and tests its blocking bits. Clear quadrants proceed to height interpolation; blocked quadrants select directional return tails.\n$65 receives one shifted terrain control bit. Its later game meaning remains uncertain. Native equivalent: sample_wheels uses native surface patches and optional BlockDirection values. Existing wheel ordering, retained heights, marker history and independent projection arithmetic remain intact.",
       "equivalents": [
         "port/src/world/terrain.rs::sample_wheels",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.rs::project",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9779,8 +9806,33 @@
             "game.asm:6387"
           ],
           "disposition": "merged",
-          "summary": "Source fragment finish_projection_and_classify_terrain is expressed by sample_wheels using owned native state and source-width arithmetic. Finish projected Y using the surface-height contribution and $2C00 baseline, then return screen Y in $86.\nInternal $974F loads a terrain neighborhood, selects a packed quadrant from relative X/Y and tests its blocking bits. Clear quadrants proceed to height interpolation; blocked quadrants select directional return tails.\n$65 receives one shifted terrain control bit. Its later game meaning remains uncertain. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Finish projected Y using the surface-height contribution and $2C00 baseline, then return screen Y in $86.\nInternal $974F loads a terrain neighborhood, selects a packed quadrant from relative X/Y and tests its blocking bits. Clear quadrants proceed to height interpolation; blocked quadrants select directional return tails.\n$65 receives one shifted terrain control bit. Its later game meaning remains uncertain. Native equivalent: sample_wheels uses native surface patches and optional BlockDirection values. Existing wheel ordering, retained heights, marker history and independent projection arithmetic remain intact.",
           "equivalents": [
+            "port/src/world/terrain.rs::sample_wheels",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.rs::project",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment finish_projection_and_classify_terrain is expressed by sample_wheels using owned native state and source-width arithmetic. Finish projected Y using the surface-height contribution and $2C00 baseline, then return screen Y in $86.\nInternal $974F loads a terrain neighborhood, selects a packed quadrant from relative X/Y and tests its blocking bits. Clear quadrants proceed to height interpolation; blocked quadrants select directional return tails.\n$65 receives one shifted terrain control bit. Its later game meaning remains uncertain. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::sample_wheels",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment finish_projection_and_classify_terrain is expressed by sample_wheels using owned native state and source-width arithmetic. Finish projected Y using the surface-height contribution and $2C00 baseline, then return screen Y in $86.\nInternal $974F loads a terrain neighborhood, selects a packed quadrant from relative X/Y and tests its blocking bits. Clear quadrants proceed to height interpolation; blocked quadrants select directional return tails.\n$65 receives one shifted terrain control bit. Its later game meaning remains uncertain. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::sample_wheels",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9798,11 +9850,11 @@
         "game.asm:6452"
       ],
       "disposition": "merged",
-      "summary": "Source fragment select_diagonal_terrain_block_direction is expressed by classify using owned native state and source-width arithmetic. Recognize masked neighborhood patterns $0A/$88/$A0, directing each to its corresponding diagonal blocking return. Other patterns take the shared fallback. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Recognize masked neighborhood patterns $0A/$88/$A0, directing each to its corresponding diagonal blocking return. Other patterns take the shared fallback. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
       "equivalents": [
-        "port/src/world/terrain.rs::classify",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::decode_escape",
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9815,8 +9867,32 @@
             "game.asm:6452"
           ],
           "disposition": "merged",
-          "summary": "Source fragment select_diagonal_terrain_block_direction is expressed by classify using owned native state and source-width arithmetic. Recognize masked neighborhood patterns $0A/$88/$A0, directing each to its corresponding diagonal blocking return. Other patterns take the shared fallback. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Recognize masked neighborhood patterns $0A/$88/$A0, directing each to its corresponding diagonal blocking return. Other patterns take the shared fallback. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_escape",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment select_diagonal_terrain_block_direction is expressed by classify using owned native state and source-width arithmetic. Recognize masked neighborhood patterns $0A/$88/$A0, directing each to its corresponding diagonal blocking return. Other patterns take the shared fallback. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::classify",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment select_diagonal_terrain_block_direction is expressed by classify using owned native state and source-width arithmetic. Recognize masked neighborhood patterns $0A/$88/$A0, directing each to its corresponding diagonal blocking return. Other patterns take the shared fallback. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::classify",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9834,11 +9910,11 @@
         "game.asm:6470"
       ],
       "disposition": "merged",
-      "summary": "Source fragment skip_diagonal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $A0 load through BIT's operand bytes, retaining the caller's A. Alternate entries load $A0/$E0/$20/$60 before restoring status and returning carry set. The trailing neighborhood entry reads another terrain row. Internal LDA entries share these bytes; they are not duplicate storage. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Skip the embedded $A0 load through BIT's operand bytes, retaining the caller's A. Alternate entries load $A0/$E0/$20/$60 before restoring status and returning carry set. The trailing neighborhood entry reads another terrain row. Internal LDA entries share these bytes; they are not duplicate storage. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
       "equivalents": [
-        "port/src/world/terrain.rs::classify",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::decode_escape",
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9851,8 +9927,32 @@
             "game.asm:6470"
           ],
           "disposition": "merged",
-          "summary": "Source fragment skip_diagonal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $A0 load through BIT's operand bytes, retaining the caller's A. Alternate entries load $A0/$E0/$20/$60 before restoring status and returning carry set. The trailing neighborhood entry reads another terrain row. Internal LDA entries share these bytes; they are not duplicate storage. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Skip the embedded $A0 load through BIT's operand bytes, retaining the caller's A. Alternate entries load $A0/$E0/$20/$60 before restoring status and returning carry set. The trailing neighborhood entry reads another terrain row. Internal LDA entries share these bytes; they are not duplicate storage. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_escape",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment skip_diagonal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $A0 load through BIT's operand bytes, retaining the caller's A. Alternate entries load $A0/$E0/$20/$60 before restoring status and returning carry set. The trailing neighborhood entry reads another terrain row. Internal LDA entries share these bytes; they are not duplicate storage. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::classify",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment skip_diagonal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $A0 load through BIT's operand bytes, retaining the caller's A. Alternate entries load $A0/$E0/$20/$60 before restoring status and returning carry set. The trailing neighborhood entry reads another terrain row. Internal LDA entries share these bytes; they are not duplicate storage. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::classify",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9870,11 +9970,11 @@
         "game.asm:6490"
       ],
       "disposition": "merged",
-      "summary": "Source fragment inspect_adjacent_terrain_blocks is expressed by classify using owned native state and source-width arithmetic. Probe the four neighboring packed terrain-control bytes for an opening when the local cell is fully blocked.\nIf a neighbor is open, use a cardinal blocking code; otherwise match neighboring diagonal patterns to the diagonal return entries. These reads can address the preceding row via $7EFFFF aliases and must retain their encoded long addresses. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Probe the four neighboring packed terrain-control bytes for an opening when the local cell is fully blocked.\nIf a neighbor is open, use a cardinal blocking code; otherwise match neighboring diagonal patterns to the diagonal return entries. These reads can address the preceding row via $7EFFFF aliases and must retain their encoded long addresses. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
       "equivalents": [
-        "port/src/world/terrain.rs::classify",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::decode_escape",
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9887,8 +9987,32 @@
             "game.asm:6490"
           ],
           "disposition": "merged",
-          "summary": "Source fragment inspect_adjacent_terrain_blocks is expressed by classify using owned native state and source-width arithmetic. Probe the four neighboring packed terrain-control bytes for an opening when the local cell is fully blocked.\nIf a neighbor is open, use a cardinal blocking code; otherwise match neighboring diagonal patterns to the diagonal return entries. These reads can address the preceding row via $7EFFFF aliases and must retain their encoded long addresses. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Probe the four neighboring packed terrain-control bytes for an opening when the local cell is fully blocked.\nIf a neighbor is open, use a cardinal blocking code; otherwise match neighboring diagonal patterns to the diagonal return entries. These reads can address the preceding row via $7EFFFF aliases and must retain their encoded long addresses. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_escape",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment inspect_adjacent_terrain_blocks is expressed by classify using owned native state and source-width arithmetic. Probe the four neighboring packed terrain-control bytes for an opening when the local cell is fully blocked.\nIf a neighbor is open, use a cardinal blocking code; otherwise match neighboring diagonal patterns to the diagonal return entries. These reads can address the preceding row via $7EFFFF aliases and must retain their encoded long addresses. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::classify",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment inspect_adjacent_terrain_blocks is expressed by classify using owned native state and source-width arithmetic. Probe the four neighboring packed terrain-control bytes for an opening when the local cell is fully blocked.\nIf a neighbor is open, use a cardinal blocking code; otherwise match neighboring diagonal patterns to the diagonal return entries. These reads can address the preceding row via $7EFFFF aliases and must retain their encoded long addresses. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::classify",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9906,11 +10030,11 @@
         "game.asm:6524"
       ],
       "disposition": "merged",
-      "summary": "Source fragment test_cardinal_neighbor_blocks is expressed by classify using owned native state and source-width arithmetic. Inspect the two neighboring terrain bit pairs for the cardinal blocked-edge patterns. Matching patterns enter shared directional return tails; otherwise seed direction $08 and continue through the BIT skip prefix. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Inspect the two neighboring terrain bit pairs for the cardinal blocked-edge patterns. Matching patterns enter shared directional return tails; otherwise seed direction $08 and continue through the BIT skip prefix. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
       "equivalents": [
-        "port/src/world/terrain.rs::classify",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::decode_escape",
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9923,8 +10047,32 @@
             "game.asm:6524"
           ],
           "disposition": "merged",
-          "summary": "Source fragment test_cardinal_neighbor_blocks is expressed by classify using owned native state and source-width arithmetic. Inspect the two neighboring terrain bit pairs for the cardinal blocked-edge patterns. Matching patterns enter shared directional return tails; otherwise seed direction $08 and continue through the BIT skip prefix. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Inspect the two neighboring terrain bit pairs for the cardinal blocked-edge patterns. Matching patterns enter shared directional return tails; otherwise seed direction $08 and continue through the BIT skip prefix. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_escape",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment test_cardinal_neighbor_blocks is expressed by classify using owned native state and source-width arithmetic. Inspect the two neighboring terrain bit pairs for the cardinal blocked-edge patterns. Matching patterns enter shared directional return tails; otherwise seed direction $08 and continue through the BIT skip prefix. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::classify",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment test_cardinal_neighbor_blocks is expressed by classify using owned native state and source-width arithmetic. Inspect the two neighboring terrain bit pairs for the cardinal blocked-edge patterns. Matching patterns enter shared directional return tails; otherwise seed direction $08 and continue through the BIT skip prefix. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::classify",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9942,11 +10090,11 @@
         "game.asm:6548"
       ],
       "disposition": "merged",
-      "summary": "Source fragment skip_cardinal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $C0 load through BIT's operand bytes. Internal LDA entries choose $C0/$00/$40/$80; all converge on status restore and carry-set return. The prefix retains A on the skip path. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Skip the embedded $C0 load through BIT's operand bytes. Internal LDA entries choose $C0/$00/$40/$80; all converge on status restore and carry-set return. The prefix retains A on the skip path. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
       "equivalents": [
-        "port/src/world/terrain.rs::classify",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::decode_escape",
+        "port/src/world/terrain.rs::SurfacePatch::sample",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9959,8 +10107,32 @@
             "game.asm:6548"
           ],
           "disposition": "merged",
-          "summary": "Source fragment skip_cardinal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $C0 load through BIT's operand bytes. Internal LDA entries choose $C0/$00/$40/$80; all converge on status restore and carry-set return. The prefix retains A on the skip path. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Skip the embedded $C0 load through BIT's operand bytes. Internal LDA entries choose $C0/$00/$40/$80; all converge on status restore and carry-set return. The prefix retains A on the skip path. Native equivalent: Packed terrain controls and ordered neighbor branches are decoded once by decode_escape; SurfacePatch::sample consumes native triangle regions and the resulting blocking exit.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_escape",
+            "port/src/world/terrain.rs::SurfacePatch::sample",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment skip_cardinal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $C0 load through BIT's operand bytes. Internal LDA entries choose $C0/$00/$40/$80; all converge on status restore and carry-set return. The prefix retains A on the skip path. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::classify",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment skip_cardinal_block_load is expressed by classify using owned native state and source-width arithmetic. Skip the embedded $C0 load through BIT's operand bytes. Internal LDA entries choose $C0/$00/$40/$80; all converge on status restore and carry-set return. The prefix retains A on the skip path. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::classify",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -9978,11 +10150,13 @@
         "game.asm:6567"
       ],
       "disposition": "merged",
-      "summary": "Source fragment normalize_terrain_triangle_and_interpolate is expressed by interpolate using owned native state and source-width arithmetic. Reflect negative fractional X/Y to nonnegative coordinates while exchanging corner heights to keep the same geometric patch.\nChoose an interpolation triangle by comparing the reflected fractions. Combine signed corner-height slopes with the two fractions using Mode 7 products and a common base.\nTrack eight has a separate interpolation finish; ordinary terrain returns the interpolated height with carry clear. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Reflect negative fractional X/Y to nonnegative coordinates while exchanging corner heights to keep the same geometric patch.\nChoose an interpolation triangle by comparing the reflected fractions. Combine signed corner-height slopes with the two fractions using Mode 7 products and a common base.\nTrack eight has a separate interpolation finish; ordinary terrain returns the interpolated height with carry clear. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
       "equivalents": [
-        "port/src/world/terrain.rs::interpolate",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::interpolate_geometry",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+        "port/src/world/terrain.rs::wheel_probe",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -9995,8 +10169,34 @@
             "game.asm:6567"
           ],
           "disposition": "merged",
-          "summary": "Source fragment normalize_terrain_triangle_and_interpolate is expressed by interpolate using owned native state and source-width arithmetic. Reflect negative fractional X/Y to nonnegative coordinates while exchanging corner heights to keep the same geometric patch.\nChoose an interpolation triangle by comparing the reflected fractions. Combine signed corner-height slopes with the two fractions using Mode 7 products and a common base.\nTrack eight has a separate interpolation finish; ordinary terrain returns the interpolated height with carry clear. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Reflect negative fractional X/Y to nonnegative coordinates while exchanging corner heights to keep the same geometric patch.\nChoose an interpolation triangle by comparing the reflected fractions. Combine signed corner-height slopes with the two fractions using Mode 7 products and a common base.\nTrack eight has a separate interpolation finish; ordinary terrain returns the interpolated height with carry clear. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
           "equivalents": [
+            "port/src/world/terrain.rs::interpolate_geometry",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.rs::wheel_probe",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment normalize_terrain_triangle_and_interpolate is expressed by interpolate using owned native state and source-width arithmetic. Reflect negative fractional X/Y to nonnegative coordinates while exchanging corner heights to keep the same geometric patch.\nChoose an interpolation triangle by comparing the reflected fractions. Combine signed corner-height slopes with the two fractions using Mode 7 products and a common base.\nTrack eight has a separate interpolation finish; ordinary terrain returns the interpolated height with carry clear. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::interpolate",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment normalize_terrain_triangle_and_interpolate is expressed by interpolate using owned native state and source-width arithmetic. Reflect negative fractional X/Y to nonnegative coordinates while exchanging corner heights to keep the same geometric patch.\nChoose an interpolation triangle by comparing the reflected fractions. Combine signed corner-height slopes with the two fractions using Mode 7 products and a common base.\nTrack eight has a separate interpolation finish; ordinary terrain returns the interpolated height with carry clear. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::interpolate",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -10014,11 +10214,13 @@
         "game.asm:6652"
       ],
       "disposition": "merged",
-      "summary": "Source fragment finish_horizontal_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the interpolated component into the low accumulator byte, subtract $20 and restore caller status. Carry clear reports a height result rather than a blocking direction. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Move the interpolated component into the low accumulator byte, subtract $20 and restore caller status. Carry clear reports a height result rather than a blocking direction. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
       "equivalents": [
-        "port/src/world/terrain.rs::interpolate",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::interpolate_geometry",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+        "port/src/world/terrain.rs::wheel_probe",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -10031,8 +10233,34 @@
             "game.asm:6652"
           ],
           "disposition": "merged",
-          "summary": "Source fragment finish_horizontal_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the interpolated component into the low accumulator byte, subtract $20 and restore caller status. Carry clear reports a height result rather than a blocking direction. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Move the interpolated component into the low accumulator byte, subtract $20 and restore caller status. Carry clear reports a height result rather than a blocking direction. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
           "equivalents": [
+            "port/src/world/terrain.rs::interpolate_geometry",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.rs::wheel_probe",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment finish_horizontal_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the interpolated component into the low accumulator byte, subtract $20 and restore caller status. Carry clear reports a height result rather than a blocking direction. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::interpolate",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment finish_horizontal_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the interpolated component into the low accumulator byte, subtract $20 and restore caller status. Carry clear reports a height result rather than a blocking direction. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::interpolate",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -10050,11 +10278,13 @@
         "game.asm:6669"
       ],
       "disposition": "merged",
-      "summary": "Source fragment return_height_or_interpolate_other_triangle is expressed by interpolate using owned native state and source-width arithmetic. Return the first triangle height from the accumulator high byte with carry clear. Internal $989A performs the alternate triangle's corner-slope products.\nBoth formulas share the normalized coordinates and base term. The track-eight adjustment branch remains outside this classified fragment. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Return the first triangle height from the accumulator high byte with carry clear. Internal $989A performs the alternate triangle's corner-slope products.\nBoth formulas share the normalized coordinates and base term. The track-eight adjustment branch remains outside this classified fragment. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
       "equivalents": [
-        "port/src/world/terrain.rs::interpolate",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::interpolate_geometry",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+        "port/src/world/terrain.rs::wheel_probe",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -10067,8 +10297,34 @@
             "game.asm:6669"
           ],
           "disposition": "merged",
-          "summary": "Source fragment return_height_or_interpolate_other_triangle is expressed by interpolate using owned native state and source-width arithmetic. Return the first triangle height from the accumulator high byte with carry clear. Internal $989A performs the alternate triangle's corner-slope products.\nBoth formulas share the normalized coordinates and base term. The track-eight adjustment branch remains outside this classified fragment. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Return the first triangle height from the accumulator high byte with carry clear. Internal $989A performs the alternate triangle's corner-slope products.\nBoth formulas share the normalized coordinates and base term. The track-eight adjustment branch remains outside this classified fragment. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
           "equivalents": [
+            "port/src/world/terrain.rs::interpolate_geometry",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.rs::wheel_probe",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment return_height_or_interpolate_other_triangle is expressed by interpolate using owned native state and source-width arithmetic. Return the first triangle height from the accumulator high byte with carry clear. Internal $989A performs the alternate triangle's corner-slope products.\nBoth formulas share the normalized coordinates and base term. The track-eight adjustment branch remains outside this classified fragment. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::interpolate",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment return_height_or_interpolate_other_triangle is expressed by interpolate using owned native state and source-width arithmetic. Return the first triangle height from the accumulator high byte with carry clear. Internal $989A performs the alternate triangle's corner-slope products.\nBoth formulas share the normalized coordinates and base term. The track-eight adjustment branch remains outside this classified fragment. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::interpolate",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -10086,11 +10342,13 @@
         "game.asm:6720"
       ],
       "disposition": "merged",
-      "summary": "Source fragment finish_vertical_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the vertical interpolation component into the low byte, subtract $20 and restore caller status. Carry clear identifies the nonblocking result. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Move the vertical interpolation component into the low byte, subtract $20 and restore caller status. Carry clear identifies the nonblocking result. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
       "equivalents": [
-        "port/src/world/terrain.rs::interpolate",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::interpolate_geometry",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+        "port/src/world/terrain.rs::wheel_probe",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -10103,8 +10361,34 @@
             "game.asm:6720"
           ],
           "disposition": "merged",
-          "summary": "Source fragment finish_vertical_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the vertical interpolation component into the low byte, subtract $20 and restore caller status. Carry clear identifies the nonblocking result. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Move the vertical interpolation component into the low byte, subtract $20 and restore caller status. Carry clear identifies the nonblocking result. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
           "equivalents": [
+            "port/src/world/terrain.rs::interpolate_geometry",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.rs::wheel_probe",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment finish_vertical_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the vertical interpolation component into the low byte, subtract $20 and restore caller status. Carry clear identifies the nonblocking result. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::interpolate",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment finish_vertical_terrain_probe is expressed by interpolate using owned native state and source-width arithmetic. Move the vertical interpolation component into the low byte, subtract $20 and restore caller status. Carry clear identifies the nonblocking result. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::interpolate",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -10122,11 +10406,13 @@
         "game.asm:6738"
       ],
       "disposition": "merged",
-      "summary": "Source fragment return_height_and_load_terrain_neighborhood is expressed by interpolate using owned native state and source-width arithmetic. Return the alternate height with carry clear. Internal $98EB computes a terrain-cell index from high coordinate bytes using a row-offset table and three-byte cell stride.\nLoad five neighboring heights and the packed control byte into direct-page scratch. Internal $992A computes a wheel probe position from the truck heading, wheel-specific angular offset and signed sine table.\nThe wheel probe outputs are world coordinates at $43/$45; they feed the terrain classifier. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+      "summary": "Return the alternate height with carry clear. Internal $98EB computes a terrain-cell index from high coordinate bytes using a row-offset table and three-byte cell stride.\nLoad five neighboring heights and the packed control byte into direct-page scratch. Internal $992A computes a wheel probe position from the truck heading, wheel-specific angular offset and signed sine table.\nThe wheel probe outputs are world coordinates at $43/$45; they feed the terrain classifier. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
       "equivalents": [
-        "port/src/world/terrain.rs::interpolate",
-        "port/src/world/terrain.trace.md",
-        "port/src/game/scheduler.rs"
+        "port/src/world/terrain.rs::interpolate_geometry",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+        "port/src/world/terrain.rs::wheel_probe",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -10139,8 +10425,34 @@
             "game.asm:6738"
           ],
           "disposition": "merged",
-          "summary": "Source fragment return_height_and_load_terrain_neighborhood is expressed by interpolate using owned native state and source-width arithmetic. Return the alternate height with carry clear. Internal $98EB computes a terrain-cell index from high coordinate bytes using a row-offset table and three-byte cell stride.\nLoad five neighboring heights and the packed control byte into direct-page scratch. Internal $992A computes a wheel probe position from the truck heading, wheel-specific angular offset and signed sine table.\nThe wheel probe outputs are world coordinates at $43/$45; they feed the terrain classifier. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "summary": "Return the alternate height with carry clear. Internal $98EB computes a terrain-cell index from high coordinate bytes using a row-offset table and three-byte cell stride.\nLoad five neighboring heights and the packed control byte into direct-page scratch. Internal $992A computes a wheel probe position from the truck heading, wheel-specific angular offset and signed sine table.\nThe wheel probe outputs are world coordinates at $43/$45; they feed the terrain classifier. Native equivalent: Native HeightPatch geometry feeds unchanged signed/reflected interpolation. Terrain::decode_views and SamplingTables::from_source_tables resolve source byte views at the asset boundary; runtime sampling consumes native patches.",
           "equivalents": [
+            "port/src/world/terrain.rs::interpolate_geometry",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.rs::wheel_probe",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Source fragment return_height_and_load_terrain_neighborhood is expressed by interpolate using owned native state and source-width arithmetic. Return the alternate height with carry clear. Internal $98EB computes a terrain-cell index from high coordinate bytes using a row-offset table and three-byte cell stride.\nLoad five neighboring heights and the packed control byte into direct-page scratch. Internal $992A computes a wheel probe position from the truck heading, wheel-specific angular offset and signed sine table.\nThe wheel probe outputs are world coordinates at $43/$45; they feed the terrain classifier. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::interpolate",
+                "port/src/world/terrain.trace.md",
+                "port/src/game/scheduler.rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Source fragment return_height_and_load_terrain_neighborhood is expressed by interpolate using owned native state and source-width arithmetic. Return the alternate height with carry clear. Internal $98EB computes a terrain-cell index from high coordinate bytes using a row-offset table and three-byte cell stride.\nLoad five neighboring heights and the packed control byte into direct-page scratch. Internal $992A computes a wheel probe position from the truck heading, wheel-specific angular offset and signed sine table.\nThe wheel probe outputs are world coordinates at $43/$45; they feed the terrain classifier. Internal register/stack preservation, branch fallthrough and return plumbing are folded into this typed operation; game/scheduler.rs resumes its waits and consumes owner mutations/audio effects.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::interpolate",
             "port/src/world/terrain.trace.md",
             "port/src/game/scheduler.rs"
@@ -11932,11 +12244,13 @@
         "game.asm:7725"
       ],
       "disposition": "replaced",
-      "summary": "The unknown complement at the start of the 512-byte CPU $009EC7 transfer window. The byte copy sends this range to CGRAM, but the complete read window also overlaps row-offset data and executable code at $00A037..$00A0C7.\nThis is a bounded transfer-source role, not a disjoint 512-byte palette allocation or proof that code bytes are color-format records. Native equivalent: graphics/palette/font/rectangle/sprite resources feed native VRAM/CGRAM/OAM staging and Mode1 composition; consumer-specific HUD and animation loaders retain their source indexing.",
+      "summary": "The unknown complement at the start of the 512-byte CPU $009EC7 transfer window. The byte copy sends this range to CGRAM, but the complete read window also overlaps row-offset data and executable code at $00A037..$00A0C7.\nThis is a bounded transfer-source role, not a disjoint 512-byte palette allocation or proof that code bytes are color-format records. Native equivalent: graphics/palette/font/rectangle/sprite resources feed native VRAM/CGRAM/OAM staging and Mode1 composition; consumer-specific HUD and animation loaders retain their source indexing. The separate terrain consumer reads only the44 row words at physical1F87..1FDF and compiles them into coordinate-to-patch views; this does not reclassify the complete overlapping palette-transfer complement as terrain data.",
       "equivalents": [
         "port/src/presentation/memory.rs::load_shared",
         "port/src/game/resources.rs",
-        "port/src/presentation/rendering.trace.md"
+        "port/src/presentation/rendering.trace.md",
+        "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+        "port/src/world/terrain.trace.md"
       ],
       "units": [
         {
@@ -11949,11 +12263,41 @@
             "game.asm:7725"
           ],
           "disposition": "replaced",
-          "summary": "The unknown complement at the start of the 512-byte CPU $009EC7 transfer window. The byte copy sends this range to CGRAM, but the complete read window also overlaps row-offset data and executable code at $00A037..$00A0C7.\nThis is a bounded transfer-source role, not a disjoint 512-byte palette allocation or proof that code bytes are color-format records. Native equivalent: graphics/palette/font/rectangle/sprite resources feed native VRAM/CGRAM/OAM staging and Mode1 composition; consumer-specific HUD and animation loaders retain their source indexing.",
+          "summary": "The unknown complement at the start of the 512-byte CPU $009EC7 transfer window. The byte copy sends this range to CGRAM, but the complete read window also overlaps row-offset data and executable code at $00A037..$00A0C7.\nThis is a bounded transfer-source role, not a disjoint 512-byte palette allocation or proof that code bytes are color-format records. Native equivalent: graphics/palette/font/rectangle/sprite resources feed native VRAM/CGRAM/OAM staging and Mode1 composition; consumer-specific HUD and animation loaders retain their source indexing. The separate terrain consumer reads only the44 row words at physical1F87..1FDF and compiles them into coordinate-to-patch views; this does not reclassify the complete overlapping palette-transfer complement as terrain data.",
           "equivalents": [
             "port/src/presentation/memory.rs::load_shared",
             "port/src/game/resources.rs",
-            "port/src/presentation/rendering.trace.md"
+            "port/src/presentation/rendering.trace.md",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "The unknown complement at the start of the 512-byte CPU $009EC7 transfer window. The byte copy sends this range to CGRAM, but the complete read window also overlaps row-offset data and executable code at $00A037..$00A0C7.\nThis is a bounded transfer-source role, not a disjoint 512-byte palette allocation or proof that code bytes are color-format records. Native equivalent: graphics/palette/font/rectangle/sprite resources feed native VRAM/CGRAM/OAM staging and Mode1 composition; consumer-specific HUD and animation loaders retain their source indexing.",
+              "previous_equivalents": [
+                "port/src/presentation/memory.rs::load_shared",
+                "port/src/game/resources.rs",
+                "port/src/presentation/rendering.trace.md",
+                "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+                "port/src/world/terrain.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "The unknown complement at the start of the 512-byte CPU $009EC7 transfer window. The byte copy sends this range to CGRAM, but the complete read window also overlaps row-offset data and executable code at $00A037..$00A0C7.\nThis is a bounded transfer-source role, not a disjoint 512-byte palette allocation or proof that code bytes are color-format records. Native equivalent: graphics/palette/font/rectangle/sprite resources feed native VRAM/CGRAM/OAM staging and Mode1 composition; consumer-specific HUD and animation loaders retain their source indexing.",
+          "previous_equivalents": [
+            "port/src/presentation/memory.rs::load_shared",
+            "port/src/game/resources.rs",
+            "port/src/presentation/rendering.trace.md",
+            "port/src/world/terrain.rs::SamplingTables::from_source_tables",
+            "port/src/world/terrain.trace.md"
           ]
         }
       ]
@@ -25736,10 +26080,11 @@
         "game.asm:18589"
       ],
       "disposition": "replaced",
-      "summary": "Union of four track terrain source windows, each read for exactly $16B1 bytes into WRAM $7F0000. Sources overlap physically; internal markers retain each track view.\nThe runtime sampler uses three-byte terrain cells with neighboring height/control reads; complete artistic/material semantics remain uncertain. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+      "summary": "Union of four track terrain source windows, each read for exactly $16B1 bytes into WRAM $7F0000. Sources overlap physically; internal markers retain each track view.\nThe runtime sampler uses three-byte terrain cells with neighboring height/control reads; complete artistic/material semantics remain uncertain. Native equivalent: Original terrain windows remain immutable asset inputs. decode_terrain builds a native atlas for every complete byte-aligned geometry view; runtime queries do not read the packed source bytes.",
       "equivalents": [
-        "port/src/world/terrain.rs::load_sampling_tables",
-        "port/src/game/resources.rs",
+        "port/src/world/terrain.rs::decode_terrain",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/race/assets.rs",
         "port/src/world/terrain.trace.md"
       ],
       "units": [
@@ -25753,8 +26098,33 @@
             "game.asm:18589"
           ],
           "disposition": "replaced",
-          "summary": "Union of four track terrain source windows, each read for exactly $16B1 bytes into WRAM $7F0000. Sources overlap physically; internal markers retain each track view.\nThe runtime sampler uses three-byte terrain cells with neighboring height/control reads; complete artistic/material semantics remain uncertain. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+          "summary": "Union of four track terrain source windows, each read for exactly $16B1 bytes into WRAM $7F0000. Sources overlap physically; internal markers retain each track view.\nThe runtime sampler uses three-byte terrain cells with neighboring height/control reads; complete artistic/material semantics remain uncertain. Native equivalent: Original terrain windows remain immutable asset inputs. decode_terrain builds a native atlas for every complete byte-aligned geometry view; runtime queries do not read the packed source bytes.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_terrain",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/race/assets.rs",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Union of four track terrain source windows, each read for exactly $16B1 bytes into WRAM $7F0000. Sources overlap physically; internal markers retain each track view.\nThe runtime sampler uses three-byte terrain cells with neighboring height/control reads; complete artistic/material semantics remain uncertain. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::load_sampling_tables",
+                "port/src/game/resources.rs",
+                "port/src/world/terrain.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Union of four track terrain source windows, each read for exactly $16B1 bytes into WRAM $7F0000. Sources overlap physically; internal markers retain each track view.\nThe runtime sampler uses three-byte terrain cells with neighboring height/control reads; complete artistic/material semantics remain uncertain. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::load_sampling_tables",
             "port/src/game/resources.rs",
             "port/src/world/terrain.trace.md"
@@ -28078,10 +28448,11 @@
         "game.asm:19988"
       ],
       "disposition": "replaced",
-      "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Internal track markers preserve overlapping physical windows and CPU source aliases. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+      "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Internal track markers preserve overlapping physical windows and CPU source aliases. Native equivalent: Original terrain windows remain immutable asset inputs. decode_terrain builds a native atlas for every complete byte-aligned geometry view; runtime queries do not read the packed source bytes.",
       "equivalents": [
-        "port/src/world/terrain.rs::load_sampling_tables",
-        "port/src/game/resources.rs",
+        "port/src/world/terrain.rs::decode_terrain",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/race/assets.rs",
         "port/src/world/terrain.trace.md"
       ],
       "units": [
@@ -28095,8 +28466,33 @@
             "game.asm:19988"
           ],
           "disposition": "replaced",
-          "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Internal track markers preserve overlapping physical windows and CPU source aliases. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+          "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Internal track markers preserve overlapping physical windows and CPU source aliases. Native equivalent: Original terrain windows remain immutable asset inputs. decode_terrain builds a native atlas for every complete byte-aligned geometry view; runtime queries do not read the packed source bytes.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_terrain",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/race/assets.rs",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Internal track markers preserve overlapping physical windows and CPU source aliases. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::load_sampling_tables",
+                "port/src/game/resources.rs",
+                "port/src/world/terrain.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Internal track markers preserve overlapping physical windows and CPU source aliases. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::load_sampling_tables",
             "port/src/game/resources.rs",
             "port/src/world/terrain.trace.md"
@@ -28178,10 +28574,11 @@
         "game.asm:20038"
       ],
       "disposition": "replaced",
-      "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Physical union endpoints follow exact source windows, not alignment padding. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+      "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Physical union endpoints follow exact source windows, not alignment padding. Native equivalent: Original terrain windows remain immutable asset inputs. decode_terrain builds a native atlas for every complete byte-aligned geometry view; runtime queries do not read the packed source bytes.",
       "equivalents": [
-        "port/src/world/terrain.rs::load_sampling_tables",
-        "port/src/game/resources.rs",
+        "port/src/world/terrain.rs::decode_terrain",
+        "port/src/world/terrain.rs::Terrain::decode_views",
+        "port/src/race/assets.rs",
         "port/src/world/terrain.trace.md"
       ],
       "units": [
@@ -28195,8 +28592,33 @@
             "game.asm:20038"
           ],
           "disposition": "replaced",
-          "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Physical union endpoints follow exact source windows, not alignment padding. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+          "summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Physical union endpoints follow exact source windows, not alignment padding. Native equivalent: Original terrain windows remain immutable asset inputs. decode_terrain builds a native atlas for every complete byte-aligned geometry view; runtime queries do not read the packed source bytes.",
           "equivalents": [
+            "port/src/world/terrain.rs::decode_terrain",
+            "port/src/world/terrain.rs::Terrain::decode_views",
+            "port/src/race/assets.rs",
+            "port/src/world/terrain.trace.md"
+          ],
+          "modernization_history": [
+            {
+              "iteration": 3,
+              "candidate": "M2",
+              "previous_summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Physical union endpoints follow exact source windows, not alignment padding. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+              "previous_equivalents": [
+                "port/src/world/terrain.rs::load_sampling_tables",
+                "port/src/game/resources.rs",
+                "port/src/world/terrain.trace.md"
+              ]
+            }
+          ]
+        }
+      ],
+      "modernization_history": [
+        {
+          "iteration": 3,
+          "candidate": "M2",
+          "previous_summary": "Union of four track terrain windows, each consumed for $16B1 bytes by the WRAM terrain loader. Physical union endpoints follow exact source windows, not alignment padding. Native equivalent: the interpolation/classification/projection lookup consumer uses this bounded table with wrapping/signed source arithmetic.",
+          "previous_equivalents": [
             "port/src/world/terrain.rs::load_sampling_tables",
             "port/src/game/resources.rs",
             "port/src/world/terrain.trace.md"

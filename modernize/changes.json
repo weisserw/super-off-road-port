@@ -955,6 +955,100 @@
         "modernize/evidence/iteration-003/M7-retained-scores/review.json",
         "modernize/evidence/iteration-003/M7-retained-postrace/review.json"
       ]
+    },
+    {
+      "id": "M2",
+      "iteration": 3,
+      "category": "modernization",
+      "status": "retained",
+      "starting_implementation_commit": "8bc4086",
+      "design": "modernize/design-iteration-003-M2.json",
+      "retained_source_sha256": "d4c2b8410a947d7288921b12912e5de9f297e457ce18039507de5948b3683d21",
+      "retained_binary_sha256": "1d41053eb99d0dc8fdba31a616f585b7b651f7a8dc5a4674c129bf7a80c85e23",
+      "before": "Raw terrain bytes and row words are interpreted on every wheel/contact query; packed controls and neighbors decide height/block/marker outcomes; wheel blocks use direction+1 bytes.",
+      "after": "Terrain owns native geometry/triangle/escape patches. SamplingTables compiles row/byte-column aliases into immutable coordinate views. Queries sample native regions; motion consumes optional BlockDirection values.",
+      "removed_machinery": [
+        "Raw cell-offset arithmetic and ROM control-pair decoding during gameplay sampling",
+        "Packed neighbor-pattern search during queries",
+        "Direction-plus-one wheel blockage transport"
+      ],
+      "remaining_boundaries": [
+        "Source row-word/byte-column aliases are compiled at asset loading; missing rows/geometry retain query-time errors.",
+        "Source integer interpolation/projection, direction codes, marker-history ordering, track8 bias and preceding-control policy remain exact.",
+        "Encoded terrain and block fixtures exist only under cfg(test); normal Terrain owns no raw byte copy."
+      ],
+      "source_contract_resolution": "Valid geometry includes index+135; positive neighbor controls are at most index+134, and negative reads are within the existing-130..-1 configured policy. Predecoding retains first-opening/fallback order without inventing missing neighbors. Original unowned-WRAM uncertainty is unchanged.",
+      "validation": [
+        {
+          "command": "python3 run.py check-fast --test-filter modernization_terrain before edits",
+          "result": "PASS1 customFFFF+3 row-word wrap/row-bank alias test, fmt/Clippy",
+          "evidence": "modernize/evidence/iteration-003/M2-preimplementation/fast.json"
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter terrain before/after edits",
+          "result": "PASS31 source-derived terrain-related contracts on both models",
+          "evidence": [
+            "modernize/evidence/iteration-003/M2-preimplementation/terrain-fast.json",
+            "modernize/evidence/iteration-003/M2-terrain-fast.json"
+          ]
+        },
+        {
+          "command": "python3 run.py check-fast --test-filter trucks::",
+          "result": "PASS98 movement/contact/AI-related contracts after typed wheel blockage conversion",
+          "evidence": "modernize/evidence/iteration-003/M2-trucks-fast.json"
+        },
+        {
+          "command": "modernization_terrain_census example, starting and native atlas",
+          "result": "PASS4,521,984 exact height/block/history/error outcomes across all16 source windows,256 column aliases, both row banks and fraction/unsupported boundaries",
+          "evidence": "modernize/evidence/iteration-003/M2-census-comparison.json"
+        },
+        {
+          "command": "iteration3_terrain_original.py plus modernization_terrain_reference example",
+          "result": "PASS96 natural original wheel calls across900 further race frames,36 distinct heights and11 marked returns; native values/history match exactly; no state writes",
+          "evidence": "modernize/evidence/iteration-003/M2-original-probe-comparison.json"
+        },
+        {
+          "command": "Interpolation token audit",
+          "result": "PASS function body unchanged apart from input type",
+          "evidence": "modernize/evidence/iteration-003/M2-interpolation-audit.json"
+        },
+        {
+          "command": "CARGO_INCREMENTAL=0 python3 run.py check",
+          "result": "PASS647 optimized tests, fmt, desktop/web Clippy/builds; Rust1.90.0/Cargo.lock",
+          "evidence": "modernize/evidence/iteration-003/M2-full-latest.json"
+        },
+        {
+          "command": "Fresh contact, player postrace and hazard/lap integrations versus starting build",
+          "result": "PASS full state/frame/PCM and all checkpoint fields except build identity",
+          "evidence": [
+            "modernize/evidence/iteration-003/M2-retained-contact/comparison.json",
+            "modernize/evidence/iteration-003/M2-retained-postrace/comparison.json",
+            "modernize/evidence/iteration-003/M2-retained-hazard/native-hazard-route/baseline-comparison.json"
+          ]
+        },
+        {
+          "command": "Original ledger identity/accounting audit",
+          "result": "PASS1527 regions/1408 units/22 uncertainties; all original region/unit metadata preserved",
+          "evidence": "modernize/evidence/iteration-003/M2-accounting-audit.json"
+        }
+      ],
+      "test_migration": "Source fixture bytes decode through test-only constructors/mutators; old neighborhood/control assertions encode native regions only at test boundary. Blocked-motion fixtures retain encoded assertions through a test-only adapter. Numeric/source expectations unchanged.",
+      "ledger_update": "Current equivalents point to native patch/coordinate/escape owners, preserving prior native summaries/equivalents in modernization_history. Overlapping palette complement keeps its existing role; only the44 row-word consumer is additionally identified.",
+      "qa_commits": [
+        "7c56d59",
+        "dac8926"
+      ],
+      "reviews": [
+        "modernize/evidence/iteration-003/M2-retained-contact/review.json",
+        "modernize/evidence/iteration-003/M2-retained-postrace/review.json",
+        "modernize/evidence/iteration-003/M2-retained-hazard/native-hazard-route/review.json"
+      ],
+      "remaining_uncertainty": [
+        "No whole-game QA, desktop/browser runtime or hardware audio claim.",
+        "The96 original runtime probes contain no blocked wheel. Blocking and checked edge policies are established by independent source contracts and full-view differential evidence, not asserted as naturally observed in that run.",
+        "Existing original unowned-WRAM and subframe timing/native DSP uncertainties remain explicit."
+      ],
+      "implementation_commit_subject": "modernize: decode terrain into native surface patches"
     }
   ],
   "test_migration": "Source-backed fixtures now construct values through from_encoded and assert encoded/visible results instead of removed fields; original fixture values and behavioral coverage preserved. Timer advance no longer returns tile IDs, so existing tile expectations are applied at the explicit presentation boundary.",
