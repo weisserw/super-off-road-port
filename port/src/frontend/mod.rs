@@ -6,3 +6,5 @@ pub mod results;
 pub mod shop;
 
 pub mod arcade;
+
+pub mod championship;

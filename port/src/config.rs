@@ -15,3 +15,27 @@ pub fn settings() -> romatlas_port::settings::Settings {
         ..defaults
     }
 }
+
+/// Stable original-track championships, independent of gameplay entropy.
+pub const CHAMPIONSHIP_RACES: usize = 8;
+pub const CHAMPIONSHIP_NAMES: [&str; 4] = ["THUNDER", "HURRICANE", "TORNADO", "CYCLONE"];
+pub const CHAMPIONSHIP_SEEDS: [[u8; 5]; 4] = [
+    [0x54, 0x4f, 0x52, 0x4e, 0x41], // Thunder: former Tornado schedule.
+    [0x10, 0x00, 0x52, 0x52, 0x49], // Hurricane: first Classic course, forward.
+    [0x54, 0x48, 0x55, 0x4e, 0x44], // Tornado: former Thunder schedule.
+    [0x3a, 0x10, 0x43, 0x4c, 0x4f], // Cyclone: second Classic course, forward.
+];
+
+// Initial Championship tuning; keep changes here isolated from Arcade contracts.
+pub const CHAMPIONSHIP_BASE_BONUS: [i8; 3] = [-1, 0, 1];
+pub const CHAMPIONSHIP_RELIEF_LIMIT: [i8; 3] = [-3, -2, -1];
+pub const CHAMPIONSHIP_CATCHUP_LIMIT: [i8; 3] = [0, 1, 2];
+pub const CHAMPIONSHIP_CAR_BONUS: [i8; 4] = [0, 1, 0, 2];
+pub const CHAMPIONSHIP_NITRO_PERCENT: [u64; 4] = [20, 20, 20, 45];
+pub const CHAMPIONSHIP_NITRO_LIMIT: [u8; 4] = [3, 3, 3, 6];
+pub const CHAMPIONSHIP_VICTORY: &str = "Conglaturation!!! You have completed a great game";
+
+/// CPU nitro pacing at the shared approximately 60 Hz race cadence.
+pub const CHAMPIONSHIP_NITRO_CHANCE: [u8; 4] = [32, 32, 28, 48];
+pub const CHAMPIONSHIP_NITRO_COOLDOWN: [u16; 4] = [360, 360, 360, 300];
+pub const CHAMPIONSHIP_NITRO_START_DELAY: [u16; 4] = [180, 180, 240, 210];

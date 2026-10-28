@@ -184,7 +184,13 @@ impl Resources {
     }
     pub fn arcade_race(&self, state: &super::state::State) -> Result<RaceAssets> {
         let mut race = self.race(state.sequence_index, state.session.order_slot)?;
-        if state.arcade.accepted && state.arcade.random {
+        if state.championship.active {
+            crate::frontend::arcade::randomize(
+                &mut race,
+                &state.championship.race_mode(state.sequence_index),
+                &self.sequence,
+            )?;
+        } else if state.arcade.accepted && state.arcade.random {
             crate::frontend::arcade::randomize(&mut race, &state.arcade, &self.sequence)?;
         }
         Ok(race)

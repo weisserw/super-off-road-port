@@ -73,6 +73,49 @@ pub struct Driver {
     pub bias_delay: u8,
     pub parameter: u8,
 }
+/// Championship alone reserves nitros for later laps and spaces out pulses.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NitroPacing {
+    pub budget: u8,
+    pub issued: u8,
+    pub cooldown: u16,
+}
+impl NitroPacing {
+    fn stock(stock: super::nitro::NitroStock) -> u8 {
+        let digits = stock.display_digits();
+        (digits[0] + digits[1] * 10).min(99)
+    }
+    fn new(stock: super::nitro::NitroStock, slot: usize) -> Self {
+        Self {
+            budget: Self::stock(stock),
+            issued: 0,
+            cooldown: crate::config::CHAMPIONSHIP_NITRO_START_DELAY[slot],
+        }
+    }
+    fn request(&mut self, stock: super::nitro::NitroStock, lap: u8, slot: usize, draw: u8) -> bool {
+        let remaining = Self::stock(stock);
+        // Include earned pickups, without replenishing charges already spent.
+        self.budget = self
+            .budget
+            .max(remaining.saturating_add(self.issued).min(99));
+        let available = if self.budget == 0 {
+            0
+        } else {
+            1 + ((u16::from(self.budget - 1) * u16::from(lap.saturating_sub(1).min(3))) / 3) as u8
+        };
+        if self.cooldown != 0
+            || remaining == 0
+            || self.issued >= available
+            || draw >= crate::config::CHAMPIONSHIP_NITRO_CHANCE[slot]
+        {
+            return false;
+        }
+        self.issued += 1;
+        self.cooldown = crate::config::CHAMPIONSHIP_NITRO_COOLDOWN[slot];
+        true
+    }
+}
 /// Race is the sole mutable authority for lap/checkpoint/banner/winner state.
 pub use crate::race::Progress as RaceAi;
 /// Setup's all-human scan writes one route-buffer tail byte outside all original
@@ -82,6 +125,15 @@ pub struct SetupEffects {
     pub unused_route_tail_byte: Option<u8>,
 }
 pub fn setup_parameters(trucks: &mut [Truck; TRUCKS], race: &mut RaceAi) -> SetupEffects {
+    if race.championship {
+        for (slot, (truck, driver)) in trucks.iter().zip(&mut race.drivers).enumerate() {
+            driver.parameter = truck.upgrades.speed.min(7);
+            race.championship_nitro[slot] = NitroPacing::new(truck.nitro, slot);
+        }
+        return SetupEffects {
+            unused_route_tail_byte: None,
+        };
+    }
     const MINIMUM_INITIAL: u8 = 6;
     const RAISED_INCREMENT: u8 = 2;
     const PARAMETER_CAP: u8 = 7;
@@ -332,13 +384,25 @@ pub fn progress_waypoint(
     }
     let order = ranking(trucks, &race.drivers, route)?;
     let human_rank = human_relative_rank(slot, order, race.active_humans)?;
-    adjust_rank(
-        &mut trucks[slot],
-        &race.drivers[slot],
-        human_rank,
-        tables,
-        random,
-    );
+    if race.championship {
+        let draw = random.next(crate::runtime::RandomResultWidth::Byte) as u8;
+        if race.championship_nitro[slot].request(
+            trucks[slot].nitro,
+            race.drivers[slot].lap,
+            slot,
+            draw,
+        ) {
+            trucks[slot].controller.0 |= crate::controls::BUTTON_Y;
+        }
+    } else {
+        adjust_rank(
+            &mut trucks[slot],
+            &race.drivers[slot],
+            human_rank,
+            tables,
+            random,
+        );
+    }
     race.drivers[slot].timeout = *tables
         .waypoint_timeouts
         .get(usize::from(race.drivers[slot].parameter))
@@ -377,18 +441,31 @@ pub fn service_computers(
         if race.active_humans & (1 << slot) != 0 {
             continue;
         }
+        if race.championship {
+            race.championship_nitro[slot].cooldown =
+                race.championship_nitro[slot].cooldown.saturating_sub(1);
+        }
         let record = route.node(race.drivers[slot].checkpoint)?.waypoint()?;
         phases.push(AiPhase::SetAcceleration(slot));
-        trucks[slot].upgrades.acceleration = AI_ACCELERATION;
+        if !race.championship {
+            trucks[slot].upgrades.acceleration = AI_ACCELERATION;
+        }
         phases.push(AiPhase::SetThrottle(slot));
         trucks[slot].controller.0 = AI_THROTTLE_WORD;
         let desired = desired_heading(&trucks[slot], record, tables);
         phases.push(AiPhase::Steer(slot));
+        let turn_step = if race.championship {
+            tables.turn_steps[slot]
+                .saturating_add(trucks[slot].upgrades.steering / 2)
+                .min(8)
+        } else {
+            tables.turn_steps[slot]
+        };
         steer_heading(
             &mut trucks[slot],
             &mut race.drivers[slot],
             desired,
-            tables.turn_steps[slot],
+            turn_step,
         );
         phases.push(AiPhase::Waypoint(slot));
         progress_waypoint(trucks, race, slot, record, route, tables, random)?;
@@ -399,6 +476,52 @@ pub fn service_computers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn championship_nitros_are_reserved_for_later_laps_and_have_a_cooldown() {
+        use crate::trucks::nitro::NitroStock;
+        for (slot, budget) in [(0, 3), (1, 3), (2, 3), (3, 6)] {
+            let mut stock = NitroStock::new(budget);
+            let mut pacing = NitroPacing::new(stock, slot);
+            assert!(
+                !pacing.request(stock, 1, slot, 0),
+                "opening delay must apply"
+            );
+            pacing.cooldown = 0;
+            for lap in 1..=4 {
+                let before = pacing.issued;
+                for _ in 0..budget {
+                    if pacing.request(stock, lap, slot, 0) {
+                        stock.consume();
+                        assert!(
+                            !pacing.request(stock, lap, slot, 0),
+                            "nitros must not fire back to back"
+                        );
+                    }
+                    pacing.cooldown = 0;
+                }
+                if lap == 1 {
+                    assert_eq!(pacing.issued - before, 1);
+                }
+                if lap < 4 {
+                    assert!(pacing.issued < budget);
+                }
+            }
+            assert_eq!(pacing.issued, budget);
+            assert_eq!(stock, NitroStock::new(0));
+        }
+    }
+    #[test]
+    fn championship_nitro_chance_and_pickups_do_not_bypass_pacing() {
+        use crate::trucks::nitro::NitroStock;
+        let mut pacing = NitroPacing::default();
+        let stock = NitroStock::new(3);
+        assert!(!pacing.request(stock, 1, 3, 255));
+        assert!(pacing.request(stock, 1, 3, 0));
+        pacing.cooldown = 0;
+        assert!(!pacing.request(NitroStock::new(5), 1, 3, 0));
+        assert!(pacing.request(NitroStock::new(5), 2, 3, 0));
+        assert!(!pacing.request(NitroStock::new(0), 4, 3, 0));
+    }
     const BEARINGS: std::ops::Range<usize> = 0x1cc7..0x1dc7;
     const TURN_STEPS: std::ops::Range<usize> = 0x989..0x98d;
     const TIMEOUTS: std::ops::Range<usize> = 0xa64..0xa6c;
@@ -435,6 +558,8 @@ mod tests {
     }
     fn race() -> RaceAi {
         RaceAi {
+            championship: false,
+            championship_nitro: Default::default(),
             drivers: [Driver {
                 lap: 1,
                 timeout: 200,

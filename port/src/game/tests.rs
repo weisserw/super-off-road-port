@@ -629,7 +629,7 @@ fn losing_human_penalty_upload_and_prompt_release_resume_on_distinct_nmi_boundar
 }
 
 #[test]
-fn arcade_menu_renders_and_enters_names_without_consuming_start() {
+fn championship_default_menu_renders_and_arcade_random_still_enters_names() {
     let mut game = port();
     game.tick(&InputState::default());
     game.state.automatic[0] = crate::controls::ControllerWord(crate::controls::BUTTON_START);
@@ -648,13 +648,17 @@ fn arcade_menu_renders_and_enters_names_without_consuming_start() {
             .any(|pixel| pixel[..3] != [0, 0, 0])
     );
     assert!(
-        frame.pixels[..256 * 4 * 40]
+        frame.pixels[..256 * 4 * 32]
             .chunks_exact(4)
             .all(|pixel| pixel[..3] == [0, 0, 0])
     );
     let saved = game.snapshot_json().unwrap();
     let mut receiver = port();
     receiver.restore_snapshot_json(&saved).unwrap();
+    game.tick(&InputState::default());
+    let mut down = InputState::default();
+    down.held.insert("down".into());
+    game.tick(&down);
     game.tick(&InputState::default());
     game.tick(&held);
     assert_eq!(game.state.scene, Scene::Names);

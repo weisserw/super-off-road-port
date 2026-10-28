@@ -3,7 +3,7 @@ use super::state::{Menu, ShopNext, SplashNext};
 use super::*;
 use crate::{
     controls,
-    frontend::{attract, names, results, shop},
+    frontend::{attract, championship, names, results, shop},
     presentation::{self, memory, sprites, transitions as t},
     race, runtime,
     sound::host,
@@ -144,6 +144,12 @@ impl Port {
     }
     fn enter_frontend(&mut self) -> Result<()> {
         self.state.arcade = Default::default();
+        self.state.championship = Default::default();
+        self.state.race.progress.championship = false;
+        for truck in &mut self.state.race.trucks {
+            truck.championship = false;
+            truck.championship_speed_bonus = 0;
+        }
         self.state.session.active_humans = 1;
         self.state.session.order_slot = 0;
         self.state.session.inhibit_video = VIDEO_UPLOAD_INHIBITED;
@@ -208,7 +214,7 @@ impl Port {
     pub(super) fn begin_names(&mut self) {
         if !self.state.arcade.accepted {
             self.reclaim_window();
-            self.state.arcade.previous = self.state.automatic[0].0;
+            self.state.championship.previous = self.state.automatic[0].0;
             self.state.scene(Scene::ArcadeMenu);
             return;
         }
@@ -386,6 +392,19 @@ impl Port {
         self.state.pause.owner_plus_one =
             std::mem::take(&mut self.state.menu.selection_mut().editors[1].button_history);
         self.state.pause.phase = t::PausePhase::Running;
+        self.state.race.progress.championship = self.state.championship.active;
+        if self.state.championship.active {
+            self.state.championship.before_awards = self
+                .state
+                .session
+                .wallets
+                .each_ref()
+                .map(championship::wallet);
+            self.state.championship.prepare(
+                &mut self.state.race.trucks,
+                self.state.session.active_humans,
+            );
+        }
         let selected = self.selected.clone();
         let resources = self.resources.clone();
         let terrain = self.terrain.clone();
@@ -537,6 +556,206 @@ impl Port {
             complete,
         )
     }
+    fn advance_championship_menu(&mut self) -> Result<()> {
+        use championship::Difficulty;
+        let pressed = self.state.championship.pressed(self.state.automatic[0].0);
+        let direction = if pressed & (controls::BUTTON_UP | controls::BUTTON_LEFT) != 0 {
+            -1
+        } else if pressed
+            & (controls::BUTTON_DOWN | controls::BUTTON_RIGHT | controls::BUTTON_SELECT)
+            != 0
+        {
+            1
+        } else {
+            0
+        };
+        let confirm =
+            pressed & (controls::BUTTON_START | controls::BUTTON_A | controls::BUTTON_B) != 0;
+        let season = &mut self.state.championship;
+        let (title, choices, selected): (&str, Vec<String>, usize) = match self.state.scene {
+            Scene::ArcadeMenu => {
+                season.mode = (i16::from(season.mode) + direction).rem_euclid(3) as u8;
+                (
+                    "SELECT MODE",
+                    vec![
+                        "CHAMPIONSHIP".into(),
+                        "ARCADE RANDOM".into(),
+                        "ARCADE CLASSIC".into(),
+                    ],
+                    usize::from(season.mode),
+                )
+            }
+            Scene::ChampionshipCup => {
+                season.cup = (season.cup as i16 + direction).rem_euclid(4) as usize;
+                (
+                    "SELECT CHAMPIONSHIP",
+                    crate::config::CHAMPIONSHIP_NAMES
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect(),
+                    season.cup,
+                )
+            }
+            Scene::ChampionshipDifficulty => {
+                let index = match season.difficulty {
+                    Difficulty::Easy => 0,
+                    Difficulty::Normal => 1,
+                    Difficulty::Hard => 2,
+                };
+                let index = (index + direction).rem_euclid(3) as usize;
+                season.difficulty = [Difficulty::Easy, Difficulty::Normal, Difficulty::Hard][index];
+                (
+                    "SELECT DIFFICULTY",
+                    vec!["EASY".into(), "NORMAL".into(), "HARD".into()],
+                    index,
+                )
+            }
+            _ => unreachable!(),
+        };
+        let choice_width = if self.state.scene == Scene::ArcadeMenu {
+            choices.iter().map(String::len).max().unwrap_or(0)
+        } else {
+            0
+        };
+        let mut lines = vec![(4, title.into())];
+        lines.extend(
+            choices
+                .into_iter()
+                .enumerate()
+                .map(|(i, s)| (9 + i as u16 * 4, format!("{s:<choice_width$}"))),
+        );
+        championship::screen(
+            &mut self.state.race.video.memory,
+            &mut self.state.race.video.display,
+            &self.resources.shared,
+            &lines,
+            Some(9 + selected as u16 * 4),
+        )?;
+        self.state.session.inhibit_video = VIDEO_UPLOAD_INHIBITED;
+        if confirm {
+            match self.state.scene {
+                Scene::ArcadeMenu if season.mode == 0 => self.state.scene(Scene::ChampionshipCup),
+                Scene::ArcadeMenu => {
+                    self.state.arcade.accepted = true;
+                    self.state.arcade.random = season.mode == 1;
+                    self.state
+                        .arcade
+                        .start(&self.resources.sequence, &mut self.state.random);
+                    self.begin_names();
+                }
+                Scene::ChampionshipCup => self.state.scene(Scene::ChampionshipDifficulty),
+                Scene::ChampionshipDifficulty => {
+                    season.start(&self.resources.sequence)?;
+                    self.state.arcade.accepted = true;
+                    self.state.arcade.random = false;
+                    // Starting resources are independent of any attract demo.
+                    shop::initialize_wallets(&mut self.state.session);
+                    for truck in &mut self.state.race.trucks {
+                        truck.upgrades = Default::default();
+                        truck.nitro = Default::default();
+                    }
+                    self.begin_names();
+                }
+                _ => unreachable!(),
+            }
+        }
+        Ok(())
+    }
+    fn begin_championship_standings(&mut self) {
+        self.state.championship.previous = self.state.automatic[0].0 | self.state.automatic[1].0;
+        self.state.scene(Scene::ChampionshipStandings);
+    }
+    fn draw_championship_standings(&mut self) -> Result<()> {
+        let season = &self.state.championship;
+        let final_screen = season.completed == 8;
+        // Center the full visible table, including the truck and earnings header.
+        let (truck_column, rank_column, initials_column, points_column, earnings_column) =
+            if final_screen {
+                (3, 6, 8, 13, 17)
+            } else {
+                (8, 11, 13, 18, 0)
+            };
+        let mut lines = vec![
+            (
+                1,
+                if final_screen {
+                    "FINAL STANDINGS".into()
+                } else {
+                    "CHAMPIONSHIP STANDINGS".into()
+                },
+            ),
+            (3, format!("{} RACES REMAINING", 8 - season.completed)),
+        ];
+        if final_screen {
+            let mut header = [b' '; 32];
+            for (column, label) in [
+                (initials_column, "NAME"),
+                (points_column, "PTS"),
+                (earnings_column, "TOTAL EARNED"),
+            ] {
+                header[column..column + label.len()].copy_from_slice(label.as_bytes());
+            }
+            lines.push((5, String::from_utf8(header.to_vec()).unwrap()));
+        }
+        for (place, slot) in season.standings().into_iter().enumerate() {
+            let name: String = self.state.session.records.truck_names[slot * 3..slot * 3 + 3]
+                .iter()
+                .map(|&g| {
+                    if (11..=36).contains(&g) {
+                        (b'A' + g - 11) as char
+                    } else if (1..=10).contains(&g) {
+                        (b'0' + g - 1) as char
+                    } else if g == 39 {
+                        '/'
+                    } else {
+                        ' '
+                    }
+                })
+                .collect();
+            let mut line = [b' '; 32];
+            line[rank_column] = b'1' + place as u8;
+            line[initials_column..initials_column + 3].copy_from_slice(name.as_bytes());
+            line[points_column..points_column + 2]
+                .copy_from_slice(format!("{:2}", season.points[slot]).as_bytes());
+            if final_screen {
+                line[earnings_column..earnings_column + 12]
+                    .copy_from_slice(format!("{:12}", season.earned[slot]).as_bytes());
+            } else {
+                line[points_column + 3..points_column + 6].copy_from_slice(b"PTS");
+            }
+            lines.push((
+                7 + place as u16 * 3,
+                String::from_utf8(line.to_vec()).unwrap(),
+            ));
+        }
+        if final_screen && self.state.session.active_humans & (1 << season.standings()[0]) != 0 {
+            let (first, rest) = crate::config::CHAMPIONSHIP_VICTORY.split_once(' ').unwrap();
+            lines.extend([(20, first.into()), (22, rest.into())]);
+        }
+        lines.push((25, "PRESS START TO CONTINUE".into()));
+        championship::screen(
+            &mut self.state.race.video.memory,
+            &mut self.state.race.video.display,
+            &self.resources.shared,
+            &lines,
+            None,
+        )?;
+        if final_screen && self.state.session.active_humans & (1 << season.standings()[0]) != 0 {
+            let (_, line) = crate::config::CHAMPIONSHIP_VICTORY.split_once(' ').unwrap();
+            championship::draw_victory_line(&mut self.state.race.video.memory, 22, line)?;
+        }
+        championship::draw_cars(
+            &mut self.state.race.video.memory,
+            &mut self.state.race.video.display,
+            &self.resources.shared,
+            &self.resources.poses,
+            self.resources.motion.body_poses.frame(2, 2, 3),
+            truck_column * 8,
+            season.standings(),
+        )?;
+        self.state.session.inhibit_video = VIDEO_UPLOAD_INHIBITED;
+        Ok(())
+    }
     fn begin_loss_display(&mut self) -> Result<()> {
         let loser = self
             .state
@@ -624,7 +843,19 @@ impl Port {
         if selection.phase == names::Phase::Complete {
             let history = selection.editors[1].button_history;
             self.state.pause.owner_plus_one = history;
-            self.begin_shop(ShopNext::FirstRace)?;
+            if self.state.championship.active {
+                if self.state.session.joined_pages == [0; 2] {
+                    self.enter_frontend()?;
+                } else {
+                    championship::restore_cpu_initials(
+                        &mut self.state.session,
+                        &resources.results.defaults.truck_names,
+                    );
+                    self.begin_championship_standings();
+                }
+            } else {
+                self.begin_shop(ShopNext::FirstRace)?;
+            }
         }
         Ok(SceneStep::Yield)
     }
@@ -685,12 +916,36 @@ impl Port {
                 self.state.race.video.display.masked_layers = 0;
                 presentation::reset_display(&mut self.state.race.video.display);
                 self.state.sequence_index = self.state.arcade.order.first().copied().unwrap_or(0);
-                self.state.arcade.roll(&mut self.state.random);
+                if self.state.championship.active {
+                    // Championship has no free initial CPU nitros.
+                    for slot in 0..4 {
+                        if self.state.session.active_humans & (1 << slot) == 0 {
+                            self.state.race.trucks[slot].nitro = Default::default();
+                        }
+                    }
+                    self.state.championship.buy(
+                        &mut self.state.session,
+                        &mut self.state.race.trucks,
+                        &resources.shop,
+                    )?;
+                    self.state.sequence_index = self.state.championship.schedule[0].0;
+                } else {
+                    self.state.arcade.roll(&mut self.state.random);
+                }
                 self.state.scene(Scene::RacePrepare);
                 return Ok(SceneStep::Continue);
             }
-            self.postrace_owner(true)?;
-            self.postrace_owner(false)?;
+            if self.state.championship.active {
+                self.state.championship.buy(
+                    &mut self.state.session,
+                    &mut self.state.race.trucks,
+                    &resources.shop,
+                )?;
+                self.state.postrace.as_mut().unwrap().phase = results::PostracePhase::Complete;
+            } else {
+                self.postrace_owner(true)?;
+                self.postrace_owner(false)?;
+            }
             self.finish_postrace()?;
             return Ok(SceneStep::Continue);
         }
@@ -884,20 +1139,29 @@ impl Port {
                     }
                     break;
                 }
-                Scene::ArcadeMenu => {
-                    let accepted = self.state.arcade.input(self.state.automatic[0].0);
-                    crate::frontend::arcade::draw(
-                        &mut self.state.race.video.memory,
-                        &mut self.state.race.video.display,
-                        &resources.shared,
-                        self.state.arcade.random,
-                    )?;
-                    self.state.session.inhibit_video = VIDEO_UPLOAD_INHIBITED;
-                    if accepted {
-                        self.state
-                            .arcade
-                            .start(&resources.sequence, &mut self.state.random);
-                        self.begin_names();
+                Scene::ArcadeMenu | Scene::ChampionshipCup | Scene::ChampionshipDifficulty => {
+                    self.advance_championship_menu()?;
+                    break;
+                }
+                Scene::ChampionshipStandings => {
+                    self.draw_championship_standings()?;
+                    let pressed = self
+                        .state
+                        .championship
+                        .pressed(self.state.automatic[0].0 | self.state.automatic[1].0);
+                    if pressed & (controls::BUTTON_START | controls::BUTTON_A | controls::BUTTON_B)
+                        != 0
+                    {
+                        if self.state.championship.completed == 8 {
+                            self.state.session.start_reentry = 0;
+                            self.enter_frontend()?;
+                        } else {
+                            self.begin_shop(if self.state.championship.completed == 0 {
+                                ShopNext::FirstRace
+                            } else {
+                                ShopNext::Postrace
+                            })?;
+                        }
                     }
                     break;
                 }
@@ -1157,6 +1421,17 @@ impl Port {
                 if self.frontend_window_frame()? {
                     self.state.frontend_motion = None;
                     self.postrace_owner(true)?;
+                    if self.state.championship.active {
+                        let rank = self.state.postrace.as_ref().unwrap().rank;
+                        self.state.championship.finish_race(
+                            rank,
+                            &self.state.session,
+                            &mut self.state.race.trucks,
+                        );
+                        self.state.postrace.as_mut().unwrap().phase = results::PostracePhase::Shop;
+                        self.begin_championship_standings();
+                        return Ok(SceneStep::Yield);
+                    }
                     return Ok(SceneStep::Continue);
                 }
             }
@@ -1284,7 +1559,10 @@ impl Port {
                 .is_some_and(|postrace| postrace.phase == results::PostracePhase::Complete),
             "postrace returned before owners completed"
         );
-        if self.state.arcade.random && self.state.arcade.accepted {
+        if self.state.championship.active {
+            self.state.sequence_index =
+                self.state.championship.schedule[self.state.championship.completed].0;
+        } else if self.state.arcade.random && self.state.arcade.accepted {
             self.state.arcade.cursor =
                 (self.state.arcade.cursor + 1) % self.state.arcade.order.len();
             self.state.sequence_index = self.state.arcade.order[self.state.arcade.cursor];
@@ -1326,5 +1604,312 @@ mod alias_tests {
             game.state.race.banner.primary.tile_attributes,
             game.resources.banners.primary_tiles[14]
         );
+    }
+}
+
+#[cfg(test)]
+mod championship_tests {
+    use super::*;
+    use crate::{
+        controls::ControllerWord,
+        frontend::championship::{Championship, Difficulty},
+        trucks::ai,
+    };
+    fn game(humans: u8) -> Port {
+        let rom = Rom::open(Path::new("../input/game.rom"), crate::config::ROM_SHA256).unwrap();
+        let mut game =
+            Port::load_assets_seeded(&rom, &MemoryAssets::default(), [1, 2, 3, 4, 5]).unwrap();
+        game.state.session.records = game.resources.results.defaults.clone();
+        game.state.session.signature = game.resources.frontend.signature;
+        shop::initialize_wallets(&mut game.state.session);
+        game.state.session.active_humans = humans;
+        game.state.session.joined_pages = [humans, 0];
+        game.state.arcade.accepted = true;
+        game.state.arcade.random = false;
+        game.state
+            .championship
+            .start(&game.resources.sequence)
+            .unwrap();
+        game.state.sequence_index = game.state.championship.schedule[0].0;
+        game
+    }
+    #[test]
+    fn championship_cpu_shop_spends_real_money_caps_nitros_and_restores_purchases() {
+        for difficulty in [Difficulty::Easy, Difficulty::Normal, Difficulty::Hard] {
+            let mut g = game(1);
+            g.state.championship.difficulty = difficulty;
+            g.state.session.wallets = [[0, 0, 8, 0, 0, 0]; 4];
+            let human = g.state.race.trucks[0].clone();
+            g.state
+                .championship
+                .buy(
+                    &mut g.state.session,
+                    &mut g.state.race.trucks,
+                    &g.resources.shop,
+                )
+                .unwrap();
+            assert_eq!(g.state.race.trucks[0], human);
+            assert_eq!(g.state.session.wallets[0], [0, 0, 8, 0, 0, 0]);
+            for slot in 1..4 {
+                let truck = &g.state.race.trucks[slot];
+                let u = truck.upgrades;
+                let levels = [u.acceleration, u.steering, u.speed, u.suspension];
+                assert!(levels.iter().all(|&n| n > 0));
+                assert!(levels.iter().max().unwrap() - levels.iter().min().unwrap() <= 1);
+                let charges = truck.nitro.display_digits();
+                let charges = charges[0] + charges[1] * 10;
+                assert!(charges <= if slot == 3 { 6 } else { 3 });
+                let spent = levels
+                    .iter()
+                    .zip(g.resources.shop.costs[1..].iter())
+                    .map(|(&n, &p)| u64::from(n) * u64::from(p) * 100)
+                    .sum::<u64>()
+                    + u64::from(charges) * u64::from(g.resources.shop.costs[0]) * 100;
+                assert_eq!(
+                    championship::wallet(&g.state.session.wallets[slot]) + spent,
+                    8000
+                );
+            }
+            let purchased = g.state.race.trucks.each_ref().map(|t| t.upgrades);
+            g.prepare_race().unwrap();
+            let frozen = g.state.race.trucks.each_ref().map(|t| t.upgrades);
+            for _ in 0..200 {
+                ai::service_computers(
+                    &mut g.state.race.trucks,
+                    &mut g.state.race.progress,
+                    &g.selected.track.routes[usize::from(g.selected.reversed)],
+                    &g.resources.ai,
+                    &mut g.state.random,
+                )
+                .unwrap();
+                assert_eq!(g.state.race.trucks.each_ref().map(|t| t.upgrades), frozen);
+            }
+            g.state.championship.finish_race(
+                [3, 1, 2, 0],
+                &g.state.session,
+                &mut g.state.race.trucks,
+            );
+            assert_eq!(
+                g.state.race.trucks.each_ref().map(|t| t.upgrades),
+                purchased
+            );
+        }
+    }
+    #[test]
+    fn championship_eight_races_keep_fourth_place_human_and_finish_without_ninth_race() {
+        for humans in [1, 3] {
+            let mut g = game(humans);
+            for round in 0..8 {
+                g.prepare_race().unwrap();
+                let route = g.selected.track.routes[usize::from(g.selected.reversed)].clone();
+                g.state.postrace = Some(results::Postrace {
+                    loss_route: None,
+                    route_count: route.checkpoint_count,
+                    route: Some(route),
+                    phase: results::PostracePhase::Contract,
+                    rank: if humans == 1 {
+                        [3, 2, 1, 0]
+                    } else {
+                        [1, 3, 2, 0]
+                    },
+                    awards: results::Awards {
+                        timer: 0,
+                        new_record_pending: 0,
+                        phase: results::AwardsFrame::Dismissed,
+                    },
+                });
+                g.state.scene = Scene::Postrace;
+                g.state.session.selected_wallet = 3;
+                shop::add_award(&mut g.state.session, 3, shop::AwardDigit::TenThousands).unwrap();
+                g.state.race.world.pending_awards = [1, 2, 3, 4];
+                // Complete the real transition and dispatch the Championship branch.
+                g.start_frontend_window(t::FrontendKind::Contracting)
+                    .unwrap();
+                g.state.frontend_motion.as_mut().unwrap().complete = true;
+                let resources = g.resources.clone();
+                g.advance_postrace_scene(&resources).unwrap();
+                assert_eq!(g.state.session.active_humans, humans);
+                assert_eq!(g.state.scene, Scene::ChampionshipStandings);
+                g.draw_championship_standings().unwrap();
+                if humans == 3 && round == 7 && std::env::var_os("CHAMPIONSHIP_PREVIEW").is_some() {
+                    let mut frame = romatlas_port::graphics::Frame::new(256, 224).unwrap();
+                    g.render(&mut frame);
+                    let mut ppm = b"P6\n256 224\n255\n".to_vec();
+                    for pixel in frame.pixels.chunks_exact(4) {
+                        ppm.extend_from_slice(&pixel[..3]);
+                    }
+                    std::fs::write("/tmp/championship-final.ppm", ppm).unwrap();
+                }
+                assert_eq!(g.state.championship.completed, round + 1);
+                assert_eq!(g.state.session.active_humans, humans);
+                assert_eq!(g.state.race.world.pending_awards, [0; 4]);
+                assert_eq!(g.state.championship.points[0], 0);
+                assert_eq!(g.state.championship.earned[0], (round as u64 + 1) * 10000);
+                g.sync_race_views();
+                let saved = g.snapshot_json().unwrap();
+                g.restore_snapshot_json(&saved).unwrap();
+                if round < 7 {
+                    g.state
+                        .championship
+                        .buy(
+                            &mut g.state.session,
+                            &mut g.state.race.trucks,
+                            &g.resources.shop,
+                        )
+                        .unwrap();
+                    g.state.postrace.as_mut().unwrap().phase = results::PostracePhase::Complete;
+                    g.finish_postrace().unwrap();
+                    assert_eq!(
+                        g.state.sequence_index,
+                        g.state.championship.schedule[round + 1].0
+                    );
+                }
+            }
+            assert_eq!(
+                g.state.championship.points,
+                if humans == 1 {
+                    [0, 24, 48, 72]
+                } else {
+                    [0, 72, 24, 48]
+                }
+            );
+            g.state.championship.previous = 0;
+            let mut input = MultiInputState::default();
+            input.players[0].held.insert("start".into());
+            g.advance(&input).unwrap();
+            assert!(!g.state.championship.active);
+            assert_eq!(
+                g.state.race.trucks.each_ref().map(|t| t.upgrades),
+                [Default::default(); 4]
+            );
+            assert_eq!(g.state.session.wallets, [[0, 0, 1, 0, 0, 0]; 4]);
+        }
+    }
+    #[test]
+    fn championship_natural_cpu_races_finish_with_fixed_stats_on_each_difficulty() {
+        for humans in [1, 2, 3] {
+            for difficulty in [Difficulty::Easy, Difficulty::Normal, Difficulty::Hard] {
+                let mut g = game(humans);
+                g.state.championship.difficulty = difficulty;
+                g.state
+                    .championship
+                    .buy(
+                        &mut g.state.session,
+                        &mut g.state.race.trucks,
+                        &g.resources.shop,
+                    )
+                    .unwrap();
+                g.prepare_race().unwrap();
+                let upgrades = g.state.race.trucks.each_ref().map(|t| t.upgrades);
+                let mut finished = false;
+                for frame in 0..20000 {
+                    g.advance(&MultiInputState::default()).unwrap();
+                    assert_eq!(g.state.race.trucks.each_ref().map(|t| t.upgrades), upgrades);
+                    if frame == 1000 {
+                        let snapshot = g.snapshot_json().unwrap();
+                        g.restore_snapshot_json(&snapshot).unwrap();
+                    }
+                    if g.state.scene == Scene::Postrace {
+                        finished = true;
+                        break;
+                    }
+                }
+                assert!(
+                    finished,
+                    "CPU failed to finish {difficulty:?}, humans {humans}"
+                );
+                assert_eq!(
+                    humans & (1 << (g.state.race.progress.winner_plus_one - 1)),
+                    0
+                );
+            }
+        }
+    }
+    #[test]
+    fn championship_initial_standings_precede_shop_and_first_race() {
+        for humans in [1, 3] {
+            let mut g = game(humans);
+            // Reproduce name entry's placeholders in the unjoined blue panel.
+            g.state.session.records.truck_names[..3].copy_from_slice(&[11, 12, 13]);
+            g.state.session.records.truck_names[3..6].copy_from_slice(if humans == 1 {
+                &[42, 42, 42]
+            } else {
+                &[34, 35, 36]
+            });
+            g.state.menu = Menu::Names(state::selection());
+            g.state.scene = Scene::Names;
+            let resources = g.resources.clone();
+            g.advance_names_scene(&resources).unwrap();
+            assert_eq!(g.state.scene, Scene::ChampionshipStandings);
+            assert_eq!(g.state.championship.completed, 0);
+            assert_eq!(&g.state.session.records.truck_names[..3], &[11, 12, 13]);
+            assert_eq!(
+                &g.state.session.records.truck_names[3..6],
+                if humans == 1 {
+                    &resources.results.defaults.truck_names[3..6]
+                } else {
+                    &[34, 35, 36]
+                }
+            );
+            assert_eq!(
+                &g.state.session.records.truck_names[6..],
+                &resources.results.defaults.truck_names[6..]
+            );
+            if humans == 1 && std::env::var_os("CHAMPIONSHIP_PREVIEW").is_some() {
+                g.draw_championship_standings().unwrap();
+                let mut frame = romatlas_port::graphics::Frame::new(256, 224).unwrap();
+                g.render(&mut frame);
+                let mut ppm = b"P6\n256 224\n255\n".to_vec();
+                for pixel in frame.pixels.chunks_exact(4) {
+                    ppm.extend_from_slice(&pixel[..3]);
+                }
+                std::fs::write("/tmp/championship-initial.ppm", ppm).unwrap();
+            }
+            g.state.automatic[0] = ControllerWord(controls::BUTTON_START);
+            g.state.championship.previous = controls::BUTTON_START;
+            let mut input = MultiInputState::default();
+            input.players[0].held.insert("start".into());
+            g.advance(&input).unwrap();
+            assert_eq!(g.state.scene, Scene::ChampionshipStandings);
+            g.advance(&MultiInputState::default()).unwrap();
+            g.advance(&input).unwrap();
+            assert_eq!(g.state.scene, Scene::Shop);
+            let Menu::Shop(shop) = &mut g.state.menu else {
+                panic!("missing first shop")
+            };
+            shop.phase = shop::Phase::Complete;
+            g.advance_shop_scene(&resources).unwrap();
+            assert_eq!(g.state.scene, Scene::RacePrepare);
+            assert_eq!(g.state.session.active_humans, humans);
+            g.prepare_race().unwrap();
+            assert!(g.state.race.progress.championship);
+            assert_eq!(g.state.sequence_index, g.state.championship.schedule[0].0);
+        }
+    }
+    #[test]
+    fn championship_setup_defaults_and_fresh_press_gate() {
+        let mut g = game(1);
+        g.state.championship = Championship::default();
+        g.state.arcade = Default::default();
+        g.state.automatic = [ControllerWord(0); 4];
+        g.begin_names();
+        for expected in [
+            Scene::ChampionshipCup,
+            Scene::ChampionshipDifficulty,
+            Scene::Names,
+        ] {
+            g.state.automatic[0] = ControllerWord(controls::BUTTON_START);
+            g.advance_championship_menu().unwrap();
+            assert_eq!(g.state.scene, expected);
+            if expected != Scene::Names {
+                g.advance_championship_menu().unwrap();
+                assert_eq!(g.state.scene, expected);
+                g.state.automatic[0] = ControllerWord(0);
+                g.advance_championship_menu().unwrap();
+            }
+        }
+        assert!(g.state.championship.active);
+        assert_eq!(g.state.championship.difficulty, Difficulty::Normal);
+        assert_eq!(g.state.championship.cup, 0);
     }
 }

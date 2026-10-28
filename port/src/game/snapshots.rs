@@ -71,6 +71,45 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
         "invalid frontend joined mask"
     );
     state.arcade.validate(resources.sequence.len())?;
+    state.championship.validate(&resources.sequence)?;
+    let nitro_delay_limit = crate::config::CHAMPIONSHIP_NITRO_COOLDOWN
+        .into_iter()
+        .chain(crate::config::CHAMPIONSHIP_NITRO_START_DELAY)
+        .max()
+        .unwrap_or(0);
+    ensure!(
+        state
+            .race
+            .progress
+            .championship_nitro
+            .iter()
+            .all(|n| n.budget <= 99 && n.issued <= n.budget && n.cooldown <= nitro_delay_limit),
+        "invalid championship nitro pacing"
+    );
+    ensure!(
+        state
+            .race
+            .trucks
+            .iter()
+            .all(|t| t.championship_speed_bonus <= 6),
+        "invalid championship speed bonus"
+    );
+    if matches!(
+        state.scene,
+        Scene::ChampionshipCup | Scene::ChampionshipDifficulty
+    ) {
+        ensure!(
+            !state.championship.active,
+            "active championship during setup"
+        );
+    }
+    if state.scene == Scene::ChampionshipStandings {
+        ensure!(
+            state.championship.active
+                && (state.championship.completed == 0 || state.postrace.is_some()),
+            "missing championship standings owner"
+        );
+    }
     let video = &state.race.video;
     let mut sprite_order = video.sprites.order;
     sprite_order.sort_unstable();
@@ -334,7 +373,9 @@ fn validate(state: &State, resources: &Resources) -> Result<()> {
             .find(|track| track.id == choice.id)
             .context("snapshot track missing")?
             .content;
-        let reversed = if state.arcade.accepted && state.arcade.random {
+        let reversed = if state.championship.active {
+            state.championship.race_mode(state.sequence_index).reversed
+        } else if state.arcade.accepted && state.arcade.random {
             state.arcade.reversed
         } else {
             choice.reversed

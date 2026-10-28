@@ -49,6 +49,10 @@ pub struct Wheel {
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Truck {
+    #[serde(default)]
+    pub championship: bool,
+    #[serde(default)]
+    pub championship_speed_bonus: u8,
     #[serde(with = "crate::snapshot::array")]
     pub world: [u16; 2],
     pub speed: u16,

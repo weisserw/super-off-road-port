@@ -19,6 +19,9 @@ pub enum Scene {
     Highscores,
     HighscoreClose,
     ArcadeMenu,
+    ChampionshipCup,
+    ChampionshipDifficulty,
+    ChampionshipStandings,
     Names,
     Shop,
     RacePrepare,
@@ -90,6 +93,8 @@ pub struct State {
     pub sequence_index: usize,
     #[serde(default)]
     pub arcade: crate::frontend::arcade::Arcade,
+    #[serde(default)]
+    pub championship: crate::frontend::championship::Championship,
     pub input: MultiInputState,
     pub automatic: [ControllerWord; 4],
     pub splash: Option<attract::Splash>,
@@ -171,6 +176,8 @@ impl State {
             working_pose: 0,
             trucks: std::array::from_fn(|_| Truck::default()),
             progress: race::Progress {
+                championship: false,
+                championship_nitro: Default::default(),
                 drivers: [ai::Driver::default(); 4],
                 active_humans: 1,
                 animation_frame: 0,
@@ -203,6 +210,7 @@ impl State {
             shop_redraw_field: 0,
             sequence_index: 0,
             arcade: Default::default(),
+            championship: Default::default(),
             input: MultiInputState::default(),
             automatic: [ControllerWord(0); 4],
             splash: None,

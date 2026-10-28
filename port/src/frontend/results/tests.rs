@@ -121,6 +121,8 @@ fn word(m: &VideoMemory, at: u16) -> u16 {
 }
 fn progress() -> Progress {
     Progress {
+        championship: false,
+        championship_nitro: Default::default(),
         drivers: [Driver::default(); 4],
         active_humans: 1,
         animation_frame: 0,

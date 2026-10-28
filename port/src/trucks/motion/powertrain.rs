@@ -9,6 +9,8 @@ use crate::{controls::ControllerWord, trucks::nitro::NitroStock};
 
 #[derive(Clone, Copy)]
 pub(super) struct PowertrainInput {
+    championship: bool,
+    championship_speed_bonus: u8,
     controller: ControllerWord,
     upgrades: Upgrades,
     screen_x: u16,
@@ -18,6 +20,8 @@ pub(super) struct PowertrainInput {
 impl From<&Truck> for PowertrainInput {
     fn from(truck: &Truck) -> Self {
         Self {
+            championship: truck.championship,
+            championship_speed_bonus: truck.championship_speed_bonus,
             controller: truck.controller,
             upgrades: truck.upgrades,
             screen_x: truck.screen_x,
@@ -160,12 +164,16 @@ impl PowertrainState {
         } else if (old as i8) < 0 {
             old.wrapping_add(step)
         } else {
-            let selector = if input.upgrades.speed == 0 && !human {
+            let selector = if input.upgrades.speed == 0 && !human && !input.championship {
                 ZERO_UPGRADE_COMPUTER_LIMIT
             } else {
                 usize::from(input.upgrades.speed)
             };
-            let limit = tables.speed_limits[selector];
+            let limit = tables.speed_limits[selector].saturating_add(if input.championship {
+                input.championship_speed_bonus
+            } else {
+                0
+            });
             if old < limit {
                 let (candidate, overflow) = (old as i8).overflowing_add(step as i8);
                 if overflow {

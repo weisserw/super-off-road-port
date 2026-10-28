@@ -32,6 +32,10 @@ pub const ORIGINAL_ORDER_MASK: u8 = 63;
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
+    #[serde(default)]
+    pub championship: bool,
+    #[serde(default)]
+    pub championship_nitro: [crate::trucks::ai::NitroPacing; TRUCKS],
     #[serde(with = "crate::snapshot::array")]
     pub drivers: [Driver; TRUCKS],
     pub active_humans: u8,
@@ -990,6 +994,8 @@ mod tests {
     const NO_INPUT: [ControllerWord; TRUCKS] = [ControllerWord(0); TRUCKS];
     fn progress() -> Progress {
         Progress {
+            championship: false,
+            championship_nitro: Default::default(),
             drivers: [Driver {
                 checkpoint: 1,
                 lap: 1,
